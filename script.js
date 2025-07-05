@@ -1,6 +1,12 @@
-// script.js (v1.4)
+// script.js (v1.5)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
+
+    // --- 动态加载Emoji Picker库 ---
+    const pickerScript = document.createElement('script');
+    pickerScript.type = 'module';
+    pickerScript.src = 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
+    document.head.appendChild(pickerScript);
 
     function createUI() {
         const create = (tag, id, className, html) => {
@@ -32,7 +38,7 @@
                     <textarea id="cip-main-input" placeholder="在此输入文字..."></textarea>
                 </div>
                 <div id="cip-voice-content" class="cip-content-section">
-                    <input type="text" id="cip-voice-duration" placeholder="输入时长 (例如: 3s 或 1'20&quot;)">
+                    <input type="number" id="cip-voice-duration" placeholder="输入时长 (秒, 仅数字)">
                     <textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea>
                 </div>
                 <div id="cip-stickers-content" class="cip-content-section">
@@ -43,7 +49,7 @@
                 </div>
             </div>
             <div id="cip-panel-footer">
-                <div id="cip-emoji-picker-btn">😊<div id="cip-emoji-container" class="cip-frosted-glass"><div id="cip-emoji-grid"></div></div></div>
+                <div id="cip-emoji-picker-btn">😊</div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
                     <button id="cip-insert-button">插 入</button>
@@ -51,33 +57,21 @@
             </div>
         `);
 
-        const addCategoryModal = create('div', 'cip-add-category-modal', 'cip-modal-backdrop hidden', `
-            <div class="cip-modal-content cip-frosted-glass">
-                <h3>添加新分类</h3>
-                <input type="text" id="cip-new-category-name" placeholder="输入分类名称">
-                <div class="cip-modal-actions">
-                    <button id="cip-cancel-category-btn">取消</button>
-                    <button id="cip-save-category-btn">保存</button>
-                </div>
-            </div>`);
+        const emojiPicker = create('emoji-picker', 'cip-emoji-picker', 'cip-frosted-glass');
 
-        const addStickersModal = create('div', 'cip-add-stickers-modal', 'cip-modal-backdrop hidden', `
-            <div class="cip-modal-content cip-frosted-glass">
-                <h3 id="cip-add-sticker-title"></h3>
-                <p>每行一个，格式为：<br><code>表情包描述:图片链接</code></p>
-                <textarea id="cip-new-stickers-input" placeholder="可爱猫猫:https://example.com/cat.png\n狗狗点头:https://example.com/dog.gif"></textarea>
-                <div class="cip-modal-actions">
-                    <button id="cip-cancel-stickers-btn">取消</button>
-                    <button id="cip-save-stickers-btn">保存</button>
-                </div>
-            </div>`);
+        const addCategoryModal = create('div', 'cip-add-category-modal', 'cip-modal-backdrop hidden', `...`);
+        const addStickersModal = create('div', 'cip-add-stickers-modal', 'cip-modal-backdrop hidden', `...`);
+        
+        addCategoryModal.innerHTML = `<div class="cip-modal-content cip-frosted-glass"><h3>添加新分类</h3><input type="text" id="cip-new-category-name" placeholder="输入分类名称"><div class="cip-modal-actions"><button id="cip-cancel-category-btn">取消</button><button id="cip-save-category-btn">保存</button></div></div>`;
+        addStickersModal.innerHTML = `<div class="cip-modal-content cip-frosted-glass"><h3 id="cip-add-sticker-title"></h3><p>每行一个，格式为：<br><code>表情包描述:图片链接</code></p><textarea id="cip-new-stickers-input" placeholder="可爱猫猫:https://example.com/cat.png\n狗狗点头:https://example.com/dog.gif"></textarea><div class="cip-modal-actions"><button id="cip-cancel-stickers-btn">取消</button><button id="cip-save-stickers-btn">保存</button></div></div>`;
 
-        return { carrotButton, inputPanel, addCategoryModal, addStickersModal };
+        return { carrotButton, inputPanel, emojiPicker, addCategoryModal, addStickersModal };
     }
 
-    const { carrotButton, inputPanel, addCategoryModal, addStickersModal } = createUI();
+    const { carrotButton, inputPanel, emojiPicker, addCategoryModal, addStickersModal } = createUI();
     document.body.appendChild(carrotButton); document.body.appendChild(inputPanel);
-    document.body.appendChild(addCategoryModal); document.body.appendChild(addStickersModal);
+    document.body.appendChild(emojiPicker); document.body.appendChild(addCategoryModal);
+    document.body.appendChild(addStickersModal);
 
     const get = (id) => document.getElementById(id);
     const queryAll = (sel) => document.querySelectorAll(sel);
@@ -85,7 +79,7 @@
     const formatDisplay = get('cip-format-display'), insertButton = get('cip-insert-button'), recallButton = get('cip-recall-button');
     const mainInput = get('cip-main-input'), voiceDurationInput = get('cip-voice-duration'), voiceMessageInput = get('cip-voice-message');
     const stickerCategoriesContainer = get('cip-sticker-categories'), addCategoryBtn = get('cip-add-category-btn'), stickerGrid = get('cip-sticker-grid');
-    const emojiPickerBtn = get('cip-emoji-picker-btn'), emojiContainer = get('cip-emoji-container'), emojiGrid = get('cip-emoji-grid');
+    const emojiPickerBtn = get('cip-emoji-picker-btn');
     const saveCategoryBtn = get('cip-save-category-btn'), cancelCategoryBtn = get('cip-cancel-category-btn'), newCategoryNameInput = get('cip-new-category-name');
     const addStickerTitle = get('cip-add-sticker-title'), saveStickersBtn = get('cip-save-stickers-btn'), cancelStickersBtn = get('cip-cancel-stickers-btn'), newStickersInput = get('cip-new-stickers-input');
 
@@ -93,17 +87,18 @@
 
     const formatTemplates = {
         text: { plain: '"{content}"', image: '"[{content}.jpg]"', video: '"[{content}.mp4]"', music: '"[{content}.mp3]"', post: '"[{content}.link]"' },
-        voice: '={duration}|{message}=', stickers: '![{desc}]({url})', recall: '--'
+        voice: "={duration}'|{message}=",
+        stickers: "!{desc}|{url}!",
+        recall: '--'
     };
-    const commonEmojis = ['😊','😂','❤️','👍','🤔','😭','😍','🎉','🙏','🔥','💯','✨','😁','😅','🤣','🥰','🤩','🥳','😉','😋','😎','😢','😱','😠','😇','🥺','🤡','🤖','👻','💀','🎃','😺','😸','😹','😻','😼','👋','👌','✌️','🤞','🤟','🤙','👈','👉','👆','👇','💪','👀','🧠','💧','💨','☀️','🌙','⭐','🌸','🌹','🍓','🥕','🍕','🍔'];
 
     function updateFormatDisplay() {
         queryAll('.cip-category-action-icon').forEach(icon => icon.remove());
         switch (currentTab) {
             case 'text': formatDisplay.textContent = `格式: ${formatTemplates.text[currentTextSubType].replace('{content}', '内容')}`; break;
-            case 'voice': formatDisplay.textContent = `格式: ${formatTemplates.voice.replace('{duration}', `时长'`).replace('{message}', '内容')}`; break;
+            case 'voice': formatDisplay.textContent = `格式: =数字'|内容=`; break;
             case 'stickers':
-                formatDisplay.textContent = `格式: ![描述](链接)`;
+                formatDisplay.textContent = `格式: !描述|链接!`;
                 const currentCatBtn = get('cip-input-panel').querySelector(`.cip-sticker-category-btn[data-category="${currentStickerCategory}"]`);
                 if (currentCatBtn) {
                     const addIcon = document.createElement('i'); addIcon.textContent = ' ➕'; addIcon.className = 'cip-category-action-icon'; addIcon.title = '向此分类添加表情包';
@@ -153,10 +148,8 @@
     }
     function insertIntoSillyTavern(text) {
         const stTextarea = document.querySelector('#send_textarea');
-        if (stTextarea) {
-            stTextarea.value += (stTextarea.value.trim() ? '\n' : '') + text;
-            stTextarea.dispatchEvent(new Event('input', { bubbles: true })); stTextarea.focus();
-        } else { alert('未能找到SillyTavern的输入框！'); }
+        if (stTextarea) { stTextarea.value += (stTextarea.value.trim() ? '\n' : '') + text; stTextarea.dispatchEvent(new Event('input', { bubbles: true })); stTextarea.focus(); }
+        else { alert('未能找到SillyTavern的输入框！'); }
     }
     function saveStickerData() { localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData)); }
     function loadStickerData() { const data = localStorage.getItem('cip_sticker_data'); if (data) stickerData = JSON.parse(data); }
@@ -165,22 +158,31 @@
         addStickerTitle.textContent = `为「${categoryName}」分类添加表情包`;
         newStickersInput.value = ''; addStickersModal.dataset.currentCategory = categoryName; toggleModal('cip-add-stickers-modal', true); newStickersInput.focus();
     }
-    function populateEmojiPicker() {
-        emojiGrid.innerHTML = '';
-        commonEmojis.forEach(emoji => {
-            const span = document.createElement('span'); span.textContent = emoji;
-            span.addEventListener('click', () => {
-                const target = (currentTab === 'text') ? mainInput : voiceMessageInput;
-                if (target) {
-                    const { selectionStart, selectionEnd, value } = target;
-                    target.value = value.substring(0, selectionStart) + emoji + value.substring(selectionEnd);
-                    target.focus(); target.selectionEnd = selectionStart + emoji.length;
-                }
-                emojiContainer.classList.remove('active');
-            });
-            emojiGrid.appendChild(span);
-        });
-    }
+    
+    // --- Emoji Picker库的事件处理 ---
+    emojiPicker.addEventListener('emoji-click', event => {
+        const emoji = event.detail.unicode;
+        const target = (currentTab === 'text') ? mainInput : voiceMessageInput;
+        if (target) {
+            const { selectionStart, selectionEnd, value } = target;
+            target.value = value.substring(0, selectionStart) + emoji + value.substring(selectionEnd);
+            target.focus(); target.selectionEnd = selectionStart + emoji.length;
+        }
+        emojiPicker.style.display = 'none';
+    });
+    
+    emojiPickerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = emojiPicker.style.display === 'block';
+        if (isVisible) {
+            emojiPicker.style.display = 'none';
+        } else {
+            const btnRect = emojiPickerBtn.getBoundingClientRect();
+            emojiPicker.style.top = `${btnRect.top - 350 - 10}px`; // 350是picker大约高度
+            emojiPicker.style.left = `${btnRect.left}px`;
+            emojiPicker.style.display = 'block';
+        }
+    });
 
     queryAll('.cip-tab-button').forEach(button => button.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab)));
     queryAll('#cip-text-content .cip-sub-option-btn').forEach(button => button.addEventListener('click', (e) => switchTextSubType(e.currentTarget.dataset.type)));
@@ -195,7 +197,6 @@
         if (formattedText) insertIntoSillyTavern(formattedText); else alert('请输入内容或选择一个表情包！');
     });
 
-    emojiPickerBtn.addEventListener('click', (e) => { e.stopPropagation(); emojiContainer.classList.toggle('active'); });
     addCategoryBtn.addEventListener('click', () => { newCategoryNameInput.value = ''; toggleModal('cip-add-category-modal', true); newCategoryNameInput.focus(); });
     cancelCategoryBtn.addEventListener('click', () => toggleModal('cip-add-category-modal', false));
     saveCategoryBtn.addEventListener('click', () => {
@@ -228,7 +229,9 @@
     carrotButton.addEventListener('click', (e) => { e.stopPropagation(); inputPanel.classList.contains('active') ? hidePanel() : showPanel(); });
     document.addEventListener('click', (e) => {
         if (!inputPanel.contains(e.target) && !carrotButton.contains(e.target)) hidePanel();
-        if (!emojiContainer.contains(e.target) && !emojiPickerBtn.contains(e.target)) emojiContainer.classList.remove('active');
+        if (emojiPicker.style.display === 'block' && !emojiPicker.contains(e.target) && !emojiPickerBtn.contains(e.target)) {
+            emojiPicker.style.display = 'none';
+        }
     });
 
     function saveButtonPosition(top, left) { localStorage.setItem('cip_button_position', JSON.stringify({ top, left })); }
@@ -250,7 +253,7 @@
     });
 
     function init() {
-        loadStickerData(); renderCategories(); populateEmojiPicker(); loadButtonPosition();
+        loadStickerData(); renderCategories(); loadButtonPosition();
         const firstCategory = Object.keys(stickerData)[0];
         switchStickerCategory(firstCategory || '');
         switchTab('text');
