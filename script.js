@@ -1,16 +1,16 @@
-// script.js (版本 1.2 - 修正版)
+// script.js (版本 1.3 - 致命错误修复 & 功能修正)
 (function () {
     // 0. 检查插件是否已加载，防止重复注入
     if (document.getElementById('cip-carrot-button')) {
         return;
     }
 
-    // 1. 创建所有UI元素，并使用 "cip-" 前缀
+    // 1. 创建所有UI元素
     function createUI() {
         const carrotButton = document.createElement('div');
         carrotButton.id = 'cip-carrot-button';
         carrotButton.innerHTML = '🥕';
-        carrotButton.title = '胡萝卜快捷输入';
+        carrotButton.title = '兔子不吃胡萝卜';
 
         const inputPanel = document.createElement('div');
         inputPanel.id = 'cip-input-panel';
@@ -120,11 +120,10 @@
 
     let currentTab = 'text', currentTextSubType = 'plain', stickerData = {}, currentStickerCategory = '', selectedSticker = null;
 
-    // --- (已修改) --- 格式化模板
     const formatTemplates = {
         text: { plain: '"{content}"', image: '"[{content}.jpg]"', video: '"[{content}.mp4]"', music: '"[{content}.mp3]"', post: '"[{content}.link]"' },
         voice: '={duration}|{message}=',
-        stickers: '![{desc}]({url})', // <--- Bug 2 修正点: 采用标准Markdown图片格式
+        stickers: '![{desc}]({url})',
         recall: '--'
     };
     const commonEmojis = ['😊','😂','❤️','👍','🤔','😭','😍','🎉','🙏','🔥','💯','✨','😁','😅','🤣','🥰','🤩','🥳','😉','😋','😎','😢','😱','😠','😇','🥺','🤡','🤖','👻','💀','🎃','😺','😸','😹','😻','😼','👋','👌','✌️','🤞','🤟','🤙','👈','👉','👆','👇','💪','👀','🧠','💧','💨','☀️','🌙','⭐','🌸','🌹','🍓','🥕','🍕','🍔'];
@@ -196,11 +195,9 @@
         });
     }
     
-    // --- (已修改) --- 插入文本函数
     function insertIntoSillyTavern(text) {
         const stTextarea = query('#send_textarea');
         if (stTextarea) {
-            // Bug 1 修正点: 使用 += 追加内容, 并通过判断输入框内容是否为空来决定是否添加换行符
             stTextarea.value += (stTextarea.value.trim() ? '\n' : '') + text;
             stTextarea.dispatchEvent(new Event('input', { bubbles: true }));
             stTextarea.focus();
@@ -211,7 +208,7 @@
     
     function saveStickerData() { localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData)); }
     function loadStickerData() { const data = localStorage.getItem('cip_sticker_data'); if (data) stickerData = JSON.parse(data); }
-    function toggleModal(modal, show) { get(modal).classList.toggle('hidden', !show); }
+    function toggleModal(modalId, show) { get(modalId).classList.toggle('hidden', !show); }
     function openAddStickersModal(categoryName) {
         get('cip-add-sticker-title').textContent = `为「${categoryName}」分类添加表情包`;
         newStickersInput.value = ''; addStickersModal.dataset.currentCategory = categoryName; toggleModal('cip-add-stickers-modal', true); newStickersInput.focus();
@@ -242,11 +239,8 @@
             case 'text': if (mainInput.value.trim()) formattedText = formatTemplates.text[currentTextSubType].replace('{content}', mainInput.value); break;
             case 'voice': if (voiceDurationInput.value.trim() && voiceMessageInput.value.trim()) formattedText = formatTemplates.voice.replace('{duration}', voiceDurationInput.value).replace('{message}', voiceMessageInput.value); break;
             case 'stickers':
-                // Bug 2 修正点: 同时替换描述和链接
                 if (selectedSticker) {
-                    formattedText = formatTemplates.stickers
-                        .replace('{desc}', selectedSticker.desc)
-                        .replace('{url}', selectedSticker.url);
+                    formattedText = formatTemplates.stickers.replace('{desc}', selectedSticker.desc).replace('{url}', selectedSticker.url);
                 }
                 break;
         }
