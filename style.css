@@ -1,4 +1,4 @@
-/* style.css (v1.4) */
+/* style.css (v1.5) */
 :root {
     --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
     --cip-border-color: rgba(255, 255, 255, 0.4);
@@ -80,18 +80,14 @@
 #cip-recall-button:hover { background-color: #ccc; }
 #cip-insert-button { background-color: var(--cip-accent-color); color: white; }
 #cip-insert-button:hover { background-color: #e56a40; }
-#cip-emoji-container {
-    position: absolute; bottom: 40px; left: 0; width: 280px; height: 200px; padding: 10px;
-    z-index: 1002; opacity: 0; transform: translateY(10px); pointer-events: none;
-    transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
+
+/* 新的Emoji Picker库的样式 */
+emoji-picker {
+    position: fixed;
+    z-index: 1002;
+    display: none; /* 由JS控制显示 */
 }
-#cip-emoji-container.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
-#cip-emoji-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 5px;
-    width: 100%; height: 100%; overflow-y: auto;
-}
-#cip-emoji-grid span { font-size: 22px; text-align: center; cursor: pointer; border-radius: 4px; transition: background-color var(--cip-transition-speed); }
-#cip-emoji-grid span:hover { background-color: rgba(0,0,0,0.1); }
+
 #cip-sticker-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 150px;
     overflow-y: auto; padding: 5px; background: rgba(255,255,255,0.3); border-radius: 8px;
