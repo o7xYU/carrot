@@ -64,7 +64,7 @@
     // --- 4. 核心逻辑与事件监听 ---
     let currentTab = 'text', currentTextSubType = 'plain', stickerData = {}, currentStickerCategory = '', selectedSticker = null;
     const formatTemplates = {
-        text: { plain: '"{content}"', image: '"[{content}.jpg]"', video: '"[{content}.mp4]"', music: '"[{content}.mp3]"', post: '"[{content}.link]"' },
+        text: { plain: '“{content}”', image: '“[{content}.jpg]”', video: '“[{content}.mp4]”', music: '“[{content}.mp3]”', post: '“[{content}.link]”' },
         voice: "={duration}'|{message}=", stickers: "!{desc}|{url}!", recall: '--'
     };
 
