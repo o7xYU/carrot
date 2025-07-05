@@ -1,6 +1,7 @@
 # SillyTavern 快速输入面板扩展
 
 一个为 SillyTavern 设计的快速输入面板扩展，让您能够方便地插入各种格式化内容。
+BunnY制作，搭配Bunnyhole Lab食用。
 
 ## 功能特点
 
