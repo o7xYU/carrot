@@ -156,63 +156,59 @@
 
     // 跨平台拖拽与点击处理器
     function dragHandler(e) {
-        let isDragging = false;
-        let hasMoved = false;
-        
-        // 阻止默认行为，特别是对触摸事件，以防止页面滚动
-        if (e.type === 'touchstart') e.preventDefault();
+    // 1. 移除了旧的 isDragging, hasMoved 变量，因为新逻辑不再需要它们
+    
+    // 2. 阻止默认行为，特别是触摸滚动
+    if (e.type === 'touchstart') {
+        e.preventDefault();
+    }
 
-        const startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-        const startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    const rect = carrotButton.getBoundingClientRect();
+    let isClick = true; // 先假设是点击
 
-        const move = (e) => {
-            const moveX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-            const moveY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-            const deltaX = Math.abs(moveX - startX);
-            const deltaY = Math.abs(moveY - startY);
+    // 3. 在拖拽开始时，就计算好鼠标/手指相对于按钮左上角的固定偏移量
+    const offsetX = (e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) - rect.left;
+    const offsetY = (e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) - rect.top;
 
-            // 如果移动超过5像素，则判定为拖拽
-            if (!hasMoved && (deltaX > 5 || deltaY > 5)) {
-                hasMoved = true;
-                isDragging = true;
-                carrotButton.classList.add('is-dragging');
-                // 从相对定位改为固定定位，以便自由拖动
-                const rect = carrotButton.getBoundingClientRect();
-                carrotButton.style.position = 'fixed';
-                carrotButton.style.top = `${rect.top}px`;
-                carrotButton.style.left = `${rect.left}px`;
-            }
+    const move = (e) => {
+        // 4. 一旦开始移动，就判定为不是点击
+        isClick = false;
+        carrotButton.classList.add('is-dragging');
 
-            if (isDragging) {
-                let newLeft = moveX - (startX - carrotButton.offsetLeft);
-                let newTop = moveY - (startY - carrotButton.offsetTop);
-                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - carrotButton.offsetWidth));
-                newTop = Math.max(0, Math.min(newTop, window.innerHeight - carrotButton.offsetHeight));
-                carrotButton.style.left = `${newLeft}px`;
-                carrotButton.style.top = `${newTop}px`;
-            }
-        };
+        // 5. 使用新的、正确的逻辑计算位置
+        let newLeft = (e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) - offsetX;
+        let newTop = (e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) - offsetY;
 
-        const end = () => {
-            document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', end);
-            document.removeEventListener('touchmove', move);
-            document.removeEventListener('touchend', end);
-            
-            carrotButton.classList.remove('is-dragging');
-            if (isDragging) {
-                // 如果拖拽了，就保存位置
-                localStorage.setItem('cip_button_position_v4', JSON.stringify({ top: carrotButton.style.top, left: carrotButton.style.left }));
-            } else {
-                // 如果没有拖拽，这就是一次点击
-                inputPanel.classList.contains('active') ? hidePanel() : showPanel();
-            }
-        };
+        // 限制在屏幕内
+        newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - carrotButton.offsetWidth));
+        newTop = Math.max(0, Math.min(newTop, window.innerHeight - carrotButton.offsetHeight));
 
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', end);
-        document.addEventListener('touchmove', move, { passive: false });
-        document.addEventListener('touchend', end);
+        carrotButton.style.position = 'fixed'; // 确保是fixed定位
+        carrotButton.style.left = `${newLeft}px`;
+        carrotButton.style.top = `${newTop}px`;
+    };
+
+    const end = () => {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', end);
+        document.removeEventListener('touchmove', move);
+        document.removeEventListener('touchend', end);
+
+        carrotButton.classList.remove('is-dragging');
+
+        if (isClick) {
+            // 6. 如果从未移动过（isClick 仍为 true），则执行点击逻辑
+            inputPanel.classList.contains('active') ? hidePanel() : showPanel();
+        } else {
+            // 否则，这是一次拖拽，保存位置
+            localStorage.setItem('cip_button_position_v4', JSON.stringify({ top: carrotButton.style.top, left: carrotButton.style.left }));
+        }
+    };
+
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', end);
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', end);
     }
     
     carrotButton.addEventListener('mousedown', dragHandler);
