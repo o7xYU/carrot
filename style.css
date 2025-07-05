@@ -1,0 +1,193 @@
+/* style.css */
+:root {
+    --panel-bg-color: rgba(255, 255, 255, 0.25);
+    --border-color: rgba(255, 255, 255, 0.4);
+    --text-color: #333;
+    --accent-color: #ff7f50;
+    --active-bg-color: rgba(255, 127, 80, 0.3);
+    --input-bg-color: rgba(255, 255, 255, 0.5);
+    --delete-color: #e74c3c;
+    --border-radius: 12px;
+    --transition-speed: 0.3s;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text-color);
+}
+.frosted-glass {
+    background: var(--panel-bg-color);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+#carrot-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: move; /* 改为move光标，表示可拖拽 */
+    z-index: 1000;
+    transition: transform 0.2s ease;
+    user-select: none; /* 防止拖动时选中文本 */
+}
+#carrot-button:hover {
+    transform: scale(1.1);
+}
+#input-panel {
+    position: fixed;
+    width: 350px;
+    max-width: 90vw;
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    z-index: 1001; /* 比按钮高一级 */
+    opacity: 0;
+    transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+    transform: scale(0.95);
+}
+#input-panel.active {
+    display: flex;
+    opacity: 1;
+    transform: scale(1);
+}
+#panel-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.tab-button {
+    flex-grow: 1; padding: 8px 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--text-color); border-radius: 8px; transition: background-color var(--transition-speed) ease;
+}
+.tab-button.active {
+    background-color: var(--active-bg-color); font-weight: bold;
+}
+#format-display {
+    padding: 5px 12px; font-size: 12px; color: #666; background: rgba(0,0,0,0.05); text-align: center; min-height: 18px;
+}
+#panel-content {
+    padding: 12px; flex-grow: 1;
+}
+.content-section {
+    display: none; flex-direction: column; gap: 10px;
+}
+.content-section.active {
+    display: flex;
+}
+.sub-options-container {
+    display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;
+}
+.sub-option-btn {
+    padding: 4px 10px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 16px; background: transparent; cursor: pointer; color: var(--text-color); transition: all var(--transition-speed) ease; position: relative;
+}
+.sub-option-btn.active {
+    background-color: var(--accent-color); color: white; border-color: var(--accent-color);
+}
+#add-category-btn {
+    font-weight: bold; width: 28px; height: 28px; padding: 0; border-radius: 50%;
+}
+.category-action-icon {
+    cursor: pointer; font-style: normal;
+}
+.delete-category-btn {
+    color: var(--delete-color);
+}
+#main-input, #voice-message, #new-stickers-input {
+    width: calc(100% - 20px); min-height: 80px; padding: 10px; border: none; border-radius: var(--border-radius); background-color: var(--input-bg-color); font-size: 14px; resize: vertical;
+}
+#voice-duration, #new-category-name {
+    width: calc(100% - 20px); padding: 10px; border: none; border-radius: var(--border-radius); background-color: var(--input-bg-color); font-size: 14px;
+}
+#panel-footer {
+    display: flex; justify-content: space-between; align-items: center; padding: 0 12px 12px 12px;
+}
+#emoji-picker-btn {
+    font-size: 24px; cursor: pointer; opacity: 0.7; transition: opacity var(--transition-speed); position: relative;
+}
+#emoji-picker-btn:hover {
+    opacity: 1;
+}
+.footer-actions {
+    display: flex; gap: 8px;
+}
+#recall-button, #insert-button {
+    padding: 8px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color var(--transition-speed);
+}
+#recall-button {
+    background-color: #ddd; color: #444;
+}
+#recall-button:hover {
+    background-color: #ccc;
+}
+#insert-button {
+    background-color: var(--accent-color); color: white;
+}
+#insert-button:hover {
+    background-color: #e56a40;
+}
+#emoji-container {
+    position: absolute; bottom: 40px; left: 0; width: 280px; height: 200px; padding: 10px; z-index: 1002; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+}
+#emoji-container.active {
+    opacity: 1; transform: translateY(0); pointer-events: auto;
+}
+#emoji-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 5px; width: 100%; height: 100%; overflow-y: auto;
+}
+#emoji-grid span {
+    font-size: 22px; text-align: center; cursor: pointer; border-radius: 4px; transition: background-color var(--transition-speed);
+}
+#emoji-grid span:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+#sticker-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 150px; overflow-y: auto; padding: 5px; background: rgba(255,255,255,0.3); border-radius: 8px;
+}
+.sticker-wrapper {
+    position: relative; width: 100%; aspect-ratio: 1 / 1;
+}
+.sticker-item {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color var(--transition-speed);
+}
+.sticker-item.selected {
+    border-color: var(--accent-color);
+}
+.delete-sticker-btn {
+    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background-color: var(--delete-color); color: white; border: none; border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; opacity: 0; transition: opacity var(--transition-speed); transform: scale(0.9);
+}
+.sticker-wrapper:hover .delete-sticker-btn {
+    opacity: 1; transform: scale(1);
+}
+.sticker-placeholder {
+    grid-column: 1 / -1; text-align: center; color: #888; align-self: center;
+}
+.modal-backdrop {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1003; opacity: 1; transition: opacity var(--transition-speed);
+}
+.modal-backdrop.hidden {
+    opacity: 0; pointer-events: none;
+}
+.modal-content {
+    width: 320px; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+}
+.modal-content h3 { margin: 0; }
+.modal-content p { font-size: 13px; margin: 0; color: #555; line-height: 1.5; }
+.modal-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+}
+.modal-actions button {
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+}
+.modal-actions button:first-child { background: #eee; }
+.modal-actions button:last-child { background: var(--accent-color); color: white; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.4); }

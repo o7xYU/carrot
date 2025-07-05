@@ -1,0 +1,8 @@
+{
+  "display_name": "胡萝卜快捷输入面板",
+  "version": "1.0",
+  "manifest_version": 2,
+  "description": "一个提供多种格式化输入选项的浮动面板，由一个可拖拽的胡萝卜按钮触发。",
+  "js": ["script.js"],
+  "css": ["style.css"]
+}
