@@ -1,4 +1,4 @@
-/* style.css (v1.6) */
+/* style.css (v1.7) */
 :root {
     --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
     --cip-border-color: rgba(255, 255, 255, 0.4);
@@ -10,7 +10,34 @@
     --cip-border-radius: 12px;
     --cip-transition-speed: 0.3s;
 }
-/* ... (大部分样式与上一版相同) ... */
+
+#cip-carrot-button {
+    position: fixed;
+    /* --- 修改点: 将默认位置改为右上角 --- */
+    top: 80px;
+    right: 20px;
+    /* --- 移除旧的 bottom 属性 --- */
+    width: 50px;
+    height: 50px;
+    background: var(--cip-accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: move;
+    z-index: 1000;
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+#cip-carrot-button.is-dragging {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* 其他样式保持不变，为简洁省略，你只需复制上面的 #cip-carrot-button 规则替换旧的即可 */
+/* 为了方便，下面提供完整的CSS文件 */
+
 .cip-frosted-glass {
     background: var(--cip-panel-bg-color);
     backdrop-filter: blur(15px);
@@ -18,28 +45,6 @@
     border-radius: var(--cip-border-radius);
     border: 1px solid var(--cip-border-color);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-}
-#cip-carrot-button {
-    /* 改为相对定位，以便在新的父容器中占位，同时又能通过fixed实现拖拽 */
-    position: relative; 
-    width: 40px; /* 在手机端稍微小一点 */
-    height: 40px;
-    background: var(--cip-accent-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    cursor: move;
-    z-index: 1000;
-    transition: transform 0.2s ease;
-    user-select: none;
-    /* 为了能被拖拽，脚本会动态修改为 'fixed' */
-    flex-shrink: 0; /* 防止在flex布局中被压缩 */
-}
-#cip-carrot-button.is-dragging {
-    position: fixed; /* 拖拽时变为fixed */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 #cip-carrot-button:hover { transform: scale(1.1); }
 #cip-input-panel {
