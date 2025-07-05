@@ -1,29 +1,27 @@
-// script.js (版本 1.3 - 致命错误修复 & 功能修正)
+// script.js (v1.4)
 (function () {
-    // 0. 检查插件是否已加载，防止重复注入
-    if (document.getElementById('cip-carrot-button')) {
-        return;
-    }
+    if (document.getElementById('cip-carrot-button')) return;
 
-    // 1. 创建所有UI元素
     function createUI() {
-        const carrotButton = document.createElement('div');
-        carrotButton.id = 'cip-carrot-button';
-        carrotButton.innerHTML = '🥕';
-        carrotButton.title = '兔子不吃胡萝卜';
+        const create = (tag, id, className, html) => {
+            const el = document.createElement(tag);
+            if (id) el.id = id;
+            if (className) el.className = className;
+            if (html) el.innerHTML = html;
+            return el;
+        };
+        const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
+        carrotButton.title = '胡萝卜快捷输入';
 
-        const inputPanel = document.createElement('div');
-        inputPanel.id = 'cip-input-panel';
-        inputPanel.className = 'cip-frosted-glass';
-        inputPanel.innerHTML = `
+        const inputPanel = create('div', 'cip-input-panel', 'cip-frosted-glass', `
             <nav id="cip-panel-tabs">
                 <button class="cip-tab-button active" data-tab="text">文字信息</button>
                 <button class="cip-tab-button" data-tab="voice">语音</button>
                 <button class="cip-tab-button" data-tab="stickers">表情包</button>
             </nav>
-            <div id="cip-format-display">格式: "内容"</div>
+            <div id="cip-format-display"></div>
             <div id="cip-panel-content">
-                <div id="cip-text-content" class="cip-content-section active">
+                <div id="cip-text-content" class="cip-content-section">
                     <div class="cip-sub-options-container">
                         <button class="cip-sub-option-btn active" data-type="plain">纯文本</button>
                         <button class="cip-sub-option-btn" data-type="image">图片</button>
@@ -41,25 +39,19 @@
                     <div id="cip-sticker-categories" class="cip-sub-options-container">
                         <button id="cip-add-category-btn" class="cip-sub-option-btn">+</button>
                     </div>
-                    <div id="cip-sticker-grid"><div class="cip-sticker-placeholder">请先添加分类...</div></div>
+                    <div id="cip-sticker-grid"></div>
                 </div>
             </div>
             <div id="cip-panel-footer">
-                <div id="cip-emoji-picker-btn">
-                    😊
-                    <div id="cip-emoji-container" class="cip-frosted-glass"><div id="cip-emoji-grid"></div></div>
-                </div>
+                <div id="cip-emoji-picker-btn">😊<div id="cip-emoji-container" class="cip-frosted-glass"><div id="cip-emoji-grid"></div></div></div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
                     <button id="cip-insert-button">插 入</button>
                 </div>
             </div>
-        `;
+        `);
 
-        const addCategoryModal = document.createElement('div');
-        addCategoryModal.id = 'cip-add-category-modal';
-        addCategoryModal.className = 'cip-modal-backdrop hidden';
-        addCategoryModal.innerHTML = `
+        const addCategoryModal = create('div', 'cip-add-category-modal', 'cip-modal-backdrop hidden', `
             <div class="cip-modal-content cip-frosted-glass">
                 <h3>添加新分类</h3>
                 <input type="text" id="cip-new-category-name" placeholder="输入分类名称">
@@ -67,64 +59,41 @@
                     <button id="cip-cancel-category-btn">取消</button>
                     <button id="cip-save-category-btn">保存</button>
                 </div>
-            </div>`;
+            </div>`);
 
-        const addStickersModal = document.createElement('div');
-        addStickersModal.id = 'cip-add-stickers-modal';
-        addStickersModal.className = 'cip-modal-backdrop hidden';
-        addStickersModal.innerHTML = `
+        const addStickersModal = create('div', 'cip-add-stickers-modal', 'cip-modal-backdrop hidden', `
             <div class="cip-modal-content cip-frosted-glass">
-                <h3 id="cip-add-sticker-title">为「默认」分类添加表情包</h3>
-                <p>每行一个，格式为：<br><code>表情包描述:图片链接</code> (冒号为英文冒号)</p>
+                <h3 id="cip-add-sticker-title"></h3>
+                <p>每行一个，格式为：<br><code>表情包描述:图片链接</code></p>
                 <textarea id="cip-new-stickers-input" placeholder="可爱猫猫:https://example.com/cat.png\n狗狗点头:https://example.com/dog.gif"></textarea>
                 <div class="cip-modal-actions">
                     <button id="cip-cancel-stickers-btn">取消</button>
                     <button id="cip-save-stickers-btn">保存</button>
                 </div>
-            </div>`;
+            </div>`);
 
         return { carrotButton, inputPanel, addCategoryModal, addStickersModal };
     }
 
     const { carrotButton, inputPanel, addCategoryModal, addStickersModal } = createUI();
-    document.body.appendChild(carrotButton);
-    document.body.appendChild(inputPanel);
-    document.body.appendChild(addCategoryModal);
-    document.body.appendChild(addStickersModal);
+    document.body.appendChild(carrotButton); document.body.appendChild(inputPanel);
+    document.body.appendChild(addCategoryModal); document.body.appendChild(addStickersModal);
 
     const get = (id) => document.getElementById(id);
-    const query = (selector) => document.querySelector(selector);
-    const queryAll = (selector) => document.querySelectorAll(selector);
-    
-    const tabButtons = queryAll('.cip-tab-button');
-    const contentSections = queryAll('.cip-content-section');
-    const formatDisplay = get('cip-format-display');
-    const insertButton = get('cip-insert-button');
-    const recallButton = get('cip-recall-button');
-    const mainInput = get('cip-main-input');
-    const voiceDurationInput = get('cip-voice-duration');
-    const voiceMessageInput = get('cip-voice-message');
-    const stickerCategoriesContainer = get('cip-sticker-categories');
-    const addCategoryBtn = get('cip-add-category-btn');
-    const stickerGrid = get('cip-sticker-grid');
-    const emojiPickerBtn = get('cip-emoji-picker-btn');
-    const emojiContainer = get('cip-emoji-container');
-    const emojiGrid = get('cip-emoji-grid');
-    const saveCategoryBtn = get('cip-save-category-btn');
-    const cancelCategoryBtn = get('cip-cancel-category-btn');
-    const newCategoryNameInput = get('cip-new-category-name');
-    const addStickerTitle = get('cip-add-sticker-title');
-    const saveStickersBtn = get('cip-save-stickers-btn');
-    const cancelStickersBtn = get('cip-cancel-stickers-btn');
-    const newStickersInput = get('cip-new-stickers-input');
+    const queryAll = (sel) => document.querySelectorAll(sel);
+
+    const formatDisplay = get('cip-format-display'), insertButton = get('cip-insert-button'), recallButton = get('cip-recall-button');
+    const mainInput = get('cip-main-input'), voiceDurationInput = get('cip-voice-duration'), voiceMessageInput = get('cip-voice-message');
+    const stickerCategoriesContainer = get('cip-sticker-categories'), addCategoryBtn = get('cip-add-category-btn'), stickerGrid = get('cip-sticker-grid');
+    const emojiPickerBtn = get('cip-emoji-picker-btn'), emojiContainer = get('cip-emoji-container'), emojiGrid = get('cip-emoji-grid');
+    const saveCategoryBtn = get('cip-save-category-btn'), cancelCategoryBtn = get('cip-cancel-category-btn'), newCategoryNameInput = get('cip-new-category-name');
+    const addStickerTitle = get('cip-add-sticker-title'), saveStickersBtn = get('cip-save-stickers-btn'), cancelStickersBtn = get('cip-cancel-stickers-btn'), newStickersInput = get('cip-new-stickers-input');
 
     let currentTab = 'text', currentTextSubType = 'plain', stickerData = {}, currentStickerCategory = '', selectedSticker = null;
 
     const formatTemplates = {
         text: { plain: '"{content}"', image: '"[{content}.jpg]"', video: '"[{content}.mp4]"', music: '"[{content}.mp3]"', post: '"[{content}.link]"' },
-        voice: '={duration}|{message}=',
-        stickers: '![{desc}]({url})',
-        recall: '--'
+        voice: '={duration}|{message}=', stickers: '![{desc}]({url})', recall: '--'
     };
     const commonEmojis = ['😊','😂','❤️','👍','🤔','😭','😍','🎉','🙏','🔥','💯','✨','😁','😅','🤣','🥰','🤩','🥳','😉','😋','😎','😢','😱','😠','😇','🥺','🤡','🤖','👻','💀','🎃','😺','😸','😹','😻','😼','👋','👌','✌️','🤞','🤟','🤙','👈','👉','👆','👇','💪','👀','🧠','💧','💨','☀️','🌙','⭐','🌸','🌹','🍓','🥕','🍕','🍔'];
 
@@ -135,34 +104,23 @@
             case 'voice': formatDisplay.textContent = `格式: ${formatTemplates.voice.replace('{duration}', `时长'`).replace('{message}', '内容')}`; break;
             case 'stickers':
                 formatDisplay.textContent = `格式: ![描述](链接)`;
-                const currentCatBtn = query(`.cip-sticker-category-btn[data-category="${currentStickerCategory}"]`);
+                const currentCatBtn = get('cip-input-panel').querySelector(`.cip-sticker-category-btn[data-category="${currentStickerCategory}"]`);
                 if (currentCatBtn) {
-                    const addStickersIcon = document.createElement('i');
-                    addStickersIcon.textContent = ' ➕'; addStickersIcon.className = 'cip-category-action-icon'; addStickersIcon.title = '向此分类添加表情包';
-                    addStickersIcon.onclick = (e) => { e.stopPropagation(); openAddStickersModal(currentStickerCategory); };
-                    currentCatBtn.appendChild(addStickersIcon);
-                    const deleteCategoryIcon = document.createElement('i');
-                    deleteCategoryIcon.textContent = ' 🗑️'; deleteCategoryIcon.className = 'cip-category-action-icon cip-delete-category-btn'; deleteCategoryIcon.title = '删除此分类';
-                    deleteCategoryIcon.onclick = (e) => {
-                        e.stopPropagation();
-                        if (confirm(`你确定要删除「${currentStickerCategory}」这个分类及其所有表情包吗？`)) {
-                            delete stickerData[currentStickerCategory];
-                            saveStickerData(); renderCategories(); const remaining = Object.keys(stickerData); switchStickerCategory(remaining[0] || '');
-                        }
-                    };
-                    currentCatBtn.appendChild(deleteCategoryIcon);
+                    const addIcon = document.createElement('i'); addIcon.textContent = ' ➕'; addIcon.className = 'cip-category-action-icon'; addIcon.title = '向此分类添加表情包';
+                    addIcon.onclick = (e) => { e.stopPropagation(); openAddStickersModal(currentStickerCategory); };
+                    currentCatBtn.appendChild(addIcon);
+                    const delIcon = document.createElement('i'); delIcon.textContent = ' 🗑️'; delIcon.className = 'cip-category-action-icon cip-delete-category-btn'; delIcon.title = '删除此分类';
+                    delIcon.onclick = (e) => { e.stopPropagation(); if (confirm(`确定删除「${currentStickerCategory}」分类?`)) { delete stickerData[currentStickerCategory]; saveStickerData(); renderCategories(); const rem = Object.keys(stickerData); switchStickerCategory(rem[0] || ''); } };
+                    currentCatBtn.appendChild(delIcon);
                 }
                 break;
         }
     }
     function switchTab(tabName) {
         currentTab = tabName;
-        tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
-        contentSections.forEach(sec => sec.classList.toggle('active', sec.id === `cip-${tabName}-content`));
-        if (tabName === 'stickers') {
-            const firstCategory = Object.keys(stickerData)[0];
-            if (!currentStickerCategory && firstCategory) switchStickerCategory(firstCategory); else switchStickerCategory(currentStickerCategory);
-        }
+        queryAll('.cip-tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+        queryAll('.cip-content-section').forEach(sec => sec.classList.toggle('active', sec.id === `cip-${tabName}-content`));
+        if (tabName === 'stickers') { const first = Object.keys(stickerData)[0]; if (!currentStickerCategory && first) switchStickerCategory(first); else switchStickerCategory(currentStickerCategory); }
         updateFormatDisplay();
     }
     function switchTextSubType(typeName) { currentTextSubType = typeName; queryAll('#cip-text-content .cip-sub-option-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.type === typeName)); updateFormatDisplay(); }
@@ -181,68 +139,58 @@
             const img = document.createElement('img'); img.src = sticker.url; img.title = sticker.desc; img.className = 'cip-sticker-item';
             img.onclick = () => { queryAll('.cip-sticker-item.selected').forEach(item => item.classList.remove('selected')); img.classList.add('selected'); selectedSticker = sticker; };
             const deleteBtn = document.createElement('button'); deleteBtn.innerHTML = '&times;'; deleteBtn.className = 'cip-delete-sticker-btn'; deleteBtn.title = '删除这个表情包';
-            deleteBtn.onclick = (e) => { e.stopPropagation(); if (confirm(`确定要删除表情包「${sticker.desc}」吗？`)) { stickerData[categoryName].splice(index, 1); saveStickerData(); renderStickers(categoryName); } };
+            deleteBtn.onclick = (e) => { e.stopPropagation(); if (confirm(`确定删除表情「${sticker.desc}」?`)) { stickerData[categoryName].splice(index, 1); saveStickerData(); renderStickers(categoryName); } };
             wrapper.appendChild(img); wrapper.appendChild(deleteBtn); stickerGrid.appendChild(wrapper);
         });
     }
     function renderCategories() {
         queryAll('.cip-sticker-category-btn').forEach(btn => btn.remove());
         Object.keys(stickerData).forEach(name => {
-            const btn = document.createElement('button');
-            const textNode = document.createElement('span'); textNode.textContent = name; btn.appendChild(textNode);
+            const btn = document.createElement('button'); const textNode = document.createElement('span'); textNode.textContent = name; btn.appendChild(textNode);
             btn.className = 'cip-sub-option-btn cip-sticker-category-btn'; btn.dataset.category = name; btn.onclick = () => switchStickerCategory(name);
             stickerCategoriesContainer.appendChild(btn);
         });
     }
-    
     function insertIntoSillyTavern(text) {
-        const stTextarea = query('#send_textarea');
+        const stTextarea = document.querySelector('#send_textarea');
         if (stTextarea) {
             stTextarea.value += (stTextarea.value.trim() ? '\n' : '') + text;
-            stTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-            stTextarea.focus();
-        } else {
-            alert('未能找到SillyTavern的输入框！');
-        }
+            stTextarea.dispatchEvent(new Event('input', { bubbles: true })); stTextarea.focus();
+        } else { alert('未能找到SillyTavern的输入框！'); }
     }
-    
     function saveStickerData() { localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData)); }
     function loadStickerData() { const data = localStorage.getItem('cip_sticker_data'); if (data) stickerData = JSON.parse(data); }
     function toggleModal(modalId, show) { get(modalId).classList.toggle('hidden', !show); }
     function openAddStickersModal(categoryName) {
-        get('cip-add-sticker-title').textContent = `为「${categoryName}」分类添加表情包`;
+        addStickerTitle.textContent = `为「${categoryName}」分类添加表情包`;
         newStickersInput.value = ''; addStickersModal.dataset.currentCategory = categoryName; toggleModal('cip-add-stickers-modal', true); newStickersInput.focus();
     }
     function populateEmojiPicker() {
         emojiGrid.innerHTML = '';
         commonEmojis.forEach(emoji => {
-            const emojiSpan = document.createElement('span'); emojiSpan.textContent = emoji;
-            emojiSpan.addEventListener('click', () => {
-                let targetTextarea = (currentTab === 'text') ? mainInput : voiceMessageInput;
-                if (targetTextarea) {
-                    const start = targetTextarea.selectionStart; const end = targetTextarea.selectionEnd; const text = targetTextarea.value;
-                    targetTextarea.value = text.substring(0, start) + emoji + text.substring(end);
-                    targetTextarea.focus(); targetTextarea.selectionEnd = start + emoji.length;
+            const span = document.createElement('span'); span.textContent = emoji;
+            span.addEventListener('click', () => {
+                const target = (currentTab === 'text') ? mainInput : voiceMessageInput;
+                if (target) {
+                    const { selectionStart, selectionEnd, value } = target;
+                    target.value = value.substring(0, selectionStart) + emoji + value.substring(selectionEnd);
+                    target.focus(); target.selectionEnd = selectionStart + emoji.length;
                 }
                 emojiContainer.classList.remove('active');
             });
-            emojiGrid.appendChild(emojiSpan);
+            emojiGrid.appendChild(span);
         });
     }
 
-    tabButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
-    queryAll('#cip-text-content .cip-sub-option-btn').forEach(button => button.addEventListener('click', () => switchTextSubType(button.dataset.type)));
+    queryAll('.cip-tab-button').forEach(button => button.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab)));
+    queryAll('#cip-text-content .cip-sub-option-btn').forEach(button => button.addEventListener('click', (e) => switchTextSubType(e.currentTarget.dataset.type)));
     recallButton.addEventListener('click', () => insertIntoSillyTavern(formatTemplates.recall));
     insertButton.addEventListener('click', () => {
         let formattedText = '';
         switch (currentTab) {
             case 'text': if (mainInput.value.trim()) formattedText = formatTemplates.text[currentTextSubType].replace('{content}', mainInput.value); break;
             case 'voice': if (voiceDurationInput.value.trim() && voiceMessageInput.value.trim()) formattedText = formatTemplates.voice.replace('{duration}', voiceDurationInput.value).replace('{message}', voiceMessageInput.value); break;
-            case 'stickers':
-                if (selectedSticker) {
-                    formattedText = formatTemplates.stickers.replace('{desc}', selectedSticker.desc).replace('{url}', selectedSticker.url);
-                }
-                break;
+            case 'stickers': if (selectedSticker) { formattedText = formatTemplates.stickers.replace('{desc}', selectedSticker.desc).replace('{url}', selectedSticker.url); } break;
         }
         if (formattedText) insertIntoSillyTavern(formattedText); else alert('请输入内容或选择一个表情包！');
     });
@@ -268,8 +216,7 @@
     });
 
     function showPanel() {
-        if (inputPanel.classList.contains('active')) return;
-        const btnRect = carrotButton.getBoundingClientRect(); const panelHeight = 380;
+        const btnRect = carrotButton.getBoundingClientRect(); const panelHeight = inputPanel.offsetHeight || 380;
         let top = btnRect.top - panelHeight - 10;
         if (top < 10) top = btnRect.bottom + 10;
         let left = btnRect.left + (btnRect.width / 2) - (inputPanel.offsetWidth / 2);
@@ -280,23 +227,23 @@
     function hidePanel() { inputPanel.classList.remove('active'); }
     carrotButton.addEventListener('click', (e) => { e.stopPropagation(); inputPanel.classList.contains('active') ? hidePanel() : showPanel(); });
     document.addEventListener('click', (e) => {
-        if (inputPanel.classList.contains('active') && !inputPanel.contains(e.target) && !carrotButton.contains(e.target)) hidePanel();
-        if (emojiContainer.classList.contains('active') && !emojiContainer.contains(e.target) && !emojiPickerBtn.contains(e.target)) emojiContainer.classList.remove('active');
+        if (!inputPanel.contains(e.target) && !carrotButton.contains(e.target)) hidePanel();
+        if (!emojiContainer.contains(e.target) && !emojiPickerBtn.contains(e.target)) emojiContainer.classList.remove('active');
     });
 
     function saveButtonPosition(top, left) { localStorage.setItem('cip_button_position', JSON.stringify({ top, left })); }
     function loadButtonPosition() {
         const savedPos = JSON.parse(localStorage.getItem('cip_button_position'));
-        if (savedPos && savedPos.top && savedPos.left) { carrotButton.style.top = savedPos.top; carrotButton.style.left = savedPos.left; carrotButton.style.bottom = 'auto'; carrotButton.style.right = 'auto'; }
+        if (savedPos?.top && savedPos?.left) { carrotButton.style.top = savedPos.top; carrotButton.style.left = savedPos.left; carrotButton.style.bottom = 'auto'; carrotButton.style.right = 'auto'; }
     }
     carrotButton.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
-        const offsetX = e.clientX - carrotButton.getBoundingClientRect().left; const offsetY = e.clientY - carrotButton.getBoundingClientRect().top;
+        const offsetX = e.clientX - carrotButton.getBoundingClientRect().left, offsetY = e.clientY - carrotButton.getBoundingClientRect().top;
         const onMouseMove = (moveEvent) => {
-            let newLeft = moveEvent.clientX - offsetX; let newTop = moveEvent.clientY - offsetY;
+            let newLeft = moveEvent.clientX - offsetX, newTop = moveEvent.clientY - offsetY;
             newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - carrotButton.offsetWidth));
             newTop = Math.max(0, Math.min(newTop, window.innerHeight - carrotButton.offsetHeight));
-            carrotButton.style.left = `${newLeft}px`; carrotButton.style.top = `${newTop}px`; carrotButton.style.bottom = 'auto'; carrotButton.style.right = 'auto';
+            carrotButton.style.left = `${newLeft}px`; carrotButton.style.top = `${newTop}px`;
         };
         const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); saveButtonPosition(carrotButton.style.top, carrotButton.style.left); };
         document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
@@ -308,6 +255,5 @@
         switchStickerCategory(firstCategory || '');
         switchTab('text');
     }
-
     init();
 })();
