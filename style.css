@@ -1,9 +1,9 @@
 /* style.css (v1.7) */
 :root {
-    --cip-panel-bg-color: rgba(255, 255, 255, 0.6);
+    --cip-panel-bg-color: rgba(255, 255, 255, 0.8);
     --cip-border-color: rgba(255, 255, 255, 0.4);
     --cip-text-color: #333;
-    --cip-accent-color: #ff7f50;
+    --cip-accent-color: rgba(255, 127, 80, 0);
     --cip-active-bg-color: rgba(255, 127, 80, 0.3);
     --cip-input-bg-color: rgba(255, 255, 255, 0.5);
     --cip-delete-color: #e74c3c;
