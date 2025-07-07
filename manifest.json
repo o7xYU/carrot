@@ -1,9 +1,9 @@
 {
-  "name": "carrot-input-panel",
-  "display_name": "兔子不吃胡萝卜",
-  "version": "1.4/由BunnY制作，bunnyhole lab专供",
+  "name": "custom-qr-plugin",
+  "display_name": "自定义QR插件",
+  "version": "1.0/BunnY制造",
   "manifest_version": 2,
-  "description": "一个提供多种格式化输入选项的浮动面板，由一个可拖拽的胡萝卜按钮触发。",
+  "description": "一个完全可自定义的快捷输入面板。您可以自由编辑每个功能块的插入格式。",
   "js": ["script.js"],
   "css": ["style.css"]
 }
