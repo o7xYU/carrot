@@ -271,26 +271,34 @@ emoji-picker {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1003;
   opacity: 1;
   transition: opacity var(--cip-transition-speed);
+  /* 添加内边距防止内容贴边 */
+  padding: 20px;
+  box-sizing: border-box;
+  /* 确保在移动设备上正确显示 */
+  overflow-y: auto;
 }
 .cip-modal-backdrop.hidden {
   opacity: 0;
   pointer-events: none;
 }
 .cip-modal-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   width: 320px;
+  max-width: calc(100vw - 40px); /* 确保不超出屏幕宽度 */
+  max-height: calc(100vh - 40px); /* 确保不超出屏幕高度 */
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  max-width: 90vw;
-  box-sizing: border-box;
+  /* 添加滚动条以防内容过多 */
+  overflow-y: auto;
+  /* 确保弹窗在视口中居中 */
+  margin: auto;
 }
 .cip-modal-content h3 {
   margin: 0;
@@ -318,4 +326,30 @@ emoji-picker {
 .cip-modal-actions button:last-child {
   background: var(--cip-accent-color);
   color: white;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .cip-modal-backdrop {
+    padding: 10px;
+  }
+
+  .cip-modal-content {
+    width: 100%;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 100px); /* 留出更多空间给系统UI */
+    padding: 15px;
+  }
+
+  /* 减小添加表情包时的文本框高度 */
+  #cip-new-stickers-input {
+    min-height: 60px; /* 在手机上减小高度 */
+    max-height: 150px;
+  }
+
+  /* 确保弹窗按钮在手机上更容易点击 */
+  .cip-modal-actions button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
 }
