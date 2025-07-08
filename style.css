@@ -37,6 +37,18 @@
   z-index: 1000;
   transition: transform 0.2s ease;
   user-select: none;
+  touch-action: none; /* 防止手机上的默认触摸行为 */
+}
+
+/* 手机端按钮优化 */
+@media (max-width: 768px) {
+  #cip-carrot-button {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+    top: 60px;
+    right: 15px;
+  }
 }
 
 #cip-carrot-button.is-dragging {
@@ -49,17 +61,31 @@
   position: fixed;
   width: 350px;
   max-width: 90vw;
+  max-height: 90vh;
   display: none;
   flex-direction: column;
   z-index: 1001;
   opacity: 0;
   transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
   transform: scale(0.95);
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 #cip-input-panel.active {
   display: flex;
   opacity: 1;
   transform: scale(1);
+}
+
+/* 手机端主面板优化 */
+@media (max-width: 768px) {
+  #cip-input-panel {
+    width: calc(100vw - 20px);
+    max-width: none;
+    max-height: 80vh;
+    left: 10px !important;
+    right: 10px;
+  }
 }
 #cip-panel-tabs {
   display: flex;
@@ -208,6 +234,16 @@ emoji-picker {
   position: fixed;
   z-index: 1002;
   display: none;
+  max-width: 90vw;
+  max-height: 50vh;
+}
+
+/* 手机端emoji picker优化 */
+@media (max-width: 768px) {
+  emoji-picker {
+    max-width: calc(100vw - 20px);
+    max-height: 60vh;
+  }
 }
 #cip-sticker-grid {
   display: grid;
@@ -277,27 +313,75 @@ emoji-picker {
   z-index: 1003;
   opacity: 1;
   transition: opacity var(--cip-transition-speed);
-  /* 添加内边距防止内容贴边 */
   padding: 20px;
   box-sizing: border-box;
-  /* 确保在移动设备上正确显示 */
-  overflow-y: auto;
 }
 .cip-modal-backdrop.hidden {
-  display: none !important;
+  opacity: 0;
+  pointer-events: none;
 }
 .cip-modal-content {
-  width: 320px;
-  max-width: calc(100vw - 40px); /* 确保不超出屏幕宽度 */
-  max-height: calc(100vh - 40px); /* 确保不超出屏幕高度 */
+  width: 100%;
+  max-width: 320px;
+  max-height: 80vh;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  /* 添加滚动条以防内容过多 */
-  overflow-y: auto;
-  /* 确保弹窗在视口中居中 */
   margin: auto;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* 手机端特别优化 */
+@media (max-width: 768px) {
+  .cip-modal-backdrop {
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .cip-modal-content {
+    width: calc(100% - 20px);
+    max-width: none;
+    max-height: 90vh;
+    padding: 15px;
+    margin: 0;
+  }
+
+  /* 确保在小屏幕上文本框和按钮大小合适 */
+  .cip-modal-content input,
+  .cip-modal-content textarea {
+    font-size: 16px; /* 防止iOS放大 */
+    min-height: 44px; /* iOS推荐的最小触控大小 */
+    -webkit-appearance: none; /* 移除iOS默认样式 */
+  }
+
+  .cip-modal-actions button {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+  }
+
+  /* 手机端主面板内容区域滚动优化 */
+  #cip-panel-content {
+    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+  }
+
+  #cip-sticker-grid {
+    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+  }
+
+  /* 确保所有输入框在手机上都有合适的大小 */
+  #cip-main-input,
+  #cip-voice-message,
+  #cip-bunny-input,
+  #cip-new-stickers-input,
+  #cip-voice-duration,
+  #cip-new-category-name {
+    font-size: 16px; /* 防止iOS放大 */
+    -webkit-appearance: none; /* 移除iOS默认样式 */
+  }
 }
 .cip-modal-content h3 {
   margin: 0;
@@ -325,53 +409,4 @@ emoji-picker {
 .cip-modal-actions button:last-child {
   background: var(--cip-accent-color);
   color: white;
-}
-
-/* 移动端优化 */
-@media (max-width: 768px) {
-  .cip-modal-backdrop {
-    padding: 15px;
-    /* 使用安全区域内边距 */
-    padding-top: max(15px, env(safe-area-inset-top));
-    padding-bottom: max(15px, env(safe-area-inset-bottom));
-  }
-
-  .cip-modal-content {
-    width: 100%;
-    max-width: calc(100vw - 30px);
-    max-height: calc(100vh - 120px); /* 留出更多空间给系统UI和安全区域 */
-    padding: 15px;
-    /* 确保在小屏幕上也能看到完整内容 */
-    position: relative;
-  }
-
-  /* 减小添加表情包时的文本框高度 */
-  #cip-new-stickers-input {
-    min-height: 60px;
-    max-height: 120px;
-    font-size: 16px; /* 防止iOS自动缩放 */
-  }
-
-  /* 输入框样式优化 */
-  #cip-new-category-name {
-    font-size: 16px; /* 防止iOS自动缩放 */
-  }
-
-  /* 确保弹窗按钮在手机上更容易点击 */
-  .cip-modal-actions button {
-    padding: 12px 24px;
-    font-size: 16px;
-    min-height: 44px; /* iOS推荐的最小触控目标尺寸 */
-  }
-
-  /* 弹窗标题和段落的间距调整 */
-  .cip-modal-content h3 {
-    margin-bottom: 10px;
-    font-size: 18px;
-  }
-
-  .cip-modal-content p {
-    margin-bottom: 10px;
-    font-size: 14px;
-  }
 }
