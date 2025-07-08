@@ -1,4 +1,4 @@
-// script.js (v2.1 - 动态调整胡萝卜按钮和面板位置，适配手机端)
+// script.js (v1.9 - 新增BUNNY对话 & 插入后清空)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -8,7 +8,7 @@
     pickerScript.src = 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
     document.head.appendChild(pickerScript);
 
-    // --- 1. 创建所有UI元素 ---
+    // --- 1. 创建所有UI元素 (已修改) ---
     function createUI() {
         const create = (tag, id, className, html) => {
             const el = document.createElement(tag);
@@ -19,14 +19,12 @@
         };
         const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
         carrotButton.title = '胡萝卜快捷输入';
-        carrotButton.style.display = 'flex';
 
         const inputPanel = create('div', 'cip-input-panel', 'cip-frosted-glass', `
             <nav id="cip-panel-tabs">
                 <button class="cip-tab-button active" data-tab="text">文字信息</button>
                 <button class="cip-tab-button" data-tab="voice">语音</button>
-                <button class="cip-tab-button" data-tab="bunny">BUNNY</button>
-                <button class="cip-tab-button" data-tab="stickers">表情包</button>
+                <button class="cip-tab-button" data-tab="bunny">BUNNY</button> <button class="cip-tab-button" data-tab="stickers">表情包</button>
             </nav>
             <div id="cip-format-display"></div>
             <div id="cip-panel-content">
@@ -58,23 +56,23 @@
         return;
     }
 
-    // --- 3. 获取所有元素的引用 ---
+    // --- 3. 获取所有元素的引用 (已修改) ---
     const get = (id) => document.getElementById(id);
     const queryAll = (sel) => document.querySelectorAll(sel);
     const formatDisplay = get('cip-format-display'), insertButton = get('cip-insert-button'), recallButton = get('cip-recall-button');
     const mainInput = get('cip-main-input'), voiceDurationInput = get('cip-voice-duration'), voiceMessageInput = get('cip-voice-message');
-    const bunnyInput = get('cip-bunny-input');
+    const bunnyInput = get('cip-bunny-input'); // 新增BUNNY输入框的引用
     const stickerCategoriesContainer = get('cip-sticker-categories'), addCategoryBtn = get('cip-add-category-btn'), stickerGrid = get('cip-sticker-grid');
     const emojiPickerBtn = get('cip-emoji-picker-btn');
     const saveCategoryBtn = get('cip-save-category-btn'), cancelCategoryBtn = get('cip-cancel-category-btn'), newCategoryNameInput = get('cip-new-category-name');
     const addStickerTitle = get('cip-add-sticker-title'), saveStickersBtn = get('cip-save-stickers-btn'), cancelStickersBtn = get('cip-cancel-stickers-btn'), newStickersInput = get('cip-new-stickers-input');
 
-    // --- 4. 核心逻辑与事件监听 ---
+    // --- 4. 核心逻辑与事件监听 (已修改) ---
     let currentTab = 'text', currentTextSubType = 'plain', stickerData = {}, currentStickerCategory = '', selectedSticker = null;
     const formatTemplates = {
         text: { plain: '“{content}”', image: '“[{content}.jpg]”', video: '“[{content}.mp4]”', music: '“[{content}.mp3]”', post: '“[{content}.link]”' },
         voice: "={duration}'|{message}=",
-        bunny: "({content})",
+        bunny: "({content})", // 新增BUNNY格式模板
         stickers: "!{desc}|{url}!",
         recall: '--'
     };
@@ -85,7 +83,7 @@
         switch(currentTab){
             case "text":formatDisplay.textContent=`格式: ${formatTemplates.text[currentTextSubType].replace("{content}","内容")}`;break;
             case "voice":formatDisplay.textContent="格式: =数字'|内容=";break;
-            case "bunny":formatDisplay.textContent="格式: (内容)";break;
+            case "bunny":formatDisplay.textContent="格式: (内容)";break; // 新增BUNNY格式显示
             case "stickers":
                 formatDisplay.textContent="格式: !描述|链接!";
                 if(e){
@@ -97,31 +95,22 @@
         }
     }
     
+    // ... (大部分函数未修改，为简洁省略)
     function switchTab(t){currentTab=t,queryAll(".cip-tab-button").forEach(e=>e.classList.toggle("active",e.dataset.tab===t)),queryAll(".cip-content-section").forEach(e=>e.classList.toggle("active",e.id===`cip-${t}-content`));const o=Object.keys(stickerData)[0];"stickers"===t&&(!currentStickerCategory&&o?switchStickerCategory(o):switchStickerCategory(currentStickerCategory)),updateFormatDisplay()}
     function switchTextSubType(t){currentTextSubType=t,queryAll("#cip-text-content .cip-sub-option-btn").forEach(e=>e.classList.toggle("active",e.dataset.type===t)),updateFormatDisplay()}
     function switchStickerCategory(t){currentStickerCategory=t,queryAll(".cip-sticker-category-btn").forEach(e=>e.classList.toggle("active",e.dataset.category===t)),renderStickers(t),selectedSticker=null,updateFormatDisplay()}
-    function renderStickers(t){if(stickerGrid.innerHTML="",!t||!stickerData[t])return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">请先选择或添加一个分类...</div>');const o=stickerData[t];if(0===o.length)return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">这个分类还没有表情包...</div>');o.forEach((t,o)=>{const e=document.createElement("div");e.className="cip-sticker-wrapper";const i=document.createElement("img");i.src=t.url,i.title=t.desc,i.className="cip-sticker-item",i.onclick=()=>{queryAll(".cip-sticker-item.selected").forEach(e=>e.classList.remove("selected")),i.classList.add("selected"),selectedSticker=t};const n=document.createElement("button");n.innerHTML="×",n.className="cip-delete-sticker-btn",n.title="删除这个表情包",n.onclick=e=>{e.stopPropagation(),confirm(`确定删除表情「${t.desc}」?`)&&(stickerData[currentStickerCategory].splice(o,1),saveStickerData(),renderStickers(currentStickerCategory))},e.appendChild(i),e.appendChild(n),stickerGrid.appendChild(e)})}
+    function renderStickers(t){if(stickerGrid.innerHTML="",!t||!stickerData[t])return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">请先选择或添加一个分类...</div>');const o=stickerData[t];if(0===o.length)return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">这个分类还没有表情包...</div>');o.forEach((t,o)=>{const e=document.createElement("div");e.className="cip-sticker-wrapper";const i=document.createElement("img");i.src=t.url,i.title=t.desc,i.className="cip-sticker-item",i.onclick=()=>{queryAll(".cip-sticker-item.selected").forEach(e=>e.classList.remove("selected")),i.classList.add("selected"),selectedSticker=t};const n=document.createElement("button");n.innerHTML="&times;",n.className="cip-delete-sticker-btn",n.title="删除这个表情包",n.onclick=e=>{e.stopPropagation(),confirm(`确定删除表情「${t.desc}」?`)&&(stickerData[currentStickerCategory].splice(o,1),saveStickerData(),renderStickers(currentStickerCategory))},e.appendChild(i),e.appendChild(n),stickerGrid.appendChild(e)})}
     function renderCategories(){queryAll(".cip-sticker-category-btn").forEach(e=>e.remove()),Object.keys(stickerData).forEach(t=>{const o=document.createElement("button"),e=document.createElement("span");e.textContent=t,o.appendChild(e),o.className="cip-sub-option-btn cip-sticker-category-btn",o.dataset.category=t,o.onclick=()=>switchStickerCategory(t),stickerCategoriesContainer.appendChild(o)})}
     function insertIntoSillyTavern(t){const o=document.querySelector("#send_textarea");o?(o.value+=(o.value.trim()?"\n":"")+t,o.dispatchEvent(new Event("input",{bubbles:!0})),o.focus()):alert("未能找到SillyTavern的输入框！")}
     function saveStickerData(){localStorage.setItem("cip_sticker_data",JSON.stringify(stickerData))}function loadStickerData(){const t=localStorage.getItem("cip_sticker_data");t&&(stickerData=JSON.parse(t))}
-    function toggleModal(t, o) {
-    get(t).classList.toggle("hidden", !o);
-}
-
-function openAddStickersModal(t) {
-    addStickerTitle.textContent = `为「${t}」分类添加表情包`;
-    newStickersInput.value = "";
-    addStickersModal.dataset.currentCategory = t;
-    toggleModal("cip-add-stickers-modal", true);
-    newStickersInput.focus();
-}
+    function toggleModal(t,o){get(t).classList.toggle("hidden",!o)}function openAddStickersModal(t){addStickerTitle.textContent=`为「${t}」分类添加表情包`,newStickersInput.value="",addStickersModal.dataset.currentCategory=t,toggleModal("cip-add-stickers-modal",!0),newStickersInput.focus()}
     
     emojiPicker.addEventListener('emoji-click', event => {
         const emoji = event.detail.unicode;
         let target;
         if (currentTab === 'text') target = mainInput;
         else if (currentTab === 'voice') target = voiceMessageInput;
-        else if (currentTab === 'bunny') target = bunnyInput;
+        else if (currentTab === 'bunny') target = bunnyInput; // Emoji也支持BUNNY输入框
         
         if (target) {
             const { selectionStart, selectionEnd, value } = target;
@@ -148,6 +137,7 @@ function openAddStickersModal(t) {
     queryAll('#cip-text-content .cip-sub-option-btn').forEach(button => button.addEventListener('click', (e) => switchTextSubType(e.currentTarget.dataset.type)));
     recallButton.addEventListener('click', () => insertIntoSillyTavern(formatTemplates.recall));
     
+    // --- “插入”按钮逻辑 (已修改) ---
     insertButton.addEventListener('click', () => {
         let formattedText = '';
         let inputToClear = null;
@@ -162,11 +152,11 @@ function openAddStickersModal(t) {
             case 'voice':
                 if (voiceDurationInput.value.trim() && voiceMessageInput.value.trim()) {
                     formattedText = formatTemplates.voice.replace('{duration}', voiceDurationInput.value).replace('{message}', voiceMessageInput.value);
-                    inputToClear = voiceMessageInput;
-                    voiceDurationInput.value = '';
+                    inputToClear = voiceMessageInput; // 清空主要内容
+                    voiceDurationInput.value = ''; // 也清空时长
                 }
                 break;
-            case 'bunny':
+            case 'bunny': // 新增BUNNY插入逻辑
                 if (bunnyInput.value.trim()) {
                     formattedText = formatTemplates.bunny.replace('{content}', bunnyInput.value);
                     inputToClear = bunnyInput;
@@ -175,12 +165,14 @@ function openAddStickersModal(t) {
             case 'stickers':
                 if (selectedSticker) {
                     formattedText = formatTemplates.stickers.replace('{desc}', selectedSticker.desc).replace('{url}', selectedSticker.url);
+                    // 表情包是选择的，不需要清空输入框
                 }
                 break;
         }
         
         if (formattedText) {
             insertIntoSillyTavern(formattedText);
+            // 如果有需要清空的输入框，则清空它
             if (inputToClear) {
                 inputToClear.value = '';
             }
@@ -209,26 +201,16 @@ function openAddStickersModal(t) {
     // --- 5. 交互处理逻辑 ---
     function showPanel() {
         if (inputPanel.classList.contains('active')) return;
-        const panelWidth = inputPanel.offsetWidth || 350;
-        const panelHeight = inputPanel.offsetHeight || 400;
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-
-        let top = (windowHeight - panelHeight) / 2;
-        let left = (windowWidth - panelWidth) / 2;
-
-        // 确保面板不超出屏幕
-        top = Math.max(10, Math.min(top, windowHeight - panelHeight - 10));
-        left = Math.max(10, Math.min(left, windowWidth - panelWidth - 10));
-
-        inputPanel.style.top = `${top}px`;
-        inputPanel.style.left = `${left}px`;
+        const btnRect = carrotButton.getBoundingClientRect();
+        const panelHeight = inputPanel.offsetHeight || 380;
+        let top = btnRect.top - panelHeight - 10;
+        if (top < 10) { top = btnRect.bottom + 10; }
+        let left = btnRect.left + (btnRect.width / 2) - (inputPanel.offsetWidth / 2);
+        left = Math.max(10, Math.min(left, window.innerWidth - inputPanel.offsetWidth - 10));
+        inputPanel.style.top = `${top}px`; inputPanel.style.left = `${left}px`;
         inputPanel.classList.add('active');
     }
-
-    function hidePanel() {
-        inputPanel.classList.remove('active');
-    }
+    function hidePanel() { inputPanel.classList.remove('active'); }
 
     document.addEventListener('click', (e) => {
         if (inputPanel.classList.contains('active') && !inputPanel.contains(e.target) && !carrotButton.contains(e.target)) hidePanel();
@@ -279,22 +261,13 @@ function openAddStickersModal(t) {
             carrotButton.style.position = 'fixed';
             carrotButton.style.top = savedPos.top;
             carrotButton.style.left = savedPos.left;
-        } else {
-            // 默认位置，适配手机端
-            carrotButton.style.top = '20px';
-            carrotButton.style.right = '20px';
         }
-        carrotButton.style.display = 'flex';
     }
 
     function init() {
-        loadStickerData();
-        renderCategories();
-        loadButtonPosition();
+        loadStickerData(); renderCategories(); loadButtonPosition();
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
-        carrotButton.style.display = 'flex';
-        document.body.appendChild(carrotButton);
     }
     init();
 })();
