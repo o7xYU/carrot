@@ -104,7 +104,17 @@
     function renderCategories(){queryAll(".cip-sticker-category-btn").forEach(e=>e.remove()),Object.keys(stickerData).forEach(t=>{const o=document.createElement("button"),e=document.createElement("span");e.textContent=t,o.appendChild(e),o.className="cip-sub-option-btn cip-sticker-category-btn",o.dataset.category=t,o.onclick=()=>switchStickerCategory(t),stickerCategoriesContainer.appendChild(o)})}
     function insertIntoSillyTavern(t){const o=document.querySelector("#send_textarea");o?(o.value+=(o.value.trim()?"\n":"")+t,o.dispatchEvent(new Event("input",{bubbles:!0})),o.focus()):alert("未能找到SillyTavern的输入框！")}
     function saveStickerData(){localStorage.setItem("cip_sticker_data",JSON.stringify(stickerData))}function loadStickerData(){const t=localStorage.getItem("cip_sticker_data");t&&(stickerData=JSON.parse(t))}
-    function toggleModal(t,o){get(t).classList.toggle("hidden",!o)}function openAddStickersModal(t){addStickerTitle.textContent=`为「${t}」分类添加表情包`,newStickersInput.value="",addStickersModal.dataset.currentCategory=t,toggleModal("cip-add-stickers-modal",!0),newStickersInput.focus()}
+    function toggleModal(t, o) {
+    get(t).classList.toggle("hidden", !o);
+}
+
+function openAddStickersModal(t) {
+    addStickerTitle.textContent = `为「${t}」分类添加表情包`;
+    newStickersInput.value = "";
+    addStickersModal.dataset.currentCategory = t;
+    toggleModal("cip-add-stickers-modal", true);
+    newStickersInput.focus();
+}
     
     emojiPicker.addEventListener('emoji-click', event => {
         const emoji = event.detail.unicode;
