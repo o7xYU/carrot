@@ -1,4 +1,4 @@
-/* style.css (v1.8) */
+/* style.css (v1.9) */
 :root {
     --cip-panel-bg-color: rgba(255, 255, 255, 0.8);
     --cip-border-color: rgba(255, 255, 255, 0.4);
@@ -24,9 +24,10 @@
     justify-content: center;
     font-size: 24px;
     cursor: move;
-    z-index: 1000;
+    z-index: 10000; /* 提高z-index，确保按钮在最上层 */
     transition: transform 0.2s ease;
     user-select: none;
+    color: #fff; /* 确保胡萝卜图标颜色可见 */
 }
 
 #cip-carrot-button.is-dragging {
@@ -50,7 +51,7 @@
     max-width: 90vw;
     display: none;
     flex-direction: column;
-    z-index: 1001;
+    z-index: 10001;
     opacity: 0;
     transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
     transform: translate(-50%, -50%) scale(0.95);
@@ -114,7 +115,7 @@
 #cip-insert-button:hover { background-color: #e56a40; }
 emoji-picker {
     position: fixed;
-    z-index: 1002;
+    z-index: 10002;
     display: none;
 }
 #cip-sticker-grid {
@@ -146,7 +147,7 @@ emoji-picker {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1003;
+    z-index: 10003;
     opacity: 1;
     transition: opacity var(--cip-transition-speed);
 }
