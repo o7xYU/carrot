@@ -1,4 +1,4 @@
-/* style.css (v1.6) */
+/* style.css (v1.7 - 移动设备优化版本) */
 :root {
   --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
   --cip-border-color: rgba(255, 255, 255, 0.4);
@@ -9,6 +9,27 @@
   --cip-delete-color: #e74c3c;
   --cip-border-radius: 12px;
   --cip-transition-speed: 0.3s;
+}
+
+/* 移动设备触摸优化 */
+@media (max-width: 768px) {
+  /* 防止意外缩放和改善触摸体验 */
+  .cip-frosted-glass {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* 改善按钮触摸反馈 */
+  .cip-tab-button,
+  .cip-sub-option-btn,
+  #cip-recall-button,
+  #cip-insert-button,
+  .cip-modal-actions button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
 }
 /* ... (大部分样式与上一版相同) ... */
 .cip-frosted-glass {
@@ -37,18 +58,6 @@
   z-index: 1000;
   transition: transform 0.2s ease;
   user-select: none;
-  touch-action: none; /* 防止手机上的默认触摸行为 */
-}
-
-/* 手机端按钮优化 */
-@media (max-width: 768px) {
-  #cip-carrot-button {
-    width: 60px;
-    height: 60px;
-    font-size: 28px;
-    top: 60px;
-    right: 15px;
-  }
 }
 
 #cip-carrot-button.is-dragging {
@@ -61,32 +70,20 @@
   position: fixed;
   width: 350px;
   max-width: 90vw;
-  max-height: 90vh;
   display: none;
   flex-direction: column;
   z-index: 1001;
   opacity: 0;
   transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
   transform: scale(0.95);
+  /* 新增：确保面板不会超出屏幕边界 */
+  max-height: calc(100vh - 20px);
   overflow-y: auto;
-  box-sizing: border-box;
 }
 #cip-input-panel.active {
   display: flex;
   opacity: 1;
   transform: scale(1);
-}
-
-/* 手机端主面板优化 */
-@media (max-width: 768px) {
-  #cip-input-panel {
-    width: calc(100vw - 20px);
-    max-width: none;
-    max-height: 70vh;
-    left: 10px !important;
-    right: 10px;
-    bottom: 20px;
-  }
 }
 #cip-panel-tabs {
   display: flex;
@@ -235,15 +232,17 @@ emoji-picker {
   position: fixed;
   z-index: 1002;
   display: none;
-  max-width: 90vw;
-  max-height: 50vh;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
 }
 
-/* 手机端emoji picker优化 */
+/* 移动设备下的emoji picker优化 */
 @media (max-width: 768px) {
   emoji-picker {
-    max-width: calc(100vw - 20px);
-    max-height: 60vh;
+    width: calc(100vw - 40px) !important;
+    height: auto !important;
+    max-width: 320px;
+    max-height: calc(100vh - 40px);
   }
 }
 #cip-sticker-grid {
@@ -309,11 +308,12 @@ emoji-picker {
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 1003;
   opacity: 1;
   transition: opacity var(--cip-transition-speed);
+  /* 新增：确保在小屏幕上也能正确显示 */
   padding: 20px;
   box-sizing: border-box;
 }
@@ -322,72 +322,95 @@ emoji-picker {
   pointer-events: none;
 }
 .cip-modal-content {
-  width: 100%;
-  max-width: 320px;
-  max-height: 70vh;
+  width: 320px;
+  max-width: 100%;
+  max-height: calc(100vh - 40px);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin: 0 auto 0 auto;
+  /* 新增：防止内容溢出并添加滚动 */
   overflow-y: auto;
+  /* 新增：确保在小屏幕上的响应式调整 */
   box-sizing: border-box;
 }
 
-/* 手机端特别优化 */
+/* 新增：移动设备优化 */
 @media (max-width: 768px) {
-  .cip-modal-backdrop {
-    padding: 10px 10px 20px 10px;
-    align-items: flex-end;
-    justify-content: center;
-  }
   .cip-modal-content {
-    width: calc(100% - 20px);
-    max-width: none;
-    max-height: 70vh;
-    padding: 15px;
+    width: calc(100vw - 40px);
+    max-width: 340px;
     margin: 0;
-    margin-bottom: 0;
+    padding: 16px;
   }
 
-  /* 确保在小屏幕上文本框和按钮大小合适 */
-  .cip-modal-content input,
-  .cip-modal-content textarea {
-    font-size: 16px; /* 防止iOS放大 */
-    min-height: 44px; /* iOS推荐的最小触控大小 */
-    -webkit-appearance: none; /* 移除iOS默认样式 */
+  .cip-modal-backdrop {
+    padding: 10px;
+  }
+}
+
+/* 新增：极小屏幕设备优化 */
+@media (max-width: 480px) {
+  .cip-modal-content {
+    width: calc(100vw - 20px);
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .cip-modal-backdrop {
+    padding: 10px;
+  }
+
+  .cip-modal-content h3 {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .cip-modal-content p {
+    font-size: 12px;
   }
 
   .cip-modal-actions button {
-    min-height: 44px;
-    padding: 12px 16px;
-    font-size: 16px;
-    -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+    padding: 6px 12px;
+    font-size: 14px;
   }
 
-  /* 手机端主面板内容区域滚动优化 */
-  #cip-panel-content {
-    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+  /* 主面板在移动设备上的优化 */
+  #cip-input-panel {
+    width: calc(100vw - 20px) !important;
+    max-width: 350px;
+    max-height: calc(100vh - 40px);
   }
 
-  #cip-sticker-grid {
-    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
-  }
-
-  /* 确保所有输入框在手机上都有合适的大小 */
   #cip-main-input,
   #cip-voice-message,
   #cip-bunny-input,
-  #cip-new-stickers-input,
+  #cip-new-stickers-input {
+    min-height: 60px;
+    font-size: 16px; /* 防止移动端输入框缩放 */
+  }
+
   #cip-voice-duration,
   #cip-new-category-name {
-    font-size: 16px; /* 防止iOS放大 */
-    -webkit-appearance: none; /* 移除iOS默认样式 */
+    font-size: 16px; /* 防止移动端输入框缩放 */
+  }
+
+  .cip-tab-button {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  /* 胡萝卜按钮在移动设备上的优化 */
+  #cip-carrot-button {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+    /* 确保按钮在移动设备上足够大，便于点击 */
+    min-width: 44px;
+    min-height: 44px;
   }
 }
-.cip-modal-content h3 {
-  margin: 0;
-}
+
 .cip-modal-content p {
   font-size: 13px;
   margin: 0;
