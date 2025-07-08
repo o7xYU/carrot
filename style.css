@@ -82,9 +82,10 @@
   #cip-input-panel {
     width: calc(100vw - 20px);
     max-width: none;
-    max-height: 80vh;
+    max-height: 70vh;
     left: 10px !important;
     right: 10px;
+    bottom: 20px;
   }
 }
 #cip-panel-tabs {
@@ -323,12 +324,12 @@ emoji-picker {
 .cip-modal-content {
   width: 100%;
   max-width: 320px;
-  max-height: 80vh;
+  max-height: 70vh;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin: auto;
+  margin: 0 auto 0 auto;
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -336,16 +337,17 @@ emoji-picker {
 /* 手机端特别优化 */
 @media (max-width: 768px) {
   .cip-modal-backdrop {
-    padding: 10px;
+    padding: 10px 10px 20px 10px;
     align-items: flex-end;
     justify-content: center;
   }
   .cip-modal-content {
     width: calc(100% - 20px);
     max-width: none;
-    max-height: 90vh;
+    max-height: 70vh;
     padding: 15px;
     margin: 0;
+    margin-bottom: 0;
   }
 
   /* 确保在小屏幕上文本框和按钮大小合适 */
