@@ -308,12 +308,13 @@ emoji-picker {
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end; /* 改为底部对齐 */
+  justify-content: center; /* 保持水平居中 */
   z-index: 1003;
   opacity: 1;
   transition: opacity var(--cip-transition-speed);
   padding: 20px;
+  padding-bottom: 120px; /* 距离底部120px，为输入框留空间 */
   box-sizing: border-box;
 }
 .cip-modal-backdrop.hidden {
@@ -337,8 +338,9 @@ emoji-picker {
 @media (max-width: 768px) {
   .cip-modal-backdrop {
     padding: 10px;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end; /* 手机端也显示在底部 */
+    justify-content: center; /* 保持水平居中 */
+    padding-bottom: 100px; /* 手机端距离底部100px */
   }
   .cip-modal-content {
     width: calc(100% - 20px);
