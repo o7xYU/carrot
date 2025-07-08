@@ -1,4 +1,4 @@
-// script.js (v2.2 - 采用范例插件的拖拽和定位逻辑)
+// script.js (v2.3 - 修复移动端触摸失效问题)
 (function () {
     // 防止重复注入
     if (document.getElementById('cip-carrot-button')) return;
@@ -55,12 +55,11 @@
     // --- 3. 获取所有元素的引用 ---
     const get = (id) => document.getElementById(id);
     const queryAll = (sel) => document.querySelectorAll(sel);
-    const formatDisplay = get('cip-format-display'), insertButton = get('cip-insert-button'), recallButton = get('cip-recall-button'), mainInput = get('cip-main-input'), voiceDurationInput = get('cip-voice-duration'), voiceMessageInput = get('cip-voice-message'), bunnyInput = get('cip-bunny-input'), stickerCategoriesContainer = get('cip-sticker-categories'), addCategoryBtn = get('cip-add-category-btn'), stickerGrid = get('cip-sticker-grid'), emojiPickerBtn = get('cip-emoji-picker-btn'), saveCategoryBtn = get('cip-save-category-btn'), cancelCategoryBtn = get('cip-cancel-category-btn'), newCategoryNameInput = get('cip-new-category-name'), addStickerTitle = get('cip-add-sticker-title'), saveStickersBtn = get('cip-save-stickers-btn'), cancelStickersBtn = get('cip-cancel-stickers-btn'), newStickersInput = get('cip-new-stickers-input');
+    const formatDisplay = get('cip-format-display'), insertButton = get('cip-insert-button'), recallButton = get('cip-recall-button'), mainInput = get('cip-main-input'), voiceDurationInput = get('cip-voice-duration'), voiceMessageInput = get('cip-voice-message'), bunnyInput = get('cip-bunny-input'), stickerCategoriesContainer = get('cip-sticker-categories'), addCategoryBtn = get('cip-add-category-btn'), stickerGrid = get('cip-sticker-grid'), emojiPickerBtn = get('cip-emoji-picker-btn'), saveCategoryBtn = get('cip-save-category-btn'), cancelCategoryBtn = get('cip-cancel-category-btn'), newCategoryNameInput = get('cip-new-category-name'), addStickerTitle = get('cip-add-sticker-title'), saveStickersBtn = get('cip-save-stickers-btn'), cancelStickersBtn = get('cip-cancel-stickers-btn'), newStickersInput = get('cip-new-stickers-input'), panelDragHandle = get('cip-panel-tabs');
 
-    // --- 4. 核心逻辑与事件监听 ---
+    // --- 4. 核心逻辑 (与之前版本相同) ---
     let currentTab = 'text', currentTextSubType = 'plain', stickerData = {}, currentStickerCategory = '', selectedSticker = null;
     const formatTemplates = { text: { plain: '“{content}”', image: '“[{content}.jpg]”', video: '“[{content}.mp4]”', music: '“[{content}.mp3]”', post: '“[{content}.link]”' }, voice: "={duration}'|{message}=", bunny: "({content})", stickers: "!{desc}|{url}!", recall: '--' };
-
     function updateFormatDisplay(){ queryAll(".cip-category-action-icon").forEach(e=>e.remove()); switch(currentTab){ case "text":formatDisplay.textContent=`格式: ${formatTemplates.text[currentTextSubType].replace("{content}","内容")}`;break; case "voice":formatDisplay.textContent="格式: =数字'|内容=";break; case "bunny":formatDisplay.textContent="格式: (内容)";break; case "stickers":formatDisplay.textContent="格式: !描述|链接!";const t=stickerCategoriesContainer.querySelector(`.cip-sticker-category-btn[data-category="${currentStickerCategory}"]`);if(t){const e=document.createElement("i");e.textContent=" ➕",e.className="cip-category-action-icon",e.title="向此分类添加表情包",e.onclick=t=>{t.stopPropagation(),openAddStickersModal(currentStickerCategory)},t.firstElementChild.appendChild(e);const o=document.createElement("i");o.textContent=" 🗑️",o.className="cip-category-action-icon cip-delete-category-btn",o.title="删除此分类",o.onclick=t=>{t.stopPropagation(),confirm(`确定删除「${currentStickerCategory}」分类及其所有表情包吗?`)&&(delete stickerData[currentStickerCategory],saveStickerData(),renderCategories(),switchStickerCategory(Object.keys(stickerData)[0]||""))},t.firstElementChild.appendChild(o)}break } }
     function switchTab(t){currentTab=t,queryAll(".cip-tab-button").forEach(e=>e.classList.toggle("active",e.dataset.tab===t)),queryAll(".cip-content-section").forEach(e=>e.classList.toggle("active",e.id===`cip-${t}-content`)),"stickers"===t&&!currentStickerCategory&&Object.keys(stickerData).length>0&&switchStickerCategory(Object.keys(stickerData)[0]),updateFormatDisplay()}
     function switchTextSubType(t){currentTextSubType=t,queryAll("#cip-text-content .cip-sub-option-btn").forEach(e=>e.classList.toggle("active",e.dataset.type===t)),updateFormatDisplay()}
@@ -72,10 +71,7 @@
     function loadStickerData(){const t=localStorage.getItem("cip_sticker_data");t&&(stickerData=JSON.parse(t))}
     function toggleModal(t,e){get(t).classList.toggle("hidden",!e)}
     function openAddStickersModal(t){addStickerTitle.textContent=`为「${t}」分类添加表情包`,newStickersInput.value="",addStickersModal.dataset.currentCategory=t,toggleModal("cip-add-stickers-modal",!0),newStickersInput.focus()}
-    
     emojiPicker.addEventListener('emoji-click',e=>{const o=e.detail.unicode;let t;currentTab==="text"?t=mainInput:currentTab==="voice"?t=voiceMessageInput:currentTab==="bunny"&&(t=bunnyInput),t&&(t.value=t.value.substring(0,t.selectionStart)+o+t.value.substring(t.selectionEnd),t.focus(),t.selectionStart=t.selectionEnd=t.selectionStart+o.length),emojiPicker.style.display="none"});
-    
-    // 桌面端“插入”按钮等事件监听
     queryAll('.cip-tab-button').forEach(e=>e.addEventListener('click',t=>switchTab(t.currentTarget.dataset.tab)));
     queryAll('#cip-text-content .cip-sub-option-btn').forEach(e=>e.addEventListener('click',t=>switchTextSubType(t.currentTarget.dataset.type)));
     recallButton.addEventListener('click',()=>insertIntoSillyTavern(formatTemplates.recall));
@@ -86,32 +82,29 @@
     cancelStickersBtn.addEventListener('click',()=>toggleModal("cip-add-stickers-modal",!1));
     saveStickersBtn.addEventListener('click',()=>{const t=addStickersModal.dataset.currentCategory,e=newStickersInput.value.trim();if(t&&e){let o=0;e.split("\n").forEach(t=>{const e=t.split(/:|：/);if(2<=e.length){const n=e[0].trim(),c=e.slice(1).join(":").trim();n&&c.startsWith("http")&&(stickerData[t].push({desc:n,url:c}),o++)}}),0<o?(saveStickerData(),currentStickerCategory===t&&renderStickers(t),toggleModal("cip-add-stickers-modal",!1)):alert("未能解析任何有效的表情包信息。请检查格式（描述:链接）和链接是否正确。")}});
 
-
-    // --- 5. 交互处理逻辑 (采用范例插件的最终模式) ---
-
+    // --- 5. 交互处理逻辑 (最终修复版) ---
     function showPanel() {
         if (!inputPanel.style.top && !inputPanel.style.left) {
             const btnRect = carrotButton.getBoundingClientRect();
-            let top = btnRect.top - 400; // 默认一个高度
-            if (top < 10) top = btnRect.bottom + 10;
-            let left = btnRect.left + (btnRect.width / 2) - (380 / 2); // 默认一个宽度
-            inputPanel.style.top = `${top}px`;
-            inputPanel.style.left = `${left}px`;
+            let top = btnRect.top - 400; let left = btnRect.left + (btnRect.width / 2) - (380 / 2);
+            inputPanel.style.top = `${Math.max(10, top)}px`;
+            inputPanel.style.left = `${Math.max(10, left)}px`;
         }
         inputPanel.classList.add('active');
     }
-    function hidePanel() {
-        inputPanel.classList.remove('active');
-    }
-
-    // 表情选择器只处理桌面端定位，移动端由CSS的!important负责
+    function hidePanel() { inputPanel.classList.remove('active'); }
+    
+    document.addEventListener('click', (e) => {
+        if (inputPanel.classList.contains('active') && !inputPanel.contains(e.target) && !carrotButton.contains(e.target)) { hidePanel(); }
+        if (emojiPicker.style.display === 'block' && !emojiPicker.contains(e.target) && !emojiPickerBtn.contains(e.target)) { emojiPicker.style.display = 'none'; }
+    });
+    
     emojiPickerBtn.addEventListener('click', e => {
         e.stopPropagation();
         const isVisible = emojiPicker.style.display === 'block';
-        if (isVisible) {
-            emojiPicker.style.display = 'none';
-        } else {
-            if (window.innerWidth > 768) { // 只在桌面端计算位置
+        if (isVisible) { emojiPicker.style.display = 'none'; } 
+        else {
+            if (window.innerWidth > 768) {
                 const panelRect = inputPanel.getBoundingClientRect();
                 emojiPicker.style.top = `${panelRect.top - 360}px`;
                 emojiPicker.style.left = `${panelRect.left}px`;
@@ -120,33 +113,18 @@
         }
     });
 
-    // 点击胡萝卜按钮：切换面板显示
-    let isDraggingButton = false;
-    carrotButton.addEventListener('mousedown', () => { isDraggingButton = false; });
-    carrotButton.addEventListener('mousemove', () => { isDraggingButton = true; });
-    carrotButton.addEventListener('mouseup', () => {
-        if (!isDraggingButton) {
-            inputPanel.classList.contains('active') ? hidePanel() : showPanel();
-        }
-    });
-
-    // 点击外部区域：关闭面板和表情选择器
-    document.addEventListener('click', (e) => {
-        if (inputPanel.classList.contains('active') && !inputPanel.contains(e.target) && !carrotButton.contains(e.target)) {
-            hidePanel();
-        }
-        if (emojiPicker.style.display === 'block' && !emojiPicker.contains(e.target) && !emojiPickerBtn.contains(e.target)) {
-            emojiPicker.style.display = 'none';
-        }
-    });
-
-    // 胡萝卜按钮的拖拽
-    function buttonDragHandler(e) {
+    // 【关键修复】统一处理胡萝卜按钮的点击和拖拽
+    function carrotButtonHandler(e) {
+        let isClick = true;
         if (e.type === 'touchstart') e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
+        
+        const rect = carrotButton.getBoundingClientRect();
         const offsetX = (e.clientX || e.touches[0].clientX) - rect.left;
         const offsetY = (e.clientY || e.touches[0].clientY) - rect.top;
+
         const move = (moveEvent) => {
+            isClick = false; // 只要移动了，就不是点击
+            carrotButton.classList.add('is-dragging');
             let newLeft = (moveEvent.clientX || moveEvent.touches[0].clientX) - offsetX;
             let newTop = (moveEvent.clientY || moveEvent.touches[0].clientY) - offsetY;
             newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - carrotButton.offsetWidth));
@@ -154,33 +132,35 @@
             carrotButton.style.left = `${newLeft}px`;
             carrotButton.style.top = `${newTop}px`;
         };
+
         const end = () => {
             document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', end);
             document.removeEventListener('touchmove', move); document.removeEventListener('touchend', end);
-            localStorage.setItem('cip_button_position_v4', JSON.stringify({ top: carrotButton.style.top, left: carrotButton.style.left }));
+            carrotButton.classList.remove('is-dragging');
+
+            if (isClick) {
+                inputPanel.classList.contains('active') ? hidePanel() : showPanel();
+            } else {
+                localStorage.setItem('cip_button_position_v4', JSON.stringify({ top: carrotButton.style.top, left: carrotButton.style.left }));
+            }
         };
+
         document.addEventListener('mousemove', move); document.addEventListener('mouseup', end);
         document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', end);
     }
-    carrotButton.addEventListener('mousedown', buttonDragHandler);
-    carrotButton.addEventListener('touchstart', buttonDragHandler, { passive: false });
+    carrotButton.addEventListener('mousedown', carrotButtonHandler);
+    carrotButton.addEventListener('touchstart', carrotButtonHandler, { passive: false });
 
     // 主面板的拖拽 (仅桌面端)
-    const panelDragHandle = get('cip-panel-tabs');
     panelDragHandle.addEventListener('mousedown', (e) => {
         if (e.button !== 0 || window.innerWidth <= 768) return;
-        const rect = inputPanel.getBoundingClientRect();
-        // 因为top/left是内联样式，可以直接用.style获取
-        const startTop = parseFloat(inputPanel.style.top) || rect.top;
-        const startLeft = parseFloat(inputPanel.style.left) || rect.left;
-        const startX = e.clientX;
-        const startY = e.clientY;
+        const startTop = parseFloat(inputPanel.style.top) || inputPanel.getBoundingClientRect().top;
+        const startLeft = parseFloat(inputPanel.style.left) || inputPanel.getBoundingClientRect().left;
+        const startX = e.clientX; const startY = e.clientY;
 
         const onMouseMove = (moveEvent) => {
-            const newLeft = startLeft + moveEvent.clientX - startX;
-            const newTop = startTop + moveEvent.clientY - startY;
-            inputPanel.style.left = `${newLeft}px`;
-            inputPanel.style.top = `${newTop}px`;
+            inputPanel.style.left = `${startLeft + moveEvent.clientX - startX}px`;
+            inputPanel.style.top = `${startTop + moveEvent.clientY - startY}px`;
         };
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
@@ -192,22 +172,10 @@
     });
 
     // 加载位置
-    function loadButtonPosition() {
-        const savedPos = JSON.parse(localStorage.getItem('cip_button_position_v4'));
-        if (savedPos?.top && savedPos?.left) {
-            carrotButton.style.top = savedPos.top;
-            carrotButton.style.left = savedPos.left;
-        }
-    }
-    function loadPanelPosition() {
-        const savedPos = JSON.parse(localStorage.getItem('cip_panel_position'));
-        if (savedPos?.top && savedPos?.left) {
-            inputPanel.style.top = savedPos.top;
-            inputPanel.style.left = savedPos.left;
-        }
-    }
+    function loadButtonPosition() { const pos = JSON.parse(localStorage.getItem('cip_button_position_v4')); if (pos?.top && pos?.left) { carrotButton.style.top = pos.top; carrotButton.style.left = pos.left; } }
+    function loadPanelPosition() { const pos = JSON.parse(localStorage.getItem('cip_panel_position')); if (pos?.top && pos?.left) { inputPanel.style.top = pos.top; inputPanel.style.left = pos.left; } }
 
-    // 初始化
+    // --- 6. 初始化 ---
     function init() {
         loadStickerData();
         renderCategories();
