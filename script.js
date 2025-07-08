@@ -1,4 +1,4 @@
-// script.js (v1.9 - 新增BUNNY对话 & 插入后清空)
+// script.js (v2.0 - 移动设备弹窗优化 & BUNNY对话 & 插入后清空)
 (function () {
   if (document.getElementById('cip-carrot-button')) return;
 
@@ -242,19 +242,7 @@
     t && (stickerData = JSON.parse(t));
   }
   function toggleModal(t, o) {
-    const modal = get(t);
-    modal.classList.toggle('hidden', !o);
-
-    // 如果是显示模态框且在移动设备上，确保滚动到顶部
-    if (o && window.innerWidth <= 768) {
-      setTimeout(() => {
-        // 防止模态框被键盘遮挡
-        const modalContent = modal.querySelector('.cip-modal-content');
-        if (modalContent) {
-          modalContent.scrollTop = 0;
-        }
-      }, 50);
-    }
+    get(t).classList.toggle('hidden', !o);
   }
   function openAddStickersModal(t) {
     (addStickerTitle.textContent = `为「${t}」分类添加表情包`),
@@ -286,29 +274,23 @@
     if (isVisible) {
       emojiPicker.style.display = 'none';
     } else {
+      const btnRect = emojiPickerBtn.getBoundingClientRect();
       const isMobile = window.innerWidth <= 768;
 
       if (isMobile) {
-        // 移动设备：底部居中显示
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
-        const pickerHeight = 300; // emoji picker的大概高度
-        const pickerWidth = Math.min(350, viewportWidth - 20);
-
-        const top = viewportHeight - pickerHeight - 20; // 距离底部20px
-        const left = (viewportWidth - pickerWidth) / 2;
-
-        emojiPicker.style.top = `${Math.max(10, top)}px`;
-        emojiPicker.style.left = `${Math.max(10, left)}px`;
-        emojiPicker.style.width = `${pickerWidth}px`;
+        // 移动设备：居中显示
+        const pickerWidth = 300; // emoji picker 大概宽度
+        const pickerHeight = 350; // emoji picker 大概高度
+        const left = Math.max(10, (window.innerWidth - pickerWidth) / 2);
+        const top = Math.max(10, (window.innerHeight - pickerHeight) / 2);
+        emojiPicker.style.top = `${top}px`;
+        emojiPicker.style.left = `${left}px`;
       } else {
-        // 桌面设备：原有逻辑
-        const btnRect = emojiPickerBtn.getBoundingClientRect();
+        // 桌面设备：保持原有逻辑
         let top = btnRect.top - 350 - 10;
         if (top < 10) top = btnRect.bottom + 10;
         emojiPicker.style.top = `${top}px`;
         emojiPicker.style.left = `${btnRect.left}px`;
-        emojiPicker.style.width = 'auto';
       }
 
       emojiPicker.style.display = 'block';
@@ -413,45 +395,35 @@
   // --- 5. 交互处理逻辑 ---
   function showPanel() {
     if (inputPanel.classList.contains('active')) return;
+    const btnRect = carrotButton.getBoundingClientRect();
+    const panelWidth = inputPanel.offsetWidth || 350;
+    const panelHeight = inputPanel.offsetHeight || 380;
 
     // 检测是否为移动设备
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-      // 移动设备：底部居中显示
-      const viewportHeight = window.innerHeight;
-      const panelHeight = Math.min(inputPanel.offsetHeight || 380, viewportHeight * 0.7);
-      const top = viewportHeight - panelHeight - 20; // 距离底部20px
-
-      inputPanel.style.top = `${Math.max(10, top)}px`;
-      inputPanel.style.left = '10px';
-      inputPanel.style.right = '10px';
-      inputPanel.style.width = 'calc(100vw - 20px)';
+      // 移动设备：居中显示
+      const left = Math.max(10, (window.innerWidth - panelWidth) / 2);
+      const top = Math.max(10, (window.innerHeight - panelHeight) / 2);
+      inputPanel.style.top = `${top}px`;
+      inputPanel.style.left = `${left}px`;
     } else {
-      // 桌面设备：原有逻辑
-      const btnRect = carrotButton.getBoundingClientRect();
-      const panelHeight = inputPanel.offsetHeight || 380;
+      // 桌面设备：保持原有逻辑
       let top = btnRect.top - panelHeight - 10;
       if (top < 10) {
         top = btnRect.bottom + 10;
       }
-      let left = btnRect.left + btnRect.width / 2 - inputPanel.offsetWidth / 2;
-      left = Math.max(10, Math.min(left, window.innerWidth - inputPanel.offsetWidth - 10));
+      let left = btnRect.left + btnRect.width / 2 - panelWidth / 2;
+      left = Math.max(10, Math.min(left, window.innerWidth - panelWidth - 10));
       inputPanel.style.top = `${top}px`;
       inputPanel.style.left = `${left}px`;
-      inputPanel.style.right = 'auto';
-      inputPanel.style.width = '350px';
     }
 
     inputPanel.classList.add('active');
   }
   function hidePanel() {
     inputPanel.classList.remove('active');
-    // 清理内联样式，让CSS媒体查询生效
-    if (window.innerWidth <= 768) {
-      inputPanel.style.removeProperty('width');
-      inputPanel.style.removeProperty('right');
-    }
   }
 
   document.addEventListener('click', e => {
@@ -516,28 +488,24 @@
     }
   }
 
-  // 窗口大小改变时重新调整位置
-  window.addEventListener('resize', () => {
-    if (inputPanel.classList.contains('active')) {
-      // 延迟执行，等待窗口大小完全改变
-      setTimeout(() => {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-          // 移动设备重新计算底部位置
-          const viewportHeight = window.innerHeight;
-          const panelHeight = Math.min(inputPanel.offsetHeight || 380, viewportHeight * 0.7);
-          const top = viewportHeight - panelHeight - 20;
-          inputPanel.style.top = `${Math.max(10, top)}px`;
-        } else {
+  // 添加窗口大小改变监听器，确保弹窗在设备旋转或窗口大小改变时重新定位
+  $(() => {
+    $(window).on('resize orientationchange', function () {
+      // 如果主面板正在显示，重新定位
+      if (inputPanel.classList.contains('active')) {
+        setTimeout(() => {
           hidePanel();
-          setTimeout(showPanel, 100);
-        }
-      }, 100);
-    }
+          showPanel();
+        }, 100);
+      }
 
-    if (emojiPicker.style.display === 'block') {
-      emojiPicker.style.display = 'none';
-    }
+      // 如果emoji picker正在显示，重新定位
+      if (emojiPicker.style.display === 'block') {
+        setTimeout(() => {
+          emojiPicker.style.display = 'none';
+        }, 100);
+      }
+    });
   });
 
   function init() {
