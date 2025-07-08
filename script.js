@@ -1,4 +1,4 @@
-// script.js (v1.10 - 调整面板位置到屏幕中央并适配手机端)
+// script.js (v1.11 - 修复胡萝卜图标显示问题，保留居中面板和手机端适配)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -19,6 +19,7 @@
         };
         const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
         carrotButton.title = '胡萝卜快捷输入';
+        carrotButton.style.display = 'flex'; // 确保按钮显示
 
         const inputPanel = create('div', 'cip-input-panel', 'cip-frosted-glass', `
             <nav id="cip-panel-tabs">
@@ -98,7 +99,7 @@
     function switchTab(t){currentTab=t,queryAll(".cip-tab-button").forEach(e=>e.classList.toggle("active",e.dataset.tab===t)),queryAll(".cip-content-section").forEach(e=>e.classList.toggle("active",e.id===`cip-${t}-content`));const o=Object.keys(stickerData)[0];"stickers"===t&&(!currentStickerCategory&&o?switchStickerCategory(o):switchStickerCategory(currentStickerCategory)),updateFormatDisplay()}
     function switchTextSubType(t){currentTextSubType=t,queryAll("#cip-text-content .cip-sub-option-btn").forEach(e=>e.classList.toggle("active",e.dataset.type===t)),updateFormatDisplay()}
     function switchStickerCategory(t){currentStickerCategory=t,queryAll(".cip-sticker-category-btn").forEach(e=>e.classList.toggle("active",e.dataset.category===t)),renderStickers(t),selectedSticker=null,updateFormatDisplay()}
-    function renderStickers(t){if(stickerGrid.innerHTML="",!t||!stickerData[t])return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">请先选择或添加一个分类...</div>');const o=stickerData[t];if(0===o.length)return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">这个分类还没有表情包...</div>');o.forEach((t,o)=>{const e=document.createElement("div");e.className="cip-sticker-wrapper";const i=document.createElement("img");i.src=t.url,i.title=t.desc,i.className="cip-sticker-item",i.onclick=()=>{queryAll(".cip-sticker-item.selected").forEach(e=>e.classList.remove("selected")),i.classList.add("selected"),selectedSticker=t};const n=document.createElement("button");n.innerHTML="&times;",n.className="cip-delete-sticker-btn",n.title="删除这个表情包",n.onclick=e=>{e.stopPropagation(),confirm(`确定删除表情「${t.desc}」?`)&&(stickerData[currentStickerCategory].splice(o,1),saveStickerData(),renderStickers(currentStickerCategory))},e.appendChild(i),e.appendChild(n),stickerGrid.appendChild(e)})}
+    function renderStickers(t){if(stickerGrid.innerHTML="",!t||!stickerData[t])return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">请先选择或添加一个分类...</div>');const o=stickerData[t];if(0===o.length)return void(stickerGrid.innerHTML='<div class="cip-sticker-placeholder">这个分类还没有表情包...</div>');o.forEach((t,o)=>{const e=document.createElement("div");e.className="cip-sticker-wrapper";const i=document.createElement("img");i.src=t.url,i.title=t.desc,i.className="cip-sticker-item",i.onclick=()=>{queryAll(".cip-sticker-item.selected").forEach(e=>e.classList.remove("selected")),i.classList.add("selected"),selectedSticker=t};const n=document.createElement("button");n.innerHTML="×",n.className="cip-delete-sticker-btn",n.title="删除这个表情包",n.onclick=e=>{e.stopPropagation(),confirm(`确定删除表情「${t.desc}」?`)&&(stickerData[currentStickerCategory].splice(o,1),saveStickerData(),renderStickers(currentStickerCategory))},e.appendChild(i),e.appendChild(n),stickerGrid.appendChild(e)})}
     function renderCategories(){queryAll(".cip-sticker-category-btn").forEach(e=>e.remove()),Object.keys(stickerData).forEach(t=>{const o=document.createElement("button"),e=document.createElement("span");e.textContent=t,o.appendChild(e),o.className="cip-sub-option-btn cip-sticker-category-btn",o.dataset.category=t,o.onclick=()=>switchStickerCategory(t),stickerCategoriesContainer.appendChild(o)})}
     function insertIntoSillyTavern(t){const o=document.querySelector("#send_textarea");o?(o.value+=(o.value.trim()?"\n":"")+t,o.dispatchEvent(new Event("input",{bubbles:!0})),o.focus()):alert("未能找到SillyTavern的输入框！")}
     function saveStickerData(){localStorage.setItem("cip_sticker_data",JSON.stringify(stickerData))}function loadStickerData(){const t=localStorage.getItem("cip_sticker_data");t&&(stickerData=JSON.parse(t))}
@@ -237,7 +238,7 @@
         };
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', end);
- bug       document.addEventListener('touchmove', move, { passive: false });
+        document.addEventListener('touchmove', move, { passive: false });
         document.addEventListener('touchend', end);
     }
     
@@ -251,12 +252,18 @@
             carrotButton.style.top = savedPos.top;
             carrotButton.style.left = savedPos.left;
         }
+        carrotButton.style.display = 'flex'; // 确保加载时显示
     }
 
     function init() {
-        loadStickerData(); renderCategories(); loadButtonPosition();
+        loadStickerData(); 
+        renderCategories(); 
+        loadButtonPosition();
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
+        // 强制触发胡萝卜按钮显示
+        carrotButton.style.display = 'flex';
+        document.body.appendChild(carrotButton); // 确保按钮被添加到DOM
     }
     init();
 })();
