@@ -1,4 +1,4 @@
-// script.js (v1.11 - 修复胡萝卜图标显示问题，保留居中面板和手机端适配)
+// script.js (v2.1 - 动态调整胡萝卜按钮和面板位置，适配手机端)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -19,13 +19,14 @@
         };
         const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
         carrotButton.title = '胡萝卜快捷输入';
-        carrotButton.style.display = 'flex'; // 确保按钮显示
+        carrotButton.style.display = 'flex';
 
         const inputPanel = create('div', 'cip-input-panel', 'cip-frosted-glass', `
             <nav id="cip-panel-tabs">
                 <button class="cip-tab-button active" data-tab="text">文字信息</button>
                 <button class="cip-tab-button" data-tab="voice">语音</button>
-                <button class="cip-tab-button" data-tab="bunny">BUNNY</button> <button class="cip-tab-button" data-tab="stickers">表情包</button>
+                <button class="cip-tab-button" data-tab="bunny">BUNNY</button>
+                <button class="cip-tab-button" data-tab="stickers">表情包</button>
             </nav>
             <div id="cip-format-display"></div>
             <div id="cip-panel-content">
@@ -198,9 +199,26 @@
     // --- 5. 交互处理逻辑 ---
     function showPanel() {
         if (inputPanel.classList.contains('active')) return;
+        const panelWidth = inputPanel.offsetWidth || 350;
+        const panelHeight = inputPanel.offsetHeight || 400;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        let top = (windowHeight - panelHeight) / 2;
+        let left = (windowWidth - panelWidth) / 2;
+
+        // 确保面板不超出屏幕
+        top = Math.max(10, Math.min(top, windowHeight - panelHeight - 10));
+        left = Math.max(10, Math.min(left, windowWidth - panelWidth - 10));
+
+        inputPanel.style.top = `${top}px`;
+        inputPanel.style.left = `${left}px`;
         inputPanel.classList.add('active');
     }
-    function hidePanel() { inputPanel.classList.remove('active'); }
+
+    function hidePanel() {
+        inputPanel.classList.remove('active');
+    }
 
     document.addEventListener('click', (e) => {
         if (inputPanel.classList.contains('active') && !inputPanel.contains(e.target) && !carrotButton.contains(e.target)) hidePanel();
@@ -251,19 +269,22 @@
             carrotButton.style.position = 'fixed';
             carrotButton.style.top = savedPos.top;
             carrotButton.style.left = savedPos.left;
+        } else {
+            // 默认位置，适配手机端
+            carrotButton.style.top = '20px';
+            carrotButton.style.right = '20px';
         }
-        carrotButton.style.display = 'flex'; // 确保加载时显示
+        carrotButton.style.display = 'flex';
     }
 
     function init() {
-        loadStickerData(); 
-        renderCategories(); 
+        loadStickerData();
+        renderCategories();
         loadButtonPosition();
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
-        // 强制触发胡萝卜按钮显示
         carrotButton.style.display = 'flex';
-        document.body.appendChild(carrotButton); // 确保按钮被添加到DOM
+        document.body.appendChild(carrotButton);
     }
     init();
 })();
