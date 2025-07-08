@@ -1,136 +1,320 @@
 /* style.css (v1.6) */
 :root {
-    --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
-    --cip-border-color: rgba(255, 255, 255, 0.4);
-    --cip-text-color: #333;
-    --cip-accent-color: #ff7f50;
-    --cip-active-bg-color: rgba(255, 127, 80, 0.3);
-    --cip-input-bg-color: rgba(255, 255, 255, 0.5);
-    --cip-delete-color: #e74c3c;
-    --cip-border-radius: 12px;
-    --cip-transition-speed: 0.3s;
+  --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
+  --cip-border-color: rgba(255, 255, 255, 0.4);
+  --cip-text-color: #333;
+  --cip-accent-color: #ff7f50;
+  --cip-active-bg-color: rgba(255, 127, 80, 0.3);
+  --cip-input-bg-color: rgba(255, 255, 255, 0.5);
+  --cip-delete-color: #e74c3c;
+  --cip-border-radius: 12px;
+  --cip-transition-speed: 0.3s;
 }
 /* ... (大部分样式与上一版相同) ... */
 .cip-frosted-glass {
-    background: var(--cip-panel-bg-color);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: var(--cip-border-radius);
-    border: 1px solid var(--cip-border-color);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  background: var(--cip-panel-bg-color);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: var(--cip-border-radius);
+  border: 1px solid var(--cip-border-color);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 #cip-carrot-button {
-    position: fixed;
-    /* --- 修改点: 将默认位置改为右上角 --- */
-    top: 80px;
-    right: 20px;
-    /* --- 移除旧的 bottom 属性 --- */
-    width: 50px;
-    height: 50px;
-    background: var(--cip-accent-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    cursor: move;
-    z-index: 1000;
-    transition: transform 0.2s ease;
-    user-select: none;
+  position: fixed;
+  /* --- 修改点: 将默认位置改为右上角 --- */
+  top: 80px;
+  right: 20px;
+  /* --- 移除旧的 bottom 属性 --- */
+  width: 50px;
+  height: 50px;
+  background: var(--cip-accent-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: move;
+  z-index: 1000;
+  transition: transform 0.2s ease;
+  user-select: none;
 }
 
 #cip-carrot-button.is-dragging {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
-#cip-carrot-button:hover { transform: scale(1.1); }
+#cip-carrot-button:hover {
+  transform: scale(1.1);
+}
 #cip-input-panel {
-    position: fixed; width: 350px; max-width: 90vw; display: none;
-    flex-direction: column; z-index: 1001; opacity: 0;
-    transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
-    transform: scale(0.95);
+  position: fixed;
+  width: 350px;
+  max-width: 90vw;
+  display: none;
+  flex-direction: column;
+  z-index: 1001;
+  opacity: 0;
+  transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
+  transform: scale(0.95);
 }
-#cip-input-panel.active { display: flex; opacity: 1; transform: scale(1); }
-#cip-panel-tabs { display: flex; padding: 8px; border-bottom: 1px solid var(--cip-border-color); }
+#cip-input-panel.active {
+  display: flex;
+  opacity: 1;
+  transform: scale(1);
+}
+#cip-panel-tabs {
+  display: flex;
+  padding: 8px;
+  border-bottom: 1px solid var(--cip-border-color);
+}
 .cip-tab-button {
-    flex-grow: 1; padding: 8px 12px; border: none; background: transparent; cursor: pointer;
-    font-size: 14px; color: var(--cip-text-color); border-radius: 8px;
-    transition: background-color var(--cip-transition-speed) ease;
+  flex-grow: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--cip-text-color);
+  border-radius: 8px;
+  transition: background-color var(--cip-transition-speed) ease;
 }
-.cip-tab-button.active { background-color: var(--cip-active-bg-color); font-weight: bold; }
+.cip-tab-button.active {
+  background-color: var(--cip-active-bg-color);
+  font-weight: bold;
+}
 #cip-format-display {
-    padding: 5px 12px; font-size: 12px; color: #666; background: rgba(0,0,0,0.05);
-    text-align: center; min-height: 18px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #666;
+  background: rgba(0, 0, 0, 0.05);
+  text-align: center;
+  min-height: 18px;
 }
-#cip-panel-content { padding: 12px; flex-grow: 1; }
-.cip-content-section { display: none; flex-direction: column; gap: 10px; }
-.cip-content-section.active { display: flex; }
+#cip-panel-content {
+  padding: 12px;
+  flex-grow: 1;
+}
+.cip-content-section {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+.cip-content-section.active {
+  display: flex;
+}
 .cip-sub-options-container {
-    display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px;
-    border-bottom: 1px solid var(--cip-border-color); margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cip-border-color);
+  margin-bottom: 8px;
 }
 .cip-sub-option-btn {
-    padding: 4px 10px; font-size: 12px; border: 1px solid var(--cip-border-color);
-    border-radius: 16px; background: transparent; cursor: pointer;
-    color: var(--cip-text-color); transition: all var(--cip-transition-speed) ease; position: relative;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--cip-border-color);
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--cip-text-color);
+  transition: all var(--cip-transition-speed) ease;
+  position: relative;
 }
-.cip-sub-option-btn.active { background-color: var(--cip-accent-color); color: white; border-color: var(--cip-accent-color); }
-#cip-add-category-btn { font-weight: bold; width: 28px; height: 28px; padding: 0; border-radius: 50%; }
-.cip-category-action-icon { cursor: pointer; font-style: normal; }
-.cip-delete-category-btn { color: var(--cip-delete-color); }
-#cip-main-input, #cip-voice-message, #cip-new-stickers-input {
-    width: calc(100% - 20px); min-height: 80px; padding: 10px; border: none;
-    border-radius: var(--cip-border-radius); background-color: var(--cip-input-bg-color);
-    font-size: 14px; resize: vertical;
+.cip-sub-option-btn.active {
+  background-color: var(--cip-accent-color);
+  color: white;
+  border-color: var(--cip-accent-color);
 }
-#cip-voice-duration, #cip-new-category-name {
-    width: calc(100% - 20px); padding: 10px; border: none;
-    border-radius: var(--cip-border-radius); background-color: var(--cip-input-bg-color); font-size: 14px;
+#cip-add-category-btn {
+  font-weight: bold;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
 }
-#cip-panel-footer { display: flex; justify-content: space-between; align-items: center; padding: 0 12px 12px 12px; }
-#cip-emoji-picker-btn { font-size: 24px; cursor: pointer; opacity: 0.7; transition: opacity var(--cip-transition-speed); position: relative; }
-#cip-emoji-picker-btn:hover { opacity: 1; }
-.cip-footer-actions { display: flex; gap: 8px; }
-#cip-recall-button, #cip-insert-button {
-    padding: 8px 20px; border: none; border-radius: 8px; font-size: 16px;
-    font-weight: bold; cursor: pointer; transition: background-color var(--cip-transition-speed);
+.cip-category-action-icon {
+  cursor: pointer;
+  font-style: normal;
 }
-#cip-recall-button { background-color: #ddd; color: #444; }
-#cip-recall-button:hover { background-color: #ccc; }
-#cip-insert-button { background-color: var(--cip-accent-color); color: white; }
-#cip-insert-button:hover { background-color: #e56a40; }
+.cip-delete-category-btn {
+  color: var(--cip-delete-color);
+}
+#cip-main-input,
+#cip-voice-message,
+#cip-new-stickers-input {
+  width: calc(100% - 20px);
+  min-height: 80px;
+  padding: 10px;
+  border: none;
+  border-radius: var(--cip-border-radius);
+  background-color: var(--cip-input-bg-color);
+  font-size: 14px;
+  resize: vertical;
+}
+#cip-voice-duration,
+#cip-new-category-name {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: none;
+  border-radius: var(--cip-border-radius);
+  background-color: var(--cip-input-bg-color);
+  font-size: 14px;
+}
+#cip-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px 12px 12px;
+}
+#cip-emoji-picker-btn {
+  font-size: 24px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--cip-transition-speed);
+  position: relative;
+}
+#cip-emoji-picker-btn:hover {
+  opacity: 1;
+}
+.cip-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+#cip-recall-button,
+#cip-insert-button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color var(--cip-transition-speed);
+}
+#cip-recall-button {
+  background-color: #ddd;
+  color: #444;
+}
+#cip-recall-button:hover {
+  background-color: #ccc;
+}
+#cip-insert-button {
+  background-color: var(--cip-accent-color);
+  color: white;
+}
+#cip-insert-button:hover {
+  background-color: #e56a40;
+}
 emoji-picker {
-    position: fixed;
-    z-index: 1002;
-    display: none;
+  position: fixed;
+  z-index: 1002;
+  display: none;
 }
 #cip-sticker-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 150px;
-    overflow-y: auto; padding: 5px; background: rgba(255,255,255,0.3); border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  height: 150px;
+  overflow-y: auto;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
 }
-.cip-sticker-wrapper { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+.cip-sticker-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
 .cip-sticker-item {
-    width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer;
-    border: 2px solid transparent; transition: border-color var(--cip-transition-speed);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color var(--cip-transition-speed);
 }
-.cip-sticker-item.selected { border-color: var(--cip-accent-color); }
+.cip-sticker-item.selected {
+  border-color: var(--cip-accent-color);
+}
 .cip-delete-sticker-btn {
-    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
-    background-color: var(--cip-delete-color); color: white; border: none;
-    border-radius: 50%; font-size: 12px; line-height: 20px; text-align: center;
-    cursor: pointer; opacity: 0; transition: opacity var(--cip-transition-speed); transform: scale(0.9);
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: var(--cip-delete-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--cip-transition-speed);
+  transform: scale(0.9);
 }
-.cip-sticker-wrapper:hover .cip-delete-sticker-btn { opacity: 1; transform: scale(1); }
-.cip-sticker-placeholder { grid-column: 1 / -1; text-align: center; color: #888; align-self: center; }
+.cip-sticker-wrapper:hover .cip-delete-sticker-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+.cip-sticker-placeholder {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #888;
+  align-self: center;
+}
 .cip-modal-backdrop {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center;
-    z-index: 1003; opacity: 1; transition: opacity var(--cip-transition-speed);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1003;
+  opacity: 1;
+  transition: opacity var(--cip-transition-speed);
 }
-.cip-modal-backdrop.hidden { opacity: 0; pointer-events: none; }
-.cip-modal-content { width: 320px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-.cip-modal-content h3 { margin: 0; }
-.cip-modal-content p { font-size: 13px; margin: 0; color: #555; line-height: 1.5; }
-.cip-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.cip-modal-actions button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; }
-.cip-modal-actions button:first-child { background: #eee; }
-.cip-modal-actions button:last-child { background: var(--cip-accent-color); color: white; }
+.cip-modal-backdrop.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.cip-modal-content {
+  width: 320px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+.cip-modal-content h3 {
+  margin: 0;
+}
+.cip-modal-content p {
+  font-size: 13px;
+  margin: 0;
+  color: #555;
+  line-height: 1.5;
+}
+.cip-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.cip-modal-actions button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.cip-modal-actions button:first-child {
+  background: #eee;
+}
+.cip-modal-actions button:last-child {
+  background: var(--cip-accent-color);
+  color: white;
+}
