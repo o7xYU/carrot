@@ -289,13 +289,13 @@
       const isMobile = window.innerWidth <= 768;
 
       if (isMobile) {
-        // 移动设备：居中显示
+        // 移动设备：底部居中显示
         const viewportHeight = window.innerHeight;
         const viewportWidth = window.innerWidth;
         const pickerHeight = 300; // emoji picker的大概高度
         const pickerWidth = Math.min(350, viewportWidth - 20);
 
-        const top = (viewportHeight - pickerHeight) / 2;
+        const top = viewportHeight - pickerHeight - 20; // 距离底部20px
         const left = (viewportWidth - pickerWidth) / 2;
 
         emojiPicker.style.top = `${Math.max(10, top)}px`;
@@ -418,10 +418,10 @@
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-      // 移动设备：居中显示
+      // 移动设备：底部居中显示
       const viewportHeight = window.innerHeight;
-      const panelHeight = Math.min(inputPanel.offsetHeight || 380, viewportHeight * 0.8);
-      const top = (viewportHeight - panelHeight) / 2;
+      const panelHeight = Math.min(inputPanel.offsetHeight || 380, viewportHeight * 0.7);
+      const top = viewportHeight - panelHeight - 20; // 距离底部20px
 
       inputPanel.style.top = `${Math.max(10, top)}px`;
       inputPanel.style.left = '10px';
@@ -521,8 +521,17 @@
     if (inputPanel.classList.contains('active')) {
       // 延迟执行，等待窗口大小完全改变
       setTimeout(() => {
-        hidePanel();
-        setTimeout(showPanel, 100);
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          // 移动设备重新计算底部位置
+          const viewportHeight = window.innerHeight;
+          const panelHeight = Math.min(inputPanel.offsetHeight || 380, viewportHeight * 0.7);
+          const top = viewportHeight - panelHeight - 20;
+          inputPanel.style.top = `${Math.max(10, top)}px`;
+        } else {
+          hidePanel();
+          setTimeout(showPanel, 100);
+        }
       }, 100);
     }
 
