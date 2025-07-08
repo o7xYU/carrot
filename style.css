@@ -1,4 +1,4 @@
-/* style.css (v2.0 - 借鉴成功范例的最终修复版) */
+/* style.css (v2.4 - 完全采用范例插件的交互模式) */
 :root {
     --cip-panel-bg-color: rgba(255, 255, 255, 0.8);
     --cip-border-color: rgba(255, 255, 255, 0.4);
@@ -11,9 +11,10 @@
     --cip-transition-speed: 0.3s;
 }
 
+/* 按钮不再能拖拽，样式简化 */
 #cip-carrot-button {
     position: fixed;
-    top: 80px;
+    bottom: 20px;
     right: 20px;
     width: 50px;
     height: 50px;
@@ -23,14 +24,15 @@
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    cursor: move;
+    cursor: pointer; /* 恢复为普通指针 */
     z-index: 1000;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease;
     user-select: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-#cip-carrot-button.is-dragging {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+#cip-carrot-button:hover {
+    transform: scale(1.1);
 }
 
 .cip-frosted-glass {
@@ -42,68 +44,66 @@
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
-#cip-carrot-button:hover { transform: scale(1.1); }
-
-/* --- 主面板默认样式 (桌面端) --- */
+/* 主面板默认样式 (桌面端) */
 #cip-input-panel {
-    position: fixed; /* 改为fixed以支持拖拽后保存的位置 */
+    position: fixed;
     width: 380px;
     max-width: 95vw;
-    display: none;
+    display: none; /* 由JS切换为flex */
     flex-direction: column;
     z-index: 1001;
     opacity: 0;
     transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
     transform: scale(0.95);
     pointer-events: none;
+    /* 默认居中，拖拽后由JS修改top/left */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
 }
 
 #cip-input-panel.active {
     display: flex;
     opacity: 1;
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
     pointer-events: auto;
 }
 
-/* ... (省略大部分未变的内部样式) ... */
-#cip-panel-tabs { display: flex; padding: 8px; border-bottom: 1px solid var(--cip-border-color); flex-wrap: wrap; gap: 5px; cursor: move; }
+/* 标签栏现在是拖拽把手 */
+#cip-panel-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--cip-border-color);
+    flex-wrap: wrap;
+    gap: 5px;
+    cursor: move; /* 添加拖拽手势 */
+}
+
+/* (省略大部分未变的内部样式) */
 .cip-tab-button { flex-grow: 1; padding: 8px 10px; border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--cip-text-color); border-radius: 8px; transition: background-color var(--cip-transition-speed) ease; white-space: nowrap; }
 .cip-tab-button.active { background-color: var(--cip-active-bg-color); font-weight: bold; }
 #cip-format-display { padding: 5px 12px; font-size: 12px; color: #666; background: rgba(0,0,0,0.05); text-align: center; min-height: 18px; }
 #cip-panel-content { padding: 12px; flex-grow: 1; overflow-y: auto; max-height: 250px; }
 .cip-content-section { display: none; flex-direction: column; gap: 10px; }
 .cip-content-section.active { display: flex; }
-.cip-sub-options-container { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--cip-border-color); margin-bottom: 8px; }
-.cip-sub-option-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--cip-border-color); border-radius: 16px; background: transparent; cursor: pointer; color: var(--cip-text-color); transition: all var(--cip-transition-speed) ease; position: relative; }
-.cip-sub-option-btn.active { background-color: var(--cip-accent-color); color: white; border-color: var(--cip-accent-color); }
-#cip-add-category-btn { font-weight: bold; width: 32px; height: 32px; padding: 0; border-radius: 50%; }
-#cip-main-input, #cip-voice-message, #cip-new-stickers-input, #cip-bunny-input, #cip-voice-duration, #cip-new-category-name { width: calc(100% - 22px); padding: 10px; border: 1px solid transparent; border-radius: var(--cip-border-radius); background-color: var(--cip-input-bg-color); font-size: 14px; resize: vertical; box-sizing: border-box; }
+#cip-main-input, #cip-voice-message, #cip-new-stickers-input, #cip-bunny-input, #cip-voice-duration, #cip-new-category-name { width: 100%; padding: 10px; border: 1px solid transparent; border-radius: var(--cip-border-radius); background-color: var(--cip-input-bg-color); font-size: 14px; resize: vertical; box-sizing: border-box; }
 #cip-main-input, #cip-voice-message, #cip-new-stickers-input, #cip-bunny-input { min-height: 100px; }
 #cip-panel-footer { display: flex; justify-content: space-between; align-items: center; padding: 0 12px 12px 12px; }
 #cip-emoji-picker-btn { font-size: 26px; cursor: pointer; }
 #cip-recall-button, #cip-insert-button { padding: 10px 22px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
 #cip-insert-button { background-color: var(--cip-accent-color); color: white; }
 emoji-picker { position: fixed; z-index: 1002; display: none; }
-#cip-sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; height: 180px; overflow-y: auto; padding: 5px; background: rgba(255,255,255,0.3); border-radius: 8px; }
-.cip-sticker-wrapper { position: relative; width: 100%; aspect-ratio: 1 / 1; }
-.cip-sticker-item { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; }
-.cip-sticker-item.selected { border-color: var(--cip-accent-color); }
 .cip-modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1003; }
 .cip-modal-backdrop.hidden { display: none; }
-.cip-modal-content { width: 320px; max-width: 90vw; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
 
 /* ======================================================= */
-/* 【关键】移动端适配 - 学习自你提供的范例插件 */
+/* 【关键】移动端适配 - 强制覆盖定位 */
 /* ======================================================= */
 @media (max-width: 768px) {
-    /* 使用 !important 强制覆盖JS设置的拖拽位置 */
-    #cip-input-panel {
+    #cip-input-panel, #cip-input-panel.active {
         width: 95vw !important;
-        max-width: 95vw !important;
-        height: auto !important;
-        max-height: 75vh !important; /* 最大高度为屏幕的75% */
+        max-height: 75vh !important;
         padding: 10px !important;
-        
         /* 强制定位到屏幕下方居中 */
         left: 50% !important;
         top: auto !important;
@@ -111,22 +111,13 @@ emoji-picker { position: fixed; z-index: 1002; display: none; }
         right: auto !important;
         transform: translateX(-50%) !important;
     }
-
-    /* 表情选择器也强制定位 */
     emoji-picker {
         width: 95vw !important;
-        height: auto !important;
         max-height: 45vh !important;
-        
         left: 50% !important;
         top: auto !important;
-        bottom: 60px !important; /* 和主面板在同一位置弹出 */
+        bottom: 60px !important;
         right: auto !important;
         transform: translateX(-50%) !important;
     }
-
-    /* 调整内部元素适应小屏幕 */
-    .cip-tab-button { font-size: 13px; padding: 6px 8px; }
-    #cip-panel-content { max-height: 50vh; }
-    #cip-main-input, #cip-voice-message, #cip-new-stickers-input, #cip-bunny-input { min-height: 80px; font-size: 14px; }
 }
