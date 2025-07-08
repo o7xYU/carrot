@@ -1,30 +1,20 @@
-/* style.css (v1.6) */
+/* style.css (v2.0) */
 :root {
-    --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
+    --cip-panel-bg-color: rgba(255, 255, 255, 0.8);
     --cip-border-color: rgba(255, 255, 255, 0.4);
     --cip-text-color: #333;
-    --cip-accent-color: #ff7f50;
+    --cip-accent-color: rgba(142, 166, 4, 0.7);
     --cip-active-bg-color: rgba(255, 127, 80, 0.3);
     --cip-input-bg-color: rgba(255, 255, 255, 0.5);
     --cip-delete-color: #e74c3c;
     --cip-border-radius: 12px;
     --cip-transition-speed: 0.3s;
 }
-/* ... (大部分样式与上一版相同) ... */
-.cip-frosted-glass {
-    background: var(--cip-panel-bg-color);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: var(--cip-border-radius);
-    border: 1px solid var(--cip-border-color);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-}
+
 #cip-carrot-button {
     position: fixed;
-    /* --- 修改点: 将默认位置改为右上角 --- */
-    top: 80px;
+    top: 20px; /* 调整为更靠上的位置，适配手机端 */
     right: 20px;
-    /* --- 移除旧的 bottom 属性 --- */
     width: 50px;
     height: 50px;
     background: var(--cip-accent-color);
@@ -34,22 +24,45 @@
     justify-content: center;
     font-size: 24px;
     cursor: move;
-    z-index: 1000;
+    z-index: 10000;
     transition: transform 0.2s ease;
     user-select: none;
+    color: #fff;
 }
 
 #cip-carrot-button.is-dragging {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
+
+.cip-frosted-glass {
+    background: var(--cip-panel-bg-color);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: var(--cip-border-radius);
+    border: 1px solid var(--cip-border-color);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
 #cip-carrot-button:hover { transform: scale(1.1); }
+
 #cip-input-panel {
-    position: fixed; width: 350px; max-width: 90vw; display: none;
-    flex-direction: column; z-index: 1001; opacity: 0;
+    position: fixed;
+    width: 350px;
+    max-width: 90vw;
+    display: none;
+    flex-direction: column;
+    z-index: 10001;
+    opacity: 0;
     transition: opacity var(--cip-transition-speed) ease, transform var(--cip-transition-speed) ease;
     transform: scale(0.95);
 }
-#cip-input-panel.active { display: flex; opacity: 1; transform: scale(1); }
+
+#cip-input-panel.active {
+    display: flex;
+    opacity: 1;
+    transform: scale(1);
+}
+
 #cip-panel-tabs { display: flex; padding: 8px; border-bottom: 1px solid var(--cip-border-color); }
 .cip-tab-button {
     flex-grow: 1; padding: 8px 12px; border: none; background: transparent; cursor: pointer;
@@ -100,7 +113,7 @@
 #cip-insert-button:hover { background-color: #e56a40; }
 emoji-picker {
     position: fixed;
-    z-index: 1002;
+    z-index: 10002;
     display: none;
 }
 #cip-sticker-grid {
@@ -122,12 +135,22 @@ emoji-picker {
 .cip-sticker-wrapper:hover .cip-delete-sticker-btn { opacity: 1; transform: scale(1); }
 .cip-sticker-placeholder { grid-column: 1 / -1; text-align: center; color: #888; align-self: center; }
 .cip-modal-backdrop {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center;
-    z-index: 1003; opacity: 1; transition: opacity var(--cip-transition-speed);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    opacity: 1;
+    transition: opacity var(--cip-transition-speed);
 }
 .cip-modal-backdrop.hidden { opacity: 0; pointer-events: none; }
-.cip-modal-content { width: 320px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+.cip-modal-content { width: 320px; max-width: 90vw; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
 .cip-modal-content h3 { margin: 0; }
 .cip-modal-content p { font-size: 13px; margin: 0; color: #555; line-height: 1.5; }
 .cip-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
