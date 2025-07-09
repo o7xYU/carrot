@@ -301,8 +301,8 @@ emoji-picker {
   align-self: center;
 }
 .cip-modal-backdrop {
-  position: fixed;
-  top: 0;
+  position: absolute;
+  top: auto;
   left: 0;
   width: 100%;
   height: 100%;
