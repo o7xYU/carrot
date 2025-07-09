@@ -1,7 +1,10 @@
 /* style.css (v1.7 - 移动设备优化版本) */
 :root {
+  --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
   --cip-border-color: rgba(255, 255, 255, 0.4);
+  --cip-text-color: #333;
   --cip-accent-color: #ff7f50;
+  --cip-active-bg-color: rgba(255, 127, 80, 0.3);
   --cip-input-bg-color: rgba(255, 255, 255, 0.5);
   --cip-delete-color: #e74c3c;
   --cip-border-radius: 12px;
