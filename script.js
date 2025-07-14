@@ -36,7 +36,7 @@
             <div id="cip-panel-content">
                 <div id="cip-text-content" class="cip-content-section"><div class="cip-sub-options-container"><button class="cip-sub-option-btn active" data-type="plain">纯文本</button><button class="cip-sub-option-btn" data-type="image">图片</button><button class="cip-sub-option-btn" data-type="video">视频</button><button class="cip-sub-option-btn" data-type="music">音乐</button><button class="cip-sub-option-btn" data-type="post">帖子</button></div><textarea id="cip-main-input" placeholder="在此输入文字..."></textarea></div>
                 <div id="cip-voice-content" class="cip-content-section"><input type="number" id="cip-voice-duration" placeholder="输入时长 (秒, 仅数字)"><textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea></div>
-                <div id="cip-bunny-content" class="cip-content-section"><textarea id="cip-bunny-input" placeholder="在此输入想对BUNNY说的话..."></textarea></div>
+                <div id="cip-bunny-content" class="cip-content-section"><textarea id="cip-bunny-input" placeholder="在这里鞭策BUNNY吧..."></textarea></div>
                 <div id="cip-stickers-content" class="cip-content-section"><div id="cip-sticker-categories" class="cip-sub-options-container"><button id="cip-add-category-btn" class="cip-sub-option-btn">+</button></div><div id="cip-sticker-grid"></div></div>
             </div>
             <div id="cip-panel-footer">
@@ -300,7 +300,7 @@
             post: '“[{content}.link]”',
         },
         voice: "={duration}'|{message}=",
-        bunny: '({content})',
+        bunny: '~{content}~',
         stickers: '!{desc}|{url}!',
         recall: '--',
     };
