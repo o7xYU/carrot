@@ -18,7 +18,7 @@
             if (html) el.innerHTML = html;
             return el;
         };
-        const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
+        const carrotButton = create('div', 'cip-carrot-button', null, '🍳');
         carrotButton.title = '胡萝卜快捷输入';
 
         const inputPanel = create(
