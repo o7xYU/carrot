@@ -348,3 +348,132 @@ function init() {
     // 延迟加载定时器状态
     setTimeout(checkAlarmOnLoad, 1000);
 }
+// 在原始 script.js 的最后，添加这个补丁代码
+// 不要删除或修改原有代码，只需要在文件末尾添加：
+
+(function() {
+    // 移动端定时器补丁
+    let originalStartAlarm = window.startAlarm;
+    let originalStopAlarm = window.stopAlarm;
+    let originalExecuteCommand = window.executeCommand;
+    let mobileTimerInterval = null;
+    let lastAlarmCheck = 0;
+
+    // 页面可见性变化检测
+    function handleVisibilityChange() {
+        if (!document.hidden) {
+            checkMobileAlarm();
+        }
+    }
+
+    // 移动端定时器检查
+    function checkMobileAlarm() {
+        const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+        if (!alarmData || !alarmData.endTime) return;
+
+        const now = Date.now();
+        const remaining = alarmData.endTime - now;
+
+        if (remaining <= 0) {
+            // 时间到了，执行指令
+            console.log('Carrot Mobile: 检测到定时器过期，执行指令');
+            
+            if (originalExecuteCommand && alarmData.command) {
+                originalExecuteCommand(alarmData.command);
+            }
+
+            // 检查是否需要重复
+            const currentExecuted = (alarmData.executed || 0) + 1;
+            if (currentExecuted < (alarmData.repeat || 1)) {
+                // 需要重复
+                alarmData.executed = currentExecuted;
+                alarmData.endTime = now + alarmData.duration;
+                localStorage.setItem('cip_alarm_data_v1', JSON.stringify(alarmData));
+                startMobileTimer();
+            } else {
+                // 完成，清理
+                localStorage.removeItem('cip_alarm_data_v1');
+                stopMobileTimer();
+                if (window.updateAlarmStatus) {
+                    window.updateAlarmStatus(null);
+                }
+            }
+        }
+    }
+
+    // 启动移动端定时器
+    function startMobileTimer() {
+        stopMobileTimer();
+        // 每30秒检查一次（降低电池消耗）
+        mobileTimerInterval = setInterval(() => {
+            checkMobileAlarm();
+            // 更新状态显示
+            const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+            if (alarmData && window.updateAlarmStatus) {
+                const remaining = Math.max(0, alarmData.endTime - Date.now());
+                window.updateAlarmStatus({
+                    remaining: remaining,
+                    executed: alarmData.executed || 0,
+                    repeat: alarmData.repeat || 1,
+                    isActive: remaining > 0
+                });
+            }
+        }, 30000);
+
+        // 立即检查一次
+        setTimeout(checkMobileAlarm, 1000);
+    }
+
+    function stopMobileTimer() {
+        if (mobileTimerInterval) {
+            clearInterval(mobileTimerInterval);
+            mobileTimerInterval = null;
+        }
+    }
+
+    // 增强原有的启动函数
+    if (originalStartAlarm) {
+        window.startAlarm = function(isContinuation = false) {
+            // 调用原有逻辑
+            const result = originalStartAlarm.call(this, isContinuation);
+            
+            // 添加移动端支持
+            setTimeout(() => {
+                startMobileTimer();
+            }, 1000);
+            
+            return result;
+        };
+    }
+
+    // 增强原有的停止函数
+    if (originalStopAlarm) {
+        window.stopAlarm = function() {
+            const result = originalStopAlarm.call(this);
+            stopMobileTimer();
+            return result;
+        };
+    }
+
+    // 页面加载时检查
+    function initMobileTimer() {
+        const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+        if (alarmData && alarmData.endTime > Date.now()) {
+            console.log('Carrot Mobile: 发现未完成的定时任务，启动移动端支持');
+            startMobileTimer();
+        }
+    }
+
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 页面聚焦时也检查
+    window.addEventListener('focus', () => {
+        setTimeout(checkMobileAlarm, 500);
+    });
+
+    // 初始化
+    setTimeout(initMobileTimer, 2000);
+
+    console.log('Carrot Mobile Timer Patch 已加载');
+})();
