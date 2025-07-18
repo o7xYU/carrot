@@ -11,9 +11,6 @@
     --cip-input-bg-color: rgba(255, 255, 255, 0.5);
     --cip-tabs-bg-color: transparent;
     --cip-delete-color: #e74c3c;
-    --cip-secondary-btn-bg-color: #7f8c8d; /* 新增: 次要按钮背景色 */
-    --cip-neutral-btn-bg-color: #ddd; /* 新增: 中性按钮背景色 */
-    --cip-neutral-btn-hover-bg-color: #ccc; /* 新增: 中性按钮悬浮背景色 */
     --cip-border-radius: 12px;
     --cip-transition-speed: 0.3s;
 }
@@ -237,11 +234,11 @@
     transition: background-color var(--cip-transition-speed);
 }
 #cip-recall-button {
-    background-color: var(--cip-neutral-btn-bg-color);
+    background-color: var(--cip-accent-color);
     color: #444;
 }
 #cip-recall-button:hover {
-    background-color: var(--cip-neutral-btn-hover-bg-color);
+    background-color: var(--cip-accent-hover-color);
 }
 #cip-insert-button {
     background-color: var(--cip-accent-color);
@@ -613,7 +610,7 @@ emoji-picker {
     color: white;
 }
 #cip-restore-defaults-btn {
-    background-color: var(--cip-secondary-btn-bg-color);
+    background-color: var(--cip-accent-color);
     color: white;
     flex-grow: 0;
     padding: 10px 15px;
@@ -625,13 +622,13 @@ emoji-picker {
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    background-color: var(--cip-neutral-btn-bg-color);
+    background-color: var(--cip-accent-color);
     color: #333;
     font-size: 16px;
     transition: background-color var(--cip-transition-speed);
 }
 #cip-close-alarm-panel-btn:hover {
-    background-color: var(--cip-neutral-btn-hover-bg-color);
+    background-color: var(--cip-accent-hover-color);
 }
 /* ---- */
 
