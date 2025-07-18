@@ -148,18 +148,6 @@
                     <input type="text" id="cip-color-input-bg" data-var="--cip-input-bg-color">
                     <input type="color" class="cip-color-picker" data-target="cip-color-input-bg">
                 </div>
-
-                <label for="cip-color-secondary-btn">次要按钮背景:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-secondary-btn" data-var="--cip-secondary-btn-bg-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-secondary-btn">
-                </div>
-
-                <label for="cip-color-neutral-btn">中性按钮背景:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-neutral-btn" data-var="--cip-neutral-btn-bg-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-neutral-btn">
-                </div>
             </div>
             <div class="cip-theme-manager">
                 <div class="cip-theme-actions">
@@ -315,8 +303,6 @@
         '--cip-text-color': '#333333',
         '--cip-input-bg-color': 'rgba(255, 255, 255, 0.5)',
         '--cip-secondary-btn-bg-color': '#7f8c8d',
-        '--cip-neutral-btn-bg-color': '#ddd',
-        '--cip-neutral-btn-hover-bg-color': '#ccc',
     };
 
     function hexToRgba(hex, alpha = 0.3) {
