@@ -281,9 +281,6 @@
         '--cip-tabs-bg-color': 'transparent',
         '--cip-text-color': '#333333',
         '--cip-input-bg-color': 'rgba(255, 255, 255, 0.5)',
-        '--cip-secondary-btn-bg-color': '#7f8c8d',
-        '--cip-neutral-btn-bg-color': '#ddd',
-        '--cip-neutral-btn-hover-bg-color': '#ccc',
     };
 
     function hexToRgba(hex, alpha = 0.3) {
