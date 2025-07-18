@@ -18,7 +18,7 @@
             if (html) el.innerHTML = html;
             return el;
         };
-        const carrotButton = create('div', 'cip-carrot-button', null, '🥕');
+        const carrotButton = create('div', 'cip-carrot-button', null, '🍳');
         carrotButton.title = '胡萝卜快捷输入';
 
         const inputPanel = create(
@@ -545,67 +545,88 @@
     }
 
     function startAlarm(isContinuation = false) {
-        if (!timerWorker) {
-            alert('错误：后台计时器未初始化，请刷新页面重试。');
-            return;
-        }
-
-        const hours = parseInt(alarmHoursInput.value, 10) || 0;
-        const minutes = parseInt(alarmMinutesInput.value, 10) || 0;
-        const seconds = parseInt(alarmSecondsInput.value, 10) || 0; // 读取秒
-        const command = alarmCommandInput.value.trim();
-        const repeat = parseInt(alarmRepeatInput.value, 10) || 1;
-        const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000; // 计算总毫秒数
-
-        localStorage.setItem('cip_custom_command_v1', command);
-
-        if (totalMs <= 0) {
-            alert('请输入有效的定时时间！');
-            return;
-        }
-        if (!command) {
-            alert('请输入要执行的指令！');
-            return;
-        }
-
-        const endTime = Date.now() + totalMs;
-        let alarmData;
-
-        if (isContinuation) {
-            alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
-            alarmData.endTime = endTime;
-            alarmData.executed = (alarmData.executed || 0) + 1;
-        } else {
-            alarmData = {
-                endTime: endTime,
-                command: command,
-                duration: totalMs,
-                repeat: repeat,
-                executed: 0,
-            };
-        }
-
-        localStorage.setItem('cip_alarm_data_v1', JSON.stringify(alarmData));
-        timerWorker.postMessage({ type: 'start', data: alarmData });
+    // 检查 Service Worker 是否就绪
+    if (!navigator.serviceWorker.controller) {
+        alert('错误：后台服务未就绪，请刷新页面重试。');
+        return;
     }
+
+    const hours = parseInt(alarmHoursInput.value, 10) || 0;
+    const minutes = parseInt(alarmMinutesInput.value, 10) || 0;
+    const seconds = parseInt(alarmSecondsInput.value, 10) || 0;
+    const command = alarmCommandInput.value.trim();
+    const repeat = parseInt(alarmRepeatInput.value, 10) || 1;
+    const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+
+    localStorage.setItem('cip_custom_command_v1', command);
+
+    if (totalMs <= 0) {
+        alert('请输入有效的定时时间！');
+        return;
+    }
+    if (!command) {
+        alert('请输入要执行的指令！');
+        return;
+    }
+
+    const endTime = Date.now() + totalMs;
+    let alarmData;
+
+    if (isContinuation) {
+        alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+        if (!alarmData) { // 如果本地存储被清空，则停止
+             stopAlarm();
+             return;
+        }
+        alarmData.endTime = endTime;
+        alarmData.executed = (alarmData.executed || 0) + 1;
+    } else {
+        alarmData = {
+            endTime: endTime,
+            command: command,
+            duration: totalMs,
+            repeat: repeat,
+            executed: 0,
+        };
+    }
+
+    localStorage.setItem('cip_alarm_data_v1', JSON.stringify(alarmData));
+    // 将启动指令发送给 Service Worker
+    navigator.serviceWorker.controller.postMessage({ type: 'start', data: alarmData });
+    // 立即更新UI，显示为运行中
+    updateAlarmStatus({ remaining: totalMs, ...alarmData });
+}
+
 
     function stopAlarm() {
-        if (timerWorker) {
-            timerWorker.postMessage({ type: 'stop' });
-        }
-        localStorage.removeItem('cip_alarm_data_v1');
-        updateAlarmStatus(null);
+    if (navigator.serviceWorker.controller) {
+        // 将停止指令发送给 Service Worker
+        navigator.serviceWorker.controller.postMessage({ type: 'stop' });
     }
+    localStorage.removeItem('cip_alarm_data_v1');
+    updateAlarmStatus(null);
+   }
 
     function checkAlarmOnLoad() {
-        const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
-        if (alarmData && alarmData.endTime && alarmData.endTime > Date.now()) {
-            if (timerWorker) {
-                timerWorker.postMessage({ type: 'start', data: alarmData });
-            }
-        } else if (alarmData) {
-            localStorage.removeItem('cip_alarm_data_v1');
-        }
+    const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+    if (alarmData && alarmData.endTime && alarmData.endTime > Date.now()) {
+        // 这里不再需要启动worker，因为Service Worker会处理。
+        // UI状态更新会在下面自动处理
+    } else if (alarmData) {
+        localStorage.removeItem('cip_alarm_data_v1');
+    }
+
+    const storedData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+    const duration = storedData ? storedData.duration || 0 : 0;
+    alarmHoursInput.value = Math.floor(duration / 3600000);
+    alarmMinutesInput.value = Math.floor((duration % 3600000) / 60000);
+    alarmSecondsInput.value = Math.floor((duration % 60000) / 1000);
+    alarmCommandInput.value = storedData
+        ? storedData.command
+        : localStorage.getItem('cip_custom_command_v1') || defaultCommand;
+    alarmRepeatInput.value = storedData ? storedData.repeat || 1 : 1;
+    updateAlarmStatus(null); // 初始化状态显示
+}
 
         const duration = alarmData ? alarmData.duration || 0 : 0;
         alarmHoursInput.value = Math.floor(duration / 3600000);
@@ -1186,16 +1207,46 @@
     }
 
     function init() {
-        requestNotificationPermission(); // 在初始化时请求权限
-        initServiceWorker();
-        initWebWorker();
-        loadStickerData();
-        loadThemes();
-        renderCategories();
-        loadButtonPosition();
-        switchStickerCategory(Object.keys(stickerData)[0] || '');
-        switchTab('text');
-        setTimeout(checkAlarmOnLoad, 500);
+    requestNotificationPermission();
+    initServiceWorker();
+    
+    // 删除 initWebWorker(); 这一行
+
+    // 新增：监听来自 Service Worker 的消息
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (!event.data) return;
+            const { type, ...data } = event.data;
+            switch (type) {
+                case 'execute':
+                    executeCommand(data.command);
+                    break;
+                case 'execution_finished':
+                     // 检查是否需要重复
+                    const currentAlarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+                    if (currentAlarmData && currentAlarmData.executed + 1 < currentAlarmData.repeat) {
+                        startAlarm(true); // 启动下一次
+                    } else {
+                        stopAlarm(); // 所有次数都完成了，结束任务
+                    }
+                    break;
+                case 'stopped':
+                    updateAlarmStatus(null);
+                    break;
+                case 'started':
+                    // 可选：在这里可以添加一个UI反馈，表示SW已确认启动
+                    console.log("Service Worker has confirmed the timer start.");
+                    break;
+            }
+        });
     }
+
+    loadStickerData();
+    loadThemes();
+    renderCategories();
+    loadButtonPosition();
+    switchStickerCategory(Object.keys(stickerData)[0] || '');
+    switchTab('text');
+    setTimeout(checkAlarmOnLoad, 500);
     init();
 })();
