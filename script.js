@@ -1248,5 +1248,6 @@
     switchStickerCategory(Object.keys(stickerData)[0] || '');
     switchTab('text');
     setTimeout(checkAlarmOnLoad, 500);
-    init();
+}
+init();
 })();
