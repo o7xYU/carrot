@@ -1249,5 +1249,5 @@
     switchTab('text');
     setTimeout(checkAlarmOnLoad, 500);
 }
-init();
+
 })();
