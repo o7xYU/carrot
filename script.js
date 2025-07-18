@@ -1207,47 +1207,45 @@
     }
 
     function init() {
-    requestNotificationPermission();
-    initServiceWorker();
+        requestNotificationPermission();
+        initServiceWorker();
+        
+        // 新增：监听来自 Service Worker 的消息
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (!event.data) return;
+                const { type, ...data } = event.data;
+                switch (type) {
+                    case 'execute':
+                        executeCommand(data.command);
+                        break;
+                    case 'execution_finished':
+                         // 检查是否需要重复
+                        const currentAlarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+                        if (currentAlarmData && currentAlarmData.executed + 1 < currentAlarmData.repeat) {
+                            startAlarm(true); // 启动下一次
+                        } else {
+                            stopAlarm(); // 所有次数都完成了，结束任务
+                        }
+                        break;
+                    case 'stopped':
+                        updateAlarmStatus(null);
+                        break;
+                    case 'started':
+                        // 可选：在这里可以添加一个UI反馈，表示SW已确认启动
+                        console.log("Service Worker has confirmed the timer start.");
+                        break;
+                }
+            });
+        }
     
-    // 删除 initWebWorker(); 这一行
-
-    // 新增：监听来自 Service Worker 的消息
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            if (!event.data) return;
-            const { type, ...data } = event.data;
-            switch (type) {
-                case 'execute':
-                    executeCommand(data.command);
-                    break;
-                case 'execution_finished':
-                     // 检查是否需要重复
-                    const currentAlarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
-                    if (currentAlarmData && currentAlarmData.executed + 1 < currentAlarmData.repeat) {
-                        startAlarm(true); // 启动下一次
-                    } else {
-                        stopAlarm(); // 所有次数都完成了，结束任务
-                    }
-                    break;
-                case 'stopped':
-                    updateAlarmStatus(null);
-                    break;
-                case 'started':
-                    // 可选：在这里可以添加一个UI反馈，表示SW已确认启动
-                    console.log("Service Worker has confirmed the timer start.");
-                    break;
-            }
-        });
+        loadStickerData();
+        loadThemes();
+        renderCategories();
+        loadButtonPosition();
+        switchStickerCategory(Object.keys(stickerData)[0] || '');
+        switchTab('text');
+        setTimeout(checkAlarmOnLoad, 500);
     }
-
-    loadStickerData();
-    loadThemes();
-    renderCategories();
-    loadButtonPosition();
-    switchStickerCategory(Object.keys(stickerData)[0] || '');
-    switchTab('text');
-    setTimeout(checkAlarmOnLoad, 500);
-}
-
+    init();
 })();
