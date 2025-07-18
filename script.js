@@ -925,7 +925,7 @@
                         executeCommand(data.command);
                         // After execution, message the SW to see if it should repeat
                         if (navigator.serviceWorker.controller) {
-                           navigator.serviceWorker.controller.postMessage({ type: 'execution_finished', data: data });
+                               navigator.serviceWorker.controller.postMessage({ type: 'execution_finished', data: data });
                         } else {
                            // If controller is lost, handle repeat locally
                            const currentAlarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
