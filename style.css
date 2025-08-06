@@ -718,3 +718,134 @@ emoji-picker {
     background: var(--cip-accent-color);
     color: white;
 }
+/* --- 新增: 头像配置面板样式 --- */
+#cip-avatar-button {
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--cip-transition-speed);
+    position: relative;
+    user-select: none;
+}
+
+#cip-avatar-button:hover {
+    opacity: 1;
+}
+
+#cip-avatar-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 380px;
+    max-width: 90vw;
+    max-height: 80vh;
+    z-index: 1006; /* 比定时面板层级更高 */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    overflow-y: auto;
+    transition:
+        opacity var(--cip-transition-speed),
+        transform var(--cip-transition-speed);
+}
+
+#cip-avatar-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+#cip-avatar-panel h3 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: var(--cip-text-color);
+}
+
+.cip-avatar-grid {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.cip-avatar-grid label {
+    font-size: 14px;
+    color: var(--cip-text-color);
+    justify-self: start;
+}
+
+.cip-avatar-grid input[type='text'] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: var(--cip-border-radius);
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    box-sizing: border-box;
+    color: var(--cip-text-color);
+}
+
+.cip-avatar-manager {
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--cip-border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cip-avatar-manager .cip-avatar-actions,
+.cip-avatar-manager .cip-avatar-save-new {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.cip-avatar-manager select,
+.cip-avatar-manager input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 8px;
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    color: var(--cip-text-color);
+}
+
+.cip-avatar-manager button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color var(--cip-transition-speed);
+}
+
+.cip-avatar-manager button.cip-apply-btn {
+    background-color: var(--cip-accent-color);
+    color: white;
+}
+
+.cip-avatar-manager button.cip-delete-btn {
+    background-color: var(--cip-delete-color);
+    color: white;
+}
+
+#cip-close-avatar-panel-btn {
+    margin: 10px auto 0;
+    width: 50%;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #ddd;
+    color: #333;
+    font-size: 16px;
+    transition: background-color var(--cip-transition-speed);
+}
+
+#cip-close-avatar-panel-btn:hover {
+    background-color: #ccc;
+}
