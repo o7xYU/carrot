@@ -46,20 +46,19 @@ const inputPanel = create(
                 <div id="cip-bunny-content" class="cip-content-section"><textarea id="cip-bunny-input" placeholder="在这里鞭策BUNNY吧..."></textarea></div>
                 <div id="cip-stickers-content" class="cip-content-section"><div id="cip-sticker-categories" class="cip-sub-options-container"><button id="cip-add-category-btn" class="cip-sub-option-btn">+</button></div><div id="cip-sticker-grid"></div></div>
             </div>
-            <div id="cip-panel-footer">
-                <div id="cip-footer-controls">
-                    <div id="cip-export-settings-btn" title="导出设置">📤</div>
-                    <label for="cip-import-settings-input" id="cip-import-settings-btn" title="导入设置">📥</label>
-                    <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
-                    <div id="cip-theme-button" title="主题设置">👕</div>
-                    <div id="cip-alarm-button" title="定时指令">⏰</div>
-                    <div id="cip-avatar-button" title="头像配置">🐰</div>
+        <div id="cip-panel-footer">
+            <div id="cip-footer-controls">
+                <div id="cip-sync-button" title="同步设置">☁️</div>
+                <div id="cip-theme-button" title="主题设置">👕</div>
+                <div id="cip-alarm-button" title="定时指令">⏰</div>
+                <div id="cip-avatar-button" title="头像配置">🐰</div>
+                <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
-                <div class="cip-footer-actions">
-                    <button id="cip-recall-button">撤回</button>
-                    <button id="cip-insert-button">插 入</button>
-                </div>
+            <div class="cip-footer-actions">
+                <button id="cip-recall-button">撤回</button>
+                <button id="cip-insert-button">插 入</button>
             </div>
+        </div>
         `,
         );
 
@@ -201,7 +200,28 @@ const inputPanel = create(
      <button id="cip-close-avatar-panel-btn">关闭</button>
     `
     );
-
+    const syncPanel = create(
+        'div',
+        'cip-sync-panel',
+        'cip-frosted-glass hidden',
+        `
+        <h3>同步设置</h3>
+        <div class="cip-sync-actions">
+            <button id="cip-export-btn-panel">导出设置</button>
+            <label for="cip-import-settings-input" id="cip-import-label-panel" class="cip-button-label">导入设置</label>
+        </div>
+        <div class="cip-sync-path-container">
+            <label for="cip-sync-path-input">保存到:</label>
+            <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
+        </div>
+        <div class="cip-sync-path-actions">
+             <button id="cip-save-path-btn">保存</button>
+             <button id="cip-load-path-btn">加载</button>
+        </div>
+        <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
+        <button id="cip-close-sync-panel-btn">关闭</button>
+        `
+    );
         return {
             carrotButton,
             inputPanel,
@@ -211,6 +231,7 @@ const inputPanel = create(
             themePanel,
             alarmPanel,
             avatarPanel,
+            syncPanel,
         };
     }
 // <BUNNY_CURSE>
@@ -226,6 +247,7 @@ const inputPanel = create(
         themePanel,
         alarmPanel,
         avatarPanel,
+        syncPanel,
     } = createUI();
     const anchor = document.querySelector(
         '#chat-buttons-container, #send_form',
@@ -239,6 +261,7 @@ const inputPanel = create(
         document.body.appendChild(themePanel);
         document.body.appendChild(alarmPanel);
         document.body.appendChild(avatarPanel);
+        document.body.appendChild(syncPanel);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -275,9 +298,16 @@ const inputPanel = create(
     const newThemeNameInput = get('cip-new-theme-name');
     const saveThemeBtn = get('cip-save-theme-btn');
     const deleteThemeBtn = get('cip-delete-theme-btn');
-    const exportSettingsBtn = get('cip-export-settings-btn');
     const importSettingsInput = get('cip-import-settings-input');
-    
+    const syncButton = get('cip-sync-button');
+    const syncPanel = get('cip-sync-panel');
+    const closeSyncPanelBtn = get('cip-close-sync-panel-btn');
+    const exportBtnPanel = get('cip-export-btn-panel');
+    const importLabelPanel = get('cip-import-label-panel');
+    const syncPathInput = get('cip-sync-path-input');
+    const savePathBtn = get('cip-save-path-btn');
+    const loadPathBtn = get('cip-load-path-btn');
+  
     // --- 新增: 定时指令元素引用 ---
     const alarmButton = get('cip-alarm-button');
     const closeAlarmPanelBtn = get('cip-close-alarm-panel-btn');
@@ -460,6 +490,7 @@ function exportSettings() {
             'cip_last_avatar_profile_v1',
             'cip_custom_command_v1',
             'cip_button_position_v4'
+            'cip_sync_filename_v1'
         ];
 
         keysToExport.forEach(key => {
@@ -549,6 +580,19 @@ function importSettings(event) {
     };
     
     reader.readAsText(file);
+}
+function saveToPath() {
+    const filename = syncPathInput.value.trim();
+    if (!filename) {
+        alert('请输入一个有效的文件名。');
+        return;
+    }
+
+    // 保存用户输入的文件名，以便下次加载时显示
+    localStorage.setItem('cip_sync_filename_v1', filename);
+
+    // 调用导出函数，并传入自定义文件名
+    exportSettings(filename);
 }
     // --- 主题管理核心逻辑 (已修改) ---
     let themes = {};
@@ -890,8 +934,20 @@ avatarProfileSelect.addEventListener('change', (e) => {
 
 saveAvatarBtn.addEventListener('click', saveAvatarProfile);
 deleteAvatarBtn.addEventListener('click', deleteAvatarProfile);
-// --- 新增: 导出/导入事件监听 ---
-exportSettingsBtn.addEventListener('click', exportSettings);
+// --- 新增: 同步面板事件监听 ---
+syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
+closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
+
+// 面板内的"导出设置"按钮
+exportBtnPanel.addEventListener('click', () => exportSettings());
+
+// "保存"按钮
+savePathBtn.addEventListener('click', saveToPath);
+
+// "加载"按钮 (功能等同于"导入")
+loadPathBtn.addEventListener('click', () => {
+    importSettingsInput.click();
+});
 importSettingsInput.addEventListener('change', importSettings);
 
     function updateFormatDisplay() {
@@ -1529,6 +1585,10 @@ importSettingsInput.addEventListener('change', importSettings);
         loadButtonPosition();
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
+        const savedFilename = localStorage.getItem('cip_sync_filename_v1');
+        if (savedFilename) {
+            syncPathInput.value = savedFilename;
+        }
         setTimeout(checkAlarmOnLoad, 500);
     }
     init();
