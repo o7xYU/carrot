@@ -21,7 +21,7 @@
         const carrotButton = create('div', 'cip-carrot-button', null, '🌻');
         carrotButton.title = '胡萝卜快捷输入';
 
-        const inputPanel = create(
+const inputPanel = create(
             'div',
             'cip-input-panel',
             'cip-frosted-glass',
@@ -34,14 +34,23 @@
             </nav>
             <div id="cip-format-display"></div>
             <div id="cip-panel-content">
-                <div id="cip-text-content" class="cip-content-section"><div class="cip-sub-options-container"><button class="cip-sub-option-btn active" data-type="plain">纯文本</button><button class="cip-sub-option-btn" data-type="image">图片</button><button class="cip-sub-option-btn" data-type="video">视频</button><button class="cip-sub-option-btn" data-type="music">音乐</button><button class="cip-sub-option-btn" data-type="post">帖子</button></div><textarea id="cip-main-input" placeholder="在此输入文字..."></textarea></div>
+                <div id="cip-text-content" class="cip-content-section">
+                    <div class="cip-sub-options-container"><button class="cip-sub-option-btn active" data-type="plain">纯文本</button><button class="cip-sub-option-btn" data-type="image">图片</button><button class="cip-sub-option-btn" data-type="video">视频</button><button class="cip-sub-option-btn" data-type="music">音乐</button><button class="cip-sub-option-btn" data-type="post">帖子</button></div>
+                    
+                    <div class="cip-main-input-wrapper">
+                        <textarea id="cip-main-input" placeholder="在此输入文字..."></textarea>
+                        <div id="cip-emoji-picker-btn" title="Emoji">😊</div>
+                    </div>
+                    </div>
                 <div id="cip-voice-content" class="cip-content-section"><input type="number" id="cip-voice-duration" placeholder="输入时长 (秒, 仅数字)"><textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea></div>
                 <div id="cip-bunny-content" class="cip-content-section"><textarea id="cip-bunny-input" placeholder="在这里鞭策BUNNY吧..."></textarea></div>
                 <div id="cip-stickers-content" class="cip-content-section"><div id="cip-sticker-categories" class="cip-sub-options-container"><button id="cip-add-category-btn" class="cip-sub-option-btn">+</button></div><div id="cip-sticker-grid"></div></div>
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
-                    <div id="cip-emoji-picker-btn" title="Emoji">😊</div>
+                    <div id="cip-export-settings-btn" title="导出设置">📤</div>
+                    <label for="cip-import-settings-input" id="cip-import-settings-btn" title="导入设置">📥</label>
+                    <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                     <div id="cip-theme-button" title="主题设置">👕</div>
                     <div id="cip-alarm-button" title="定时指令">⏰</div>
                     <div id="cip-avatar-button" title="头像配置">🐰</div>
@@ -266,7 +275,9 @@
     const newThemeNameInput = get('cip-new-theme-name');
     const saveThemeBtn = get('cip-save-theme-btn');
     const deleteThemeBtn = get('cip-delete-theme-btn');
-
+    const exportSettingsBtn = get('cip-export-settings-btn');
+    const importSettingsInput = get('cip-import-settings-input');
+    
     // --- 新增: 定时指令元素引用 ---
     const alarmButton = get('cip-alarm-button');
     const closeAlarmPanelBtn = get('cip-close-alarm-panel-btn');
@@ -436,7 +447,109 @@ function loadAvatarProfiles() {
         stickers: '!{desc}|{url}!',
         recall: '--',
     };
+// --- 新增: 导出/导入核心逻辑 ---
 
+function exportSettings() {
+    try {
+        const settingsToExport = {};
+        const keysToExport = [
+            'cip_sticker_data',
+            'cip_theme_data_v1',
+            'cip_last_active_theme_v1',
+            'cip_avatar_profiles_v1',
+            'cip_last_avatar_profile_v1',
+            'cip_custom_command_v1',
+            'cip_button_position_v4'
+        ];
+
+        keysToExport.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value !== null) {
+                settingsToExport[key] = value;
+            }
+        });
+
+        if (Object.keys(settingsToExport).length === 0) {
+            alert('没有可导出的设置。');
+            return;
+        }
+
+        const jsonString = JSON.stringify(settingsToExport, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date();
+        const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        a.download = `carrot-input-panel-settings-${dateString}.json`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error('导出设置时发生错误:', error);
+        alert('导出失败，请查看控制台获取更多信息。');
+    }
+}
+
+function importSettings(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    if (file.type !== 'application/json') {
+        alert('请选择一个有效的 .json 配置文件。');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedSettings = JSON.parse(e.target.result);
+            
+            // 清理旧设置，防止冲突
+            // Object.keys(localStorage).forEach(key => {
+            //     if (key.startsWith('cip_')) {
+            //         localStorage.removeItem(key);
+            //     }
+            // });
+
+            // 写入新设置
+            let settingsApplied = false;
+            for (const key in importedSettings) {
+                if (Object.prototype.hasOwnProperty.call(importedSettings, key)) {
+                    localStorage.setItem(key, importedSettings[key]);
+                    settingsApplied = true;
+                }
+            }
+            
+            if (settingsApplied) {
+                alert('设置已成功导入！页面将自动刷新以应用所有更改。');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                alert('导入的文件不包含任何有效的设置。');
+            }
+
+        } catch (error) {
+            console.error('导入设置时发生错误:', error);
+            alert('导入失败，文件格式可能不正确。请查看控制台获取更多信息。');
+        } finally {
+            // 清空input的值，以便可以再次选择同一个文件
+            event.target.value = '';
+        }
+    };
+    reader.onerror = function() {
+        alert('读取文件时发生错误。');
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+}
     // --- 主题管理核心逻辑 (已修改) ---
     let themes = {};
     const defaultTheme = {
@@ -777,6 +890,9 @@ avatarProfileSelect.addEventListener('change', (e) => {
 
 saveAvatarBtn.addEventListener('click', saveAvatarProfile);
 deleteAvatarBtn.addEventListener('click', deleteAvatarProfile);
+// --- 新增: 导出/导入事件监听 ---
+exportSettingsBtn.addEventListener('click', exportSettings);
+importSettingsInput.addEventListener('change', importSettings);
 
     function updateFormatDisplay() {
         const e = get('cip-input-panel').querySelector(
