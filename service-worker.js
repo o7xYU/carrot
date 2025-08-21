@@ -15,7 +15,7 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'WAKE_UP') {
         const showNotification = self.registration.showNotification('定时指令', {
             body: '时间到！正在执行预设指令...',
-            silent: true,
+            silent: false,
             tag: 'carrot-timer-notification',
             renotify: true,
         });
@@ -23,3 +23,4 @@ self.addEventListener('message', (event) => {
         event.waitUntil(showNotification);
     }
 });
+
