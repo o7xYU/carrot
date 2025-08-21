@@ -303,7 +303,6 @@
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
     const syncButton = get('cip-sync-button');
-    const syncPanel = get('cip-sync-panel');
     const closeSyncPanelBtn = get('cip-close-sync-panel-btn');
     const exportBtnPanel = get('cip-export-btn-panel');
     const importLabelPanel = get('cip-import-label-panel');
