@@ -229,6 +229,7 @@
     align-items: center;
     gap: 8px;
 }
+#cip-sync-button,
 #cip-theme-button,
 #cip-alarm-button,
 #cip-export-settings-btn,
@@ -875,4 +876,94 @@ emoji-picker {
 
 #cip-close-avatar-panel-btn:hover {
     background-color: #ccc;
+}
+/* --- 新增: 同步设置面板样式 --- */
+#cip-sync-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 380px;
+    max-width: 90vw;
+    z-index: 1007; /* 层级最高 */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    transition: opacity var(--cip-transition-speed), transform var(--cip-transition-speed);
+}
+#cip-sync-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+#cip-sync-panel h3 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: var(--cip-text-color);
+}
+.cip-sync-actions, .cip-sync-path-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.cip-sync-actions button, .cip-sync-actions .cip-button-label,
+.cip-sync-path-actions button {
+    flex-grow: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--cip-border-color);
+    cursor: pointer;
+    font-size: 16px;
+    background-color: var(--cip-input-bg-color);
+    color: var(--cip-text-color);
+    text-align: center;
+    transition: background-color var(--cip-transition-speed);
+}
+.cip-sync-actions button:hover, .cip-sync-actions .cip-button-label:hover,
+.cip-sync-path-actions button:hover {
+    background-color: var(--cip-border-color);
+}
+.cip-sync-path-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cip-sync-path-container label {
+    font-size: 14px;
+    color: var(--cip-text-color);
+    flex-shrink: 0;
+}
+#cip-sync-path-input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 8px;
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    color: var(--cip-text-color);
+}
+.cip-sync-note {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    margin: 5px 0;
+    padding: 8px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 8px;
+}
+#cip-close-sync-panel-btn {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: var(--cip-accent-color);
+    color: var(--cip-insert-text-color);
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color var(--cip-transition-speed);
+}
+#cip-close-sync-panel-btn:hover {
+    background-color: var(--cip-accent-hover-color);
 }
