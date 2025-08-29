@@ -586,7 +586,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '!{desc}|{url}!',
+        stickers: '“<img src="{url}" style="display: block; width: 100px; height: 100px; object-fit: contain; border-radius: 15px;" alt="Sticker"  description="{desc}">”',
         recall: '--',
     };
 
