@@ -1,6 +1,31 @@
-// script.js (v2.4 - 同步面板整合)
+// script.js (v2.5 - 新增unsplash)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
+    const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
+    const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
+    let unsplashAccessKey = '';
+    try {
+        unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
+    } catch (error) {
+        console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
+        unsplashAccessKey = '';
+    }
+    const UNSPLASH_PENDING_REQUESTS = new Map();
+    const UNSPLASH_MAX_RETRIES = 2;
+
+    function setUnsplashAccessKey(value) {
+        unsplashAccessKey = value.trim();
+        try {
+            if (unsplashAccessKey) {
+                localStorage.setItem(UNSPLASH_STORAGE_KEY, unsplashAccessKey);
+            } else {
+                localStorage.removeItem(UNSPLASH_STORAGE_KEY);
+            }
+        } catch (error) {
+            console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
+        }
+    }
+
 
     // --- 动态加载Emoji Picker库 ---
     const pickerScript = document.createElement('script');
@@ -18,7 +43,7 @@
             if (html) el.innerHTML = html;
             return el;
         };
-        const carrotButton = create('div', 'cip-carrot-button', null, '🌻');
+        const carrotButton = create('div', 'cip-carrot-button', null, '🌺');
         carrotButton.title = '胡萝卜快捷输入';
 
         const inputPanel = create(
@@ -182,6 +207,8 @@
 
               <label for="cip-user-avatar-url">你 (User):</label>
                <input type="text" id="cip-user-avatar-url" placeholder="粘贴你的头像链接...">
+               <label for="cip-unsplash-access-key">Unsplash Access Key:</label>
+               <input type="text" id="cip-unsplash-access-key" placeholder="输入你的 Unsplash Access Key...">
             </div>
 
             <div class="cip-avatar-manager">
@@ -327,6 +354,7 @@
     const closeAvatarPanelBtn = get('cip-close-avatar-panel-btn');
     const charAvatarUrlInput = get('cip-char-avatar-url');
     const userAvatarUrlInput = get('cip-user-avatar-url');
+    const unsplashAccessKeyInput = get('cip-unsplash-access-key');
     const avatarProfileSelect = get('cip-avatar-profile-select');
     const applyAvatarBtn = get('cip-apply-avatar-btn');
     const deleteAvatarBtn = get('cip-delete-avatar-btn');
@@ -356,7 +384,17 @@
 现在用户暂时离线，说出你想对用户说的话。
 `;
     alarmCommandInput.value = defaultCommand;
-
+    if (unsplashAccessKeyInput) {
+        unsplashAccessKeyInput.value = unsplashAccessKey;
+        unsplashAccessKeyInput.addEventListener('input', (event) => {
+            setUnsplashAccessKey(event.target.value || '');
+        });
+        unsplashAccessKeyInput.addEventListener('change', () => {
+            if (unsplashAccessKey) {
+                reprocessUnsplashPlaceholders();
+            }
+        });
+    }
     // --- 4. 核心逻辑与事件监听 (已修改) ---
     // --- 新增: 头像管理核心逻辑 ---
     let avatarStyleTag = null; // 全局变量，用于存储我们的style标签
@@ -1077,6 +1115,228 @@
               o.focus())
             : alert('未能找到SillyTavern的输入框！');
     }
+    
+    const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
+    const processedMessages = new WeakSet();
+
+    function getUnsplashCacheKey(query) {
+        return `${UNSPLASH_CACHE_PREFIX}${query}`;
+    }
+
+    function readUnsplashCache(query) {
+        try {
+            const raw = localStorage.getItem(getUnsplashCacheKey(query));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed.imageUrl !== 'string') return null;
+            return parsed;
+        } catch (error) {
+            console.error('胡萝卜插件：读取Unsplash缓存失败', error);
+            return null;
+        }
+    }
+
+    function writeUnsplashCache(query, data) {
+        try {
+            localStorage.setItem(
+                getUnsplashCacheKey(query),
+                JSON.stringify(data),
+            );
+        } catch (error) {
+            console.error('胡萝卜插件：写入Unsplash缓存失败', error);
+        }
+    }
+
+    async function requestUnsplashImage(query) {
+        if (!unsplashAccessKey) return null;
+
+        const cached = readUnsplashCache(query);
+        if (cached) return cached;
+
+        if (UNSPLASH_PENDING_REQUESTS.has(query)) {
+            return UNSPLASH_PENDING_REQUESTS.get(query);
+        }
+
+        const fetchPromise = (async () => {
+            try {
+                const url = new URL('https://api.unsplash.com/photos/random');
+                url.searchParams.set('query', query);
+                url.searchParams.set('orientation', 'squarish');
+                url.searchParams.set('content_filter', 'high');
+
+                const res = await fetch(url.toString(), {
+                    headers: {
+                        Authorization: `Client-ID ${unsplashAccessKey}`,
+                    },
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const imageUrl =
+                    data?.urls?.small_s3 ||
+                    data?.urls?.small ||
+                    data?.urls?.thumb ||
+                    data?.urls?.regular ||
+                    '';
+                if (!imageUrl) return null;
+                const payload = {
+                    imageUrl,
+                    altText:
+                        data?.description ||
+                        data?.alt_description ||
+                        query,
+                };
+                writeUnsplashCache(query, payload);
+                return payload;
+            } catch (error) {
+                console.error('胡萝卜插件：获取Unsplash图片失败', error);
+                return null;
+            } finally {
+                UNSPLASH_PENDING_REQUESTS.delete(query);
+            }
+        })();
+
+        UNSPLASH_PENDING_REQUESTS.set(query, fetchPromise);
+        return fetchPromise;
+    }
+
+    function replacePlaceholderWithNode(container, placeholder, node) {
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+        );
+        while (walker.nextNode()) {
+            const current = walker.currentNode;
+            const index = current.nodeValue.indexOf(placeholder);
+            if (index === -1) continue;
+            const range = document.createRange();
+            range.setStart(current, index);
+            range.setEnd(current, index + placeholder.length);
+            range.deleteContents();
+            range.insertNode(node);
+            return true;
+        }
+        return false;
+    }
+
+    async function processMessageElement(element) {
+        if (!element || processedMessages.has(element)) return;
+
+        const attempts = Number(element.dataset.unsplashAttempts || '0');
+        if (attempts >= UNSPLASH_MAX_RETRIES) {
+            return;
+        }
+
+        const html = element.innerHTML;
+        if (!unsplashPlaceholderRegex.test(html)) {
+            unsplashPlaceholderRegex.lastIndex = 0;
+            return;
+        }
+        unsplashPlaceholderRegex.lastIndex = 0;
+
+        processedMessages.add(element);
+        element.dataset.unsplashAttempts = String(attempts + 1);
+
+        const matches = Array.from(html.matchAll(unsplashPlaceholderRegex));
+        let replacedAny = false;
+        for (const match of matches) {
+            const placeholder = match[0];
+            const description = match[1]?.trim();
+            if (!description) continue;
+
+            const unsplashData = await requestUnsplashImage(description);
+            if (!unsplashData?.imageUrl) continue;
+
+            const img = document.createElement('img');
+            img.src = unsplashData.imageUrl;
+            img.alt = `${description}.jpg`;
+            img.style.display = 'block';
+            img.style.width = '100px';
+            img.style.height = '100px';
+            img.style.objectFit = 'contain';
+            img.style.borderRadius = '0px';
+
+            const replaced = replacePlaceholderWithNode(
+                element,
+                placeholder,
+                img,
+            );
+            replacedAny = replaced || replacedAny;
+        }
+
+        if (!replacedAny) {
+            processedMessages.delete(element);
+            if (attempts + 1 < UNSPLASH_MAX_RETRIES) {
+                setTimeout(() => processMessageElement(element), 1500);
+            }
+        }
+    }
+
+    function observeChatContainer(chatContainer) {
+        if (!chatContainer) return;
+
+        const processExisting = () => {
+            chatContainer
+                .querySelectorAll('.mes_text')
+                .forEach((el) => processMessageElement(el));
+        };
+
+        processExisting();
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType !== Node.ELEMENT_NODE) return;
+                    if (node.classList?.contains('mes_text')) {
+                        processMessageElement(node);
+                    } else {
+                        node
+                            .querySelectorAll?.('.mes_text')
+                            .forEach((el) => processMessageElement(el));
+                    }
+                });
+            });
+        });
+
+        observer.observe(chatContainer, {
+            childList: true,
+            subtree: true,
+        });
+    }
+
+    function initUnsplashImageReplacement() {
+        const setup = () => {
+            const chatContainer = document.getElementById('chat');
+            if (chatContainer) {
+                observeChatContainer(chatContainer);
+                return true;
+            }
+            return false;
+        };
+
+        if (setup()) return;
+
+        const bodyObserver = new MutationObserver(() => {
+            if (setup()) {
+                bodyObserver.disconnect();
+            }
+        });
+
+        bodyObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+
+    function reprocessUnsplashPlaceholders() {
+        const chatContainer = document.getElementById('chat');
+        if (!chatContainer) return;
+
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+            delete element.dataset.unsplashAttempts;
+            processedMessages.delete(element);
+            processMessageElement(element);
+        });
+    }
     function saveStickerData() {
         localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
     }
@@ -1559,6 +1819,7 @@
         initServiceWorker();
         initWebWorker();
         initAvatarStyler();
+        initUnsplashImageReplacement();
         loadStickerData();
         loadThemes();
         loadAvatarProfiles();
