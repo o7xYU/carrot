@@ -12,6 +12,7 @@
     }
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
+    const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -611,6 +612,7 @@
     let currentTab = 'text',
         currentTextSubType = 'plain',
         stickerData = {},
+        stickerLookup = new Map(),
         currentStickerCategory = '',
         selectedSticker = null,
         timerWorker = null;
@@ -1219,25 +1221,39 @@
     }
 
     async function processMessageElement(element) {
-        if (!element || processedMessages.has(element)) return;
+        if (!element) return;
 
-        const attempts = Number(element.dataset.unsplashAttempts || '0');
-        if (attempts >= UNSPLASH_MAX_RETRIES) {
-            return;
-        }
+        const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
-        if (!unsplashPlaceholderRegex.test(html)) {
-            unsplashPlaceholderRegex.lastIndex = 0;
-            return;
-        }
+        const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(html);
         unsplashPlaceholderRegex.lastIndex = 0;
 
+        if (!hasUnsplashPlaceholder) {
+            delete element.dataset.unsplashSignature;
+            return;
+        }
+
+        const matches = Array.from(html.matchAll(unsplashPlaceholderRegex));
+        const signature = matches.map((match) => match[0]).join('|');
+        const previousSignature = element.dataset.unsplashSignature || '';
+
+        let attempts = Number(element.dataset.unsplashAttempts || '0');
+        if (previousSignature !== signature) {
+            attempts = 0;
+        } else if (attempts >= UNSPLASH_MAX_RETRIES) {
+            return;
+        }
+
+        if (processedMessages.has(element) && previousSignature === signature) {
+            return;
+        }
+
+        element.dataset.unsplashSignature = signature;
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        const matches = Array.from(html.matchAll(unsplashPlaceholderRegex));
-        let replacedAny = false;
+        let replacedAny = replacedSticker;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
@@ -1265,6 +1281,7 @@
 
         if (!replacedAny) {
             processedMessages.delete(element);
+            delete element.dataset.unsplashSignature;
             if (attempts + 1 < UNSPLASH_MAX_RETRIES) {
                 setTimeout(() => processMessageElement(element), 1500);
             }
@@ -1283,23 +1300,49 @@
         processExisting();
 
         const observer = new MutationObserver((mutations) => {
+            const pending = new Set();
+
+            const queueElement = (element) => {
+                if (!element) return;
+                if (!element.classList?.contains('mes_text')) {
+                    element = element.closest?.('.mes_text');
+                }
+                if (element) pending.add(element);
+            };
+
             mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType !== Node.ELEMENT_NODE) return;
-                    if (node.classList?.contains('mes_text')) {
-                        processMessageElement(node);
-                    } else {
-                        node
-                            .querySelectorAll?.('.mes_text')
-                            .forEach((el) => processMessageElement(el));
-                    }
-                });
+                if (mutation.type === 'characterData') {
+                    const parent = mutation.target?.parentElement;
+                    queueElement(parent);
+                    return;
+                }
+
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType !== Node.ELEMENT_NODE) {
+                            queueElement(node.parentElement);
+                            return;
+                        }
+                        if (node.classList?.contains('mes_text')) {
+                            queueElement(node);
+                        } else {
+                            node
+                                .querySelectorAll?.('.mes_text')
+                                .forEach((el) => queueElement(el));
+                        }
+                    });
+
+                    queueElement(mutation.target);
+                }
             });
+
+            pending.forEach((element) => processMessageElement(element));
         });
 
         observer.observe(chatContainer, {
             childList: true,
             subtree: true,
+            characterData: true,
         });
     }
 
@@ -1333,16 +1376,92 @@
 
         chatContainer.querySelectorAll('.mes_text').forEach((element) => {
             delete element.dataset.unsplashAttempts;
+            delete element.dataset.unsplashSignature;
             processedMessages.delete(element);
             processMessageElement(element);
         });
     }
+    function rebuildStickerLookup() {
+        const nextLookup = new Map();
+        Object.values(stickerData).forEach((items) => {
+            if (!Array.isArray(items)) return;
+            items.forEach((item) => {
+                if (!item) return;
+                const desc = (item.desc || '').trim();
+                const url = (item.url || '').trim();
+                if (!desc || !url) return;
+                nextLookup.set(desc, url);
+            });
+        });
+        stickerLookup = nextLookup;
+    }
+    function replaceStickerPlaceholders(element) {
+        if (!element || !stickerLookup.size) return false;
+        const html = element.innerHTML;
+        const matches = Array.from(html.matchAll(stickerPlaceholderRegex));
+        if (!matches.length) return false;
+        let replacedAny = false;
+        for (const match of matches) {
+            const placeholder = match[0];
+            let description = match[1] ? match[1].trim() : '';
+            if (!description) continue;
+            if (description.startsWith('http')) continue;
+            let lookupKey = description;
+            let url = stickerLookup.get(lookupKey);
+            if (!url) {
+                const stripped = lookupKey.replace(
+                    /\.(?:jpe?g|png|gif|webp|svg|bmp|avif)$/i,
+                    '',
+                );
+                if (stripped !== lookupKey) {
+                    lookupKey = stripped;
+                    url = stickerLookup.get(lookupKey);
+                }
+            }
+            if (!url) continue;
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Sticker';
+            img.style.display = 'block';
+            img.style.width = '100px';
+            img.style.height = '100px';
+            img.style.objectFit = 'contain';
+            img.style.borderRadius = '0px';
+            img.setAttribute('description', lookupKey);
+            const replaced = replacePlaceholderWithNode(
+                element,
+                placeholder,
+                img,
+            );
+            replacedAny = replaced || replacedAny;
+        }
+        return replacedAny;
+    }
+    function reprocessStickerPlaceholders() {
+        const chatContainer = document.getElementById('chat');
+        if (!chatContainer) return;
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+            replaceStickerPlaceholders(element);
+        });
+    }
     function saveStickerData() {
-        localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
+        try {
+            localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
+        } catch (error) {
+            console.error('胡萝卜插件：写入表情包数据失败', error);
+        }
+        rebuildStickerLookup();
+        reprocessStickerPlaceholders();
     }
     function loadStickerData() {
-        const t = localStorage.getItem('cip_sticker_data');
-        t && (stickerData = JSON.parse(t));
+        try {
+            const stored = localStorage.getItem('cip_sticker_data');
+            stickerData = stored ? JSON.parse(stored) : {};
+        } catch (error) {
+            console.error('胡萝卜插件：读取表情包数据失败', error);
+            stickerData = {};
+        }
+        rebuildStickerLookup();
     }
     function toggleModal(t, o) {
         get(t).classList.toggle('hidden', !o);
@@ -1815,12 +1934,12 @@
     }
 
     function init() {
+        loadStickerData();
         requestNotificationPermission();
         initServiceWorker();
         initWebWorker();
         initAvatarStyler();
         initUnsplashImageReplacement();
-        loadStickerData();
         loadThemes();
         loadAvatarProfiles();
         renderCategories();
