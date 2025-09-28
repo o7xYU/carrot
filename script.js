@@ -10,6 +10,15 @@
         console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
         unsplashAccessKey = '';
     }
+    const HIDE_BUTTON_STORAGE_KEY = 'cip_hide_carrot_button_v1';
+    let hideCarrotButton = false;
+    try {
+        hideCarrotButton =
+            localStorage.getItem(HIDE_BUTTON_STORAGE_KEY) === 'true';
+    } catch (error) {
+        console.error('胡萝卜插件：读取浮标隐藏状态失败', error);
+        hideCarrotButton = false;
+    }
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
@@ -25,6 +34,15 @@
         } catch (error) {
             console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
         }
+        broadcastSettingUpdate('unsplashKey', unsplashAccessKey);
+    }
+
+    function broadcastSettingUpdate(key, value) {
+        window.dispatchEvent(
+            new CustomEvent('carrot-settings-sync', {
+                detail: { key, value },
+            }),
+        );
     }
 
 
@@ -298,6 +316,35 @@
         return;
     }
 
+    function applyCarrotButtonVisibility(hidden) {
+        if (!carrotButton) return;
+        carrotButton.style.display = hidden ? 'none' : 'flex';
+        if (hidden) {
+            hidePanel();
+        }
+    }
+
+    function setHideCarrotButton(value, persist = true) {
+        hideCarrotButton = !!value;
+        if (persist) {
+            try {
+                if (hideCarrotButton) {
+                    localStorage.setItem(HIDE_BUTTON_STORAGE_KEY, 'true');
+                } else {
+                    localStorage.setItem(HIDE_BUTTON_STORAGE_KEY, 'false');
+                }
+            } catch (error) {
+                console.error('胡萝卜插件：写入浮标隐藏状态失败', error);
+            }
+        }
+        applyCarrotButtonVisibility(hideCarrotButton);
+        if (persist) {
+            broadcastSettingUpdate('hideCarrotButton', hideCarrotButton);
+        }
+    }
+
+    setHideCarrotButton(hideCarrotButton, false);
+
     // --- 3. 获取所有元素的引用 (已修改) ---
     const get = (id) => document.getElementById(id);
     const queryAll = (sel) => document.querySelectorAll(sel);
@@ -396,6 +443,27 @@
             }
         });
     }
+
+    window.addEventListener('carrot-settings-change', (event) => {
+        const detail = event && event.detail ? event.detail : {};
+        const { key, value } = detail;
+        if (!key) return;
+
+        switch (key) {
+            case 'hideCarrotButton':
+                setHideCarrotButton(!!value);
+                break;
+            case 'unsplashKey':
+                setUnsplashAccessKey(value || '');
+                if (unsplashAccessKeyInput) {
+                    unsplashAccessKeyInput.value = unsplashAccessKey;
+                }
+                if (unsplashAccessKey) {
+                    reprocessUnsplashPlaceholders();
+                }
+                break;
+        }
+    });
     // --- 4. 核心逻辑与事件监听 (已修改) ---
     // --- 新增: 头像管理核心逻辑 ---
     let avatarStyleTag = null; // 全局变量，用于存储我们的style标签

@@ -1,0 +1,190 @@
+<div class="carrot-extension-settings">
+  <h2>Carrot 快速输入面板</h2>
+  <p class="carrot-extension-description">
+    在 SillyTavern 酒馆中管理 Carrot 插件的快捷设置。
+  </p>
+
+  <section class="carrot-setting-block">
+    <label class="carrot-toggle">
+      <input type="checkbox" id="carrot-hide-float-toggle">
+      <span>隐藏胡萝卜浮标</span>
+    </label>
+    <p class="carrot-hint">勾选后将不会显示屏幕上的胡萝卜浮动按钮。</p>
+  </section>
+
+  <section class="carrot-setting-block">
+    <label for="carrot-unsplash-key" class="carrot-label">Unsplash Access Key</label>
+    <input type="text" id="carrot-unsplash-key" placeholder="输入 Unsplash Access Key">
+    <p class="carrot-hint">
+      Unsplash 是一个免费的无版权图片网站。你可以按照
+      <a href="http://xhslink.com/o/3KdsmAFqakQ" target="_blank" rel="noopener noreferrer">这份教程</a>
+      获取 Access Key，或前往
+      <a href="https://unsplash.com/" target="_blank" rel="noopener noreferrer">Unsplash 官网</a>
+      申请。
+    </p>
+  </section>
+
+  <footer class="carrot-extension-footer">
+    <span>插件作者：<strong>BunnY</strong></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const HIDE_KEY = 'cip_hide_carrot_button_v1';
+  const UNSPLASH_KEY = 'cip_unsplash_access_key_v1';
+
+  const hideToggle = document.getElementById('carrot-hide-float-toggle');
+  const unsplashInput = document.getElementById('carrot-unsplash-key');
+
+  function readBool(key) {
+    try {
+      return localStorage.getItem(key) === 'true';
+    } catch (error) {
+      console.error('Carrot 插件设置：读取布尔值失败', error);
+      return false;
+    }
+  }
+
+  function readText(key) {
+    try {
+      return localStorage.getItem(key) || '';
+    } catch (error) {
+      console.error('Carrot 插件设置：读取文本失败', error);
+      return '';
+    }
+  }
+
+  function persistValue(key, value) {
+    try {
+      if (value === '' || value === null || value === undefined) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, value);
+      }
+    } catch (error) {
+      console.error('Carrot 插件设置：保存失败', error);
+    }
+  }
+
+  function dispatchSettingChange(key, value) {
+    window.dispatchEvent(
+      new CustomEvent('carrot-settings-change', {
+        detail: { key, value },
+      }),
+    );
+  }
+
+  if (hideToggle) {
+    hideToggle.checked = readBool(HIDE_KEY);
+    hideToggle.addEventListener('change', (event) => {
+      const hidden = !!event.target.checked;
+      persistValue(HIDE_KEY, hidden ? 'true' : 'false');
+      dispatchSettingChange('hideCarrotButton', hidden);
+    });
+  }
+
+  if (unsplashInput) {
+    unsplashInput.value = readText(UNSPLASH_KEY);
+    unsplashInput.addEventListener('input', (event) => {
+      const value = event.target.value.trim();
+      if (value) {
+        persistValue(UNSPLASH_KEY, value);
+      } else {
+        persistValue(UNSPLASH_KEY, '');
+      }
+      dispatchSettingChange('unsplashKey', value);
+    });
+  }
+
+  window.addEventListener('carrot-settings-sync', (event) => {
+    const detail = event && event.detail ? event.detail : {};
+    const { key, value } = detail;
+    switch (key) {
+      case 'hideCarrotButton':
+        if (hideToggle) {
+          hideToggle.checked = !!value;
+        }
+        break;
+      case 'unsplashKey':
+        if (unsplashInput) {
+          const nextValue = value || '';
+          if (unsplashInput.value !== nextValue) {
+            unsplashInput.value = nextValue;
+          }
+        }
+        break;
+    }
+  });
+})();
+</script>
+
+<style>
+.carrot-extension-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.carrot-extension-description {
+  margin: 0;
+  color: #666;
+}
+
+.carrot-setting-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.carrot-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.carrot-toggle input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+
+.carrot-label {
+  font-weight: 600;
+}
+
+.carrot-hint {
+  margin: 0;
+  color: #777;
+  font-size: 13px;
+}
+
+.carrot-hint a {
+  color: #ff7f50;
+  text-decoration: none;
+}
+
+.carrot-hint a:hover {
+  text-decoration: underline;
+}
+
+#carrot-unsplash-key {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+}
+
+.carrot-extension-footer {
+  display: flex;
+  justify-content: flex-end;
+  color: #444;
+  font-weight: 500;
+}
+</style>
