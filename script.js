@@ -13,6 +13,202 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
+    const BUILTIN_REGEX_SCRIPTS = [
+        {
+            id: 'cf01534d-e108-4684-a794-fff8bee6203f',
+            scriptName: '来自小图-移除思维链',
+            findRegex:
+                '/(<thinking>[\\s\\S]*?<\\/thinking>)|(<!--[\\s\\S]*?-->)|(<details(?:\\s+close)?>\\s*<summary>IF[\\s\\S]*?<\\/details>)|(<section\\s+data-id\\s*=\\s*["\']?(\\d+)["\']?[^>]*>([\\s\\S]*?)<\\/section>)/g',
+            replaceString: '',
+            trimStrings: [],
+            placement: [2],
+            disabled: false,
+            markdownOnly: false,
+            promptOnly: true,
+            runOnEdit: true,
+            substituteRegex: 0,
+            minDepth: null,
+            maxDepth: null,
+        },
+        {
+            id: '08d7874b-e7ad-4043-9729-7b18a5fb3e91',
+            scriptName: 'BHL-user气泡（水滴+头像',
+            findRegex: '/^“(.*?)”$/gm',
+            replaceString:
+                '<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">\n   <div class="B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url(\'https://i.postimg.cc/0NxXgWH8/640.jpg\'); background-size: cover; background-position: center;">\n </div>\n    <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">\n    <span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>\n      $1\n      <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>\n    </div>\n  </div>',
+            trimStrings: [],
+            placement: [1],
+            disabled: false,
+            runOnEdit: true,
+            substituteRegex: 0,
+            minDepth: null,
+            maxDepth: 2,
+            markdownOnly: true,
+            promptOnly: false,
+        },
+    ];
+    const REGEX_PLACEMENT_MAP = {
+        user: 1,
+        assistant: 2,
+        system: 3,
+    };
+    let parsedRegexScripts = [];
+
+    function parseRegexLiteral(literal) {
+        if (typeof literal !== 'string' || literal.length < 2) return null;
+        if (literal[0] !== '/') return null;
+        const lastSlash = literal.lastIndexOf('/');
+        if (lastSlash <= 0) return null;
+        const pattern = literal.slice(1, lastSlash);
+        const flags = literal.slice(lastSlash + 1);
+        try {
+            return new RegExp(pattern, flags);
+        } catch (error) {
+            console.error('胡萝卜插件：解析正则表达式失败', literal, error);
+            return null;
+        }
+    }
+
+    function normalizeRegexScript(raw) {
+        const regex = parseRegexLiteral(raw.findRegex);
+        if (!regex) return null;
+        return { ...raw, regex };
+    }
+
+    function initRegexScripts() {
+        parsedRegexScripts = BUILTIN_REGEX_SCRIPTS.map(normalizeRegexScript).filter(
+            Boolean,
+        );
+    }
+
+    function getMessageRole(element) {
+        const mes = element.closest?.('.mes');
+        if (!mes) return 'assistant';
+        if (mes.dataset?.role) {
+            const role = mes.dataset.role.toLowerCase();
+            if (role === 'user' || role === 'assistant' || role === 'system') {
+                return role;
+            }
+        }
+        if (mes.dataset?.isUser === 'true') return 'user';
+        if (mes.dataset?.isUser === 'false') return 'assistant';
+        if (mes.classList.contains('mes_right')) return 'user';
+        if (mes.classList.contains('mes_left')) return 'assistant';
+        if (mes.classList.contains('mes_system')) return 'system';
+        return 'assistant';
+    }
+
+    function getMessageDepth(element) {
+        const mes = element.closest?.('.mes');
+        if (!mes) return null;
+        const depthAttr =
+            mes.dataset?.depth ?? mes.dataset?.depthIndex ?? mes.dataset?.level;
+        if (depthAttr == null) return null;
+        const parsed = Number.parseInt(depthAttr, 10);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function isMarkdownMessage(element) {
+        if (!element) return false;
+        if (element.classList.contains('markdown')) return true;
+        const mes = element.closest?.('.mes');
+        if (!mes) return false;
+        return (
+            mes.classList.contains('markdown') ||
+            mes.dataset?.format === 'markdown' ||
+            mes.classList.contains('mes_markdown')
+        );
+    }
+
+    function shouldApplyRegexScript(script, context) {
+        if (!script || script.disabled) return false;
+        if (context.isPrompt) {
+            return script.promptOnly === true;
+        }
+        if (
+            script.promptOnly &&
+            (!Array.isArray(script.placement) || !script.placement.length)
+        ) {
+            return false;
+        }
+        if (script.markdownOnly && !context.isMarkdown) return false;
+        if (Array.isArray(script.placement) && script.placement.length) {
+            const placementValue = REGEX_PLACEMENT_MAP[context.role];
+            if (
+                typeof placementValue !== 'number' ||
+                !script.placement.includes(placementValue)
+            ) {
+                return false;
+            }
+        }
+        if (
+            typeof script.minDepth === 'number' &&
+            context.depth != null &&
+            context.depth < script.minDepth
+        ) {
+            return false;
+        }
+        if (
+            typeof script.maxDepth === 'number' &&
+            context.depth != null &&
+            context.depth > script.maxDepth
+        ) {
+            return false;
+        }
+        return true;
+    }
+
+    function applyTrimStrings(value, trimStrings) {
+        if (!trimStrings || !trimStrings.length) return value;
+        let result = value;
+        trimStrings.forEach((trim) => {
+            if (!trim) return;
+            const escaped = trim.replace(/[.*+?^${}()|\[\]\\]/g, '\$&');
+            result = result.replace(new RegExp(`^${escaped}`), '');
+            result = result.replace(new RegExp(`${escaped}$`), '');
+        });
+        return result;
+    }
+
+    function applyRegexScriptsToText(text, context) {
+        if (!parsedRegexScripts.length) return text;
+        let result = text;
+        parsedRegexScripts.forEach((script) => {
+            if (!shouldApplyRegexScript(script, context)) return;
+            const next = result.replace(script.regex, script.replaceString);
+            if (next !== result) {
+                result = applyTrimStrings(next, script.trimStrings);
+            }
+        });
+        return result;
+    }
+
+    function applyRegexScriptsToElement(element) {
+        if (!element) return false;
+        const context = {
+            isPrompt: false,
+            role: getMessageRole(element),
+            depth: getMessageDepth(element),
+            isMarkdown: isMarkdownMessage(element),
+        };
+        const original = element.innerHTML;
+        const transformed = applyRegexScriptsToText(original, context);
+        if (transformed !== original) {
+            element.innerHTML = transformed;
+            return true;
+        }
+        return false;
+    }
+
+    function applyPromptRegexScripts(text) {
+        const context = {
+            isPrompt: true,
+            role: 'prompt',
+            depth: 0,
+            isMarkdown: false,
+        };
+        return applyRegexScriptsToText(text, context);
+    }
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -1110,12 +1306,14 @@
             }));
     }
     function insertIntoSillyTavern(t) {
+        const processedText = applyPromptRegexScripts(t);
         const o = document.querySelector('#send_textarea');
-        o
-            ? ((o.value += (o.value.trim() ? '\n' : '') + t),
-              o.dispatchEvent(new Event('input', { bubbles: !0 })),
-              o.focus())
-            : alert('未能找到SillyTavern的输入框！');
+        if (o) {
+            const prefix = o.value.trim() ? '\n' : '';
+            o.value += prefix + processedText;
+            o.dispatchEvent(new Event('input', { bubbles: !0 }));
+            o.focus();
+        } else alert('未能找到SillyTavern的输入框！');
     }
     
     const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
@@ -1223,18 +1421,22 @@
     async function processMessageElement(element) {
         if (!element) return;
 
-        const replacedSticker = replaceStickerPlaceholders(element);
-
-        const html = element.innerHTML;
-        const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(html);
+        const originalHtml = element.innerHTML;
+        const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(originalHtml);
         unsplashPlaceholderRegex.lastIndex = 0;
+
+        const replacedSticker = replaceStickerPlaceholders(element);
+        const appliedRegex = applyRegexScriptsToElement(element);
 
         if (!hasUnsplashPlaceholder) {
             delete element.dataset.unsplashSignature;
+            if (replacedSticker || appliedRegex) {
+                processedMessages.delete(element);
+            }
             return;
         }
 
-        const matches = Array.from(html.matchAll(unsplashPlaceholderRegex));
+        const matches = Array.from(originalHtml.matchAll(unsplashPlaceholderRegex));
         const signature = matches.map((match) => match[0]).join('|');
         const previousSignature = element.dataset.unsplashSignature || '';
 
@@ -1254,7 +1456,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = replacedSticker || appliedRegex;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
@@ -1441,6 +1643,7 @@
         if (!chatContainer) return;
         chatContainer.querySelectorAll('.mes_text').forEach((element) => {
             replaceStickerPlaceholders(element);
+            applyRegexScriptsToElement(element);
         });
     }
     function saveStickerData() {
@@ -1933,6 +2136,7 @@
     }
 
     function init() {
+        initRegexScripts();
         loadStickerData();
         requestNotificationPermission();
         initServiceWorker();
