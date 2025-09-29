@@ -104,16 +104,20 @@ BunnY制作，搭配Bunnyhole Lab食用。
 
 ## 自定义正则替换
 
-扩展内置了一个 `regexReplacements` 列表（位于 `script.js` 中），会在消息渲染时依次执行正则替换，可用于清理 AI 输出或添加自定义气泡样式。
+扩展内置了一个 `regexReplacements` 列表（位于 `script.js` 中），会在消息渲染时依次执行正则替换，可用于清理 AI 输出或添加自定义气泡样式。每条规则沿用了 SillyTavern 正则导出的字段，因此可以直接把导出的 JSON 片段贴进来使用。
 
 ### 添加或修改正则的步骤
 
 1. 打开 `script.js`，搜索 `regexReplacements` 数组。
-2. 为每条规则新增一个对象，包含以下字段：
+2. 为每条规则新增一个对象，可以直接粘贴 SillyTavern 正则导出的字段。常用属性说明：
    - `id`：唯一标识，方便区分规则。
-   - `description`：规则说明，便于后续维护。
-   - `regex`：要匹配的 `RegExp` 对象，可直接使用字面量（如 `/.../gi`）。
-   - `replacement`：匹配后替换成的内容，支持多行模板字符串。
+   - `scriptName`：SillyTavern 中显示的规则名称，仅用于备注。
+   - `findRegex` / `regex`：要匹配的 `RegExp` 对象，可直接使用字面量（如 `/.../gi`），也可以保留 SillyTavern 导出的字符串写法（例如 `"/.../gi"`），扩展会自动解析。
+   - `replaceString` / `replacement`：匹配后替换成的内容，支持多行模板字符串。
+   - `placement`：限定作用的消息角色，遵循 SillyTavern 约定（`1`=用户、`2`=AI、`3`=系统、`4`=旁白，留空则对所有消息生效）。
+   - `promptOnly` / `markdownOnly`：仅在提示词或 Markdown 渲染时生效，默认为兼容模式，未检测到上下文时不会强制跳过。
+   - `minDepth` / `maxDepth`：按消息深度限制正则生效范围，空值表示不限制。
+   - `disabled`、`runOnEdit`、`trimStrings` 等：保持与 SillyTavern 一致的字段，方便日后拓展。
 3. 保存文件并在 SillyTavern 中重新加载扩展（或刷新页面）即可生效。
 
 ### 现有示例
@@ -121,21 +125,26 @@ BunnY制作，搭配Bunnyhole Lab食用。
 ```javascript
 const regexReplacements = [
     {
-        id: 'remove-thinking-block',
-        description: '移除思维链、调试注释与IF详情内容',
-        regex: /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=\s*["']?(\d+)["']?[^>]*>([\s\S]*?)<\/section>)/gi,
-        replacement: '',
+        id: 'cf01534d-e108-4684-a794-fff8bee6203f',
+        scriptName: '来自小图-移除思维链',
+        findRegex: /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=['"]?(\d+)['"]?[^>]*>([\s\S]*?)<\/section>)/gi,
+        replaceString: '',
+        placement: [2],
+        promptOnly: true,
     },
     {
-        id: 'user-bubble-wrapper',
-        description: '将全角引号包裹的文本替换为自定义用户气泡',
-        regex: /^“(.*?)”$/gm,
-        replacement: `...自定义HTML...`,
+        id: '08d7874b-e7ad-4043-9729-7b18a5fb3e91',
+        scriptName: 'BHL-user气泡（水滴+头像',
+        findRegex: /^“(.*?)”$/gm,
+        replaceString: `...自定义HTML...`,
+        placement: [1],
+        markdownOnly: true,
+        maxDepth: 2,
     },
 ];
 ```
 
-> 提示：如果需要暂时停用某条规则，可以将该对象注释掉或删除；新增规则时注意保持数组语法正确。
+> 提示：如果需要暂时停用某条规则，可以将 `disabled` 设为 `true`，或直接注释掉 / 删除该对象；新增规则时注意保持数组语法正确。
 
 ## 技术特性
 

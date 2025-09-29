@@ -1123,16 +1123,26 @@
 
     const regexReplacements = [
         {
-            id: 'remove-thinking-block',
-            description: '移除思维链、调试注释与IF详情内容',
-            regex: /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=\s*["']?(\d+)["']?[^>]*>([\s\S]*?)<\/section>)/gi,
-            replacement: '',
+            id: 'cf01534d-e108-4684-a794-fff8bee6203f',
+            scriptName: '来自小图-移除思维链',
+            findRegex:
+                /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=['"]?(\d+)['"]?[^>]*>([\s\S]*?)<\/section>)/gi,
+            replaceString: '',
+            trimStrings: [],
+            placement: [2],
+            disabled: false,
+            markdownOnly: false,
+            promptOnly: true,
+            runOnEdit: true,
+            substituteRegex: 0,
+            minDepth: null,
+            maxDepth: null,
         },
         {
-            id: 'user-bubble-wrapper',
-            description: '将全角引号包裹的文本替换为自定义用户气泡',
-            regex: /^“(.*?)”$/gm,
-            replacement: `<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
+            id: '08d7874b-e7ad-4043-9729-7b18a5fb3e91',
+            scriptName: 'BHL-user气泡（水滴+头像',
+            findRegex: /^“(.*?)”$/gm,
+            replaceString: `<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
    <div class="B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
  </div>
     <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
@@ -1141,27 +1151,231 @@
       <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
     </div>
   </div>`,
+            trimStrings: [],
+            placement: [1],
+            disabled: false,
+            markdownOnly: true,
+            promptOnly: false,
+            runOnEdit: true,
+            substituteRegex: 0,
+            minDepth: null,
+            maxDepth: 2,
         },
     ];
 
-    function applyRegexReplacements(html) {
-        if (!html) {
-            return { html, replaced: false };
+    function detectMessagePlacement(element) {
+        const messageEl = element.closest?.('.mes');
+        if (!messageEl) return null;
+
+        const classList = messageEl.classList || { contains: () => false };
+        if (
+            classList.contains('mes-user') ||
+            classList.contains('user_mes') ||
+            classList.contains('mes_user') ||
+            classList.contains('from-user') ||
+            messageEl.dataset?.role === 'user'
+        ) {
+            return 1;
+        }
+        if (
+            classList.contains('mes-ai') ||
+            classList.contains('bot_mes') ||
+            classList.contains('mes_bot') ||
+            classList.contains('from-bot') ||
+            messageEl.dataset?.role === 'assistant'
+        ) {
+            return 2;
+        }
+        if (
+            classList.contains('mes-system') ||
+            classList.contains('system_mes') ||
+            messageEl.dataset?.role === 'system'
+        ) {
+            return 3;
+        }
+        if (
+            classList.contains('mes-narrator') ||
+            classList.contains('narrator_mes') ||
+            classList.contains('story_mes') ||
+            messageEl.dataset?.role === 'narrator'
+        ) {
+            return 4;
+        }
+        return 0;
+    }
+
+    function detectMessageDepth(element) {
+        const messageEl = element.closest?.('.mes');
+        if (!messageEl) return 0;
+
+        const { dataset } = messageEl;
+        const depthCandidates = [
+            dataset?.depth,
+            dataset?.messageDepth,
+            dataset?.depthIndex,
+            dataset?.level,
+        ];
+        for (const value of depthCandidates) {
+            if (value == null) continue;
+            const numeric = Number(value);
+            if (!Number.isNaN(numeric)) return numeric;
         }
 
-        let nextHtml = html;
+        let depth = 0;
+        let current = messageEl;
+        while ((current = current.previousElementSibling)) {
+            if (current.classList?.contains('mes')) depth += 1;
+        }
+        return depth;
+    }
+
+    function detectPromptContext(element) {
+        const messageEl = element.closest?.('.mes');
+        if (!messageEl) return null;
+        const { dataset, classList } = messageEl;
+        if (dataset?.prompt === 'true' || dataset?.isPrompt === 'true') return true;
+        if (classList?.contains('prompt_mes') || classList?.contains('mes-prompt')) return true;
+        if (classList?.contains('chat_mes') || classList?.contains('mes_chat')) return false;
+        if (dataset?.prompt === 'false' || dataset?.isPrompt === 'false') return false;
+        if (messageEl.closest('#prompt-container, .prompt-editor')) return true;
+        return null;
+    }
+
+    function detectMarkdownContext(element) {
+        if (!element) return null;
+        if (element.dataset?.format === 'markdown') return true;
+        if (element.dataset?.format === 'plain') return false;
+        if (element.classList?.contains('markdown')) return true;
+        if (element.classList?.contains('plaintext')) return false;
+        const messageEl = element.closest?.('.mes');
+        if (!messageEl) return null;
+        if (messageEl.dataset?.format === 'markdown') return true;
+        if (messageEl.dataset?.format === 'plain') return false;
+        if (messageEl.querySelector?.('.markdown')) return true;
+        return null;
+    }
+
+    function applyTrimStrings(text, trims) {
+        if (!Array.isArray(trims) || !trims.length) return text;
+        let result = text;
+        trims.forEach((trim) => {
+            if (typeof trim !== 'string' || !trim) return;
+            const escaped = trim.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+            result = result.replace(
+                new RegExp(`^(?:${escaped})+|(?:${escaped})+$`, 'g'),
+                '',
+            );
+        });
+        return result;
+    }
+
+    function parseRegexFromString(value) {
+        if (typeof value !== 'string' || !value.trim()) return null;
+        const trimmed = value.trim();
+        const literalMatch = trimmed.match(/^\/(.*)\/(\w*)$/);
+        if (literalMatch) {
+            try {
+                return new RegExp(literalMatch[1], literalMatch[2]);
+            } catch (error) {
+                console.warn('胡萝卜插件：解析正则失败', value, error);
+                return null;
+            }
+        }
+        try {
+            return new RegExp(trimmed);
+        } catch (error) {
+            console.warn('胡萝卜插件：解析正则失败', value, error);
+            return null;
+        }
+    }
+
+    function resolveRuleRegExp(rule) {
+        if (!rule) return null;
+        if (rule.__compiledRegex instanceof RegExp) return rule.__compiledRegex;
+        const candidate =
+            rule.regex || rule.findRegex || rule.find || rule.pattern || null;
+        if (candidate instanceof RegExp) {
+            rule.__compiledRegex = candidate;
+            return candidate;
+        }
+        const parsed = parseRegexFromString(candidate);
+        if (parsed) {
+            rule.__compiledRegex = parsed;
+            return parsed;
+        }
+        return null;
+    }
+
+    function applyRegexReplacements(element) {
+        if (!element) return false;
+
+        let html = element.innerHTML;
+        if (!html) return false;
+
+        const placement = detectMessagePlacement(element);
+        const depth = detectMessageDepth(element);
+        const isPrompt = detectPromptContext(element);
+        const isMarkdown = detectMarkdownContext(element);
+
         let replacedAny = false;
 
-        regexReplacements.forEach(({ regex, replacement }) => {
+        regexReplacements.forEach((rule) => {
+            if (!rule || rule.disabled) return;
+
+            const regex = resolveRuleRegExp(rule);
             if (!(regex instanceof RegExp)) return;
-            const updatedHtml = nextHtml.replace(regex, replacement ?? '');
-            if (updatedHtml !== nextHtml) {
+
+            if (Array.isArray(rule.placement) && rule.placement.length) {
+                if (
+                    placement !== null &&
+                    placement !== undefined &&
+                    !rule.placement.includes(placement)
+                ) {
+                    return;
+                }
+            }
+
+            if (rule.promptOnly === true && isPrompt === false) return;
+            if (rule.promptOnly === false && isPrompt === true) return;
+
+            if (rule.markdownOnly === true && isMarkdown === false) return;
+            if (rule.markdownOnly === false && isMarkdown === true) return;
+
+            if (
+                rule.minDepth != null &&
+                Number.isFinite(Number(rule.minDepth)) &&
+                depth < Number(rule.minDepth)
+            ) {
+                return;
+            }
+
+            if (
+                rule.maxDepth != null &&
+                Number.isFinite(Number(rule.maxDepth)) &&
+                depth > Number(rule.maxDepth)
+            ) {
+                return;
+            }
+
+            const replacement =
+                rule.replacement ?? rule.replace ?? rule.replaceString ?? '';
+
+            const nextHtml = applyTrimStrings(html, rule.trimStrings || []).replace(
+                regex,
+                replacement,
+            );
+
+            if (nextHtml !== html) {
                 replacedAny = true;
-                nextHtml = updatedHtml;
+                html = nextHtml;
             }
         });
 
-        return { html: nextHtml, replaced: replacedAny };
+        if (replacedAny) {
+            element.innerHTML = html;
+        }
+
+        return replacedAny;
     }
 
     function getUnsplashCacheKey(query) {
@@ -1266,10 +1480,7 @@
     async function processMessageElement(element) {
         if (!element) return;
 
-        const regexResult = applyRegexReplacements(element.innerHTML);
-        if (regexResult.replaced) {
-            element.innerHTML = regexResult.html;
-        }
+        const replacedByRegex = applyRegexReplacements(element);
 
         const replacedSticker = replaceStickerPlaceholders(element);
 
@@ -1302,7 +1513,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker || regexResult.replaced;
+        let replacedAny = replacedSticker || replacedByRegex;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
