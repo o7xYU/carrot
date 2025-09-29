@@ -1121,6 +1121,49 @@
     const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
     const processedMessages = new WeakSet();
 
+    const regexReplacements = [
+        {
+            id: 'remove-thinking-block',
+            description: '移除思维链、调试注释与IF详情内容',
+            regex: /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=\s*["']?(\d+)["']?[^>]*>([\s\S]*?)<\/section>)/gi,
+            replacement: '',
+        },
+        {
+            id: 'user-bubble-wrapper',
+            description: '将全角引号包裹的文本替换为自定义用户气泡',
+            regex: /^“(.*?)”$/gm,
+            replacement: `<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
+   <div class="B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+ </div>
+    <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
+    <span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>
+      $1
+      <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
+    </div>
+  </div>`,
+        },
+    ];
+
+    function applyRegexReplacements(html) {
+        if (!html) {
+            return { html, replaced: false };
+        }
+
+        let nextHtml = html;
+        let replacedAny = false;
+
+        regexReplacements.forEach(({ regex, replacement }) => {
+            if (!(regex instanceof RegExp)) return;
+            const updatedHtml = nextHtml.replace(regex, replacement ?? '');
+            if (updatedHtml !== nextHtml) {
+                replacedAny = true;
+                nextHtml = updatedHtml;
+            }
+        });
+
+        return { html: nextHtml, replaced: replacedAny };
+    }
+
     function getUnsplashCacheKey(query) {
         return `${UNSPLASH_CACHE_PREFIX}${query}`;
     }
@@ -1223,6 +1266,11 @@
     async function processMessageElement(element) {
         if (!element) return;
 
+        const regexResult = applyRegexReplacements(element.innerHTML);
+        if (regexResult.replaced) {
+            element.innerHTML = regexResult.html;
+        }
+
         const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
@@ -1254,7 +1302,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = replacedSticker || regexResult.replaced;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();

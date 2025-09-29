@@ -102,6 +102,41 @@ BunnY制作，搭配Bunnyhole Lab食用。
    ```
 5. 点击确定保存
 
+## 自定义正则替换
+
+扩展内置了一个 `regexReplacements` 列表（位于 `script.js` 中），会在消息渲染时依次执行正则替换，可用于清理 AI 输出或添加自定义气泡样式。
+
+### 添加或修改正则的步骤
+
+1. 打开 `script.js`，搜索 `regexReplacements` 数组。
+2. 为每条规则新增一个对象，包含以下字段：
+   - `id`：唯一标识，方便区分规则。
+   - `description`：规则说明，便于后续维护。
+   - `regex`：要匹配的 `RegExp` 对象，可直接使用字面量（如 `/.../gi`）。
+   - `replacement`：匹配后替换成的内容，支持多行模板字符串。
+3. 保存文件并在 SillyTavern 中重新加载扩展（或刷新页面）即可生效。
+
+### 现有示例
+
+```javascript
+const regexReplacements = [
+    {
+        id: 'remove-thinking-block',
+        description: '移除思维链、调试注释与IF详情内容',
+        regex: /(<thinking>[\s\S]*?<\/thinking>)|(<!--[\s\S]*?-->)|(<details(?:\s+close)?>\s*<summary>IF[\s\S]*?<\/details>)|(<section\s+data-id\s*=\s*["']?(\d+)["']?[^>]*>([\s\S]*?)<\/section>)/gi,
+        replacement: '',
+    },
+    {
+        id: 'user-bubble-wrapper',
+        description: '将全角引号包裹的文本替换为自定义用户气泡',
+        regex: /^“(.*?)”$/gm,
+        replacement: `...自定义HTML...`,
+    },
+];
+```
+
+> 提示：如果需要暂时停用某条规则，可以将该对象注释掉或删除；新增规则时注意保持数组语法正确。
+
 ## 技术特性
 
 - 使用 jQuery 构建，兼容 SillyTavern 环境
