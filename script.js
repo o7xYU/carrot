@@ -509,7 +509,6 @@
                 'cip_avatar_profiles_v1',
                 'cip_last_avatar_profile_v1',
                 'cip_custom_command_v1',
-                'cip_button_position_v4',
                 'cip_sync_filename_v1' // 同时导出文件名设置
             ];
 
@@ -570,11 +569,12 @@
                 
                 let settingsApplied = false;
                 for (const key in importedSettings) {
-                    if (Object.prototype.hasOwnProperty.call(importedSettings, key)) {
-                        localStorage.setItem(key, importedSettings[key]);
-                        settingsApplied = true;
-                    }
+                     if (!Object.prototype.hasOwnProperty.call(importedSettings, key)) continue;
+                     if (key === 'cip_button_position_v4') continue; // ← 导入时忽略浮标位置
+                     localStorage.setItem(key, importedSettings[key]);
+                     settingsApplied = true;
                 }
+
                 
                 if (settingsApplied) {
                     alert('设置已成功导入！页面将自动刷新以应用所有更改。');
