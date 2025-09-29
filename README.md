@@ -102,6 +102,39 @@ BunnY制作，搭配Bunnyhole Lab食用。
    ```
 5. 点击确定保存
 
+## 自定义正则替换
+
+从 v4.5 起，胡萝卜扩展会在加载时读取根目录下的 `regex-rules.json`，把其中定义的规则自动作用到 SillyTavern 的对话消息与快捷插入的提示词：
+
+- `promptOnly: true` 的规则只会在插入提示词（发送文本框）时运行；
+- 其他规则会在聊天区的 `.mes_text` 消息渲染后运行，并与表情包/Unsplash 替换协同；
+- `markdownOnly`、`runOnEdit`、`minDepth`、`maxDepth` 等字段控制规则生效范围。
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 唯一标识符，可使用在线 UUID 生成器创建。 |
+| `scriptName` | 规则名称，用于备注用途。 |
+| `findRegex` | 查找用的正则表达式，建议使用 `/.../flags` 形式。 |
+| `replaceString` | 替换后的内容，支持捕获组引用（如 `$1`）。 |
+| `trimStrings` | 预处理要移除的字符串数组（目前保留字段，可留空数组）。 |
+| `placement` | 与 SillyTavern 配置保持一致，可留作记录。 |
+| `disabled` | 设为 `true` 可临时停用规则。 |
+| `markdownOnly` | 仅对 Markdown 渲染的消息生效。 |
+| `promptOnly` | 仅在发送提示词时运行；设为 `false` 则用于聊天消息。 |
+| `runOnEdit` | 当消息被再次编辑/刷新时是否重新执行。 |
+| `substituteRegex` | 兼容字段，暂按普通字符串处理。 |
+| `minDepth` / `maxDepth` | 限制 DOM 深度（默认 `null` 表示不限制）。 |
+
+### 在 `regex-rules.json` 中添加新规则
+
+1. 使用文本编辑器打开仓库根目录下的 `regex-rules.json`。
+2. 复制现有对象（花括号包裹的部分），粘贴到数组末尾并为上一条补上逗号。
+3. 修改 `id`、`scriptName`、`findRegex`、`replaceString` 等字段为自己的需求。
+4. 根据用途调整 `promptOnly`、`markdownOnly`、`runOnEdit`、`minDepth`、`maxDepth` 等范围控制参数。
+5. 保存文件后，在 SillyTavern 中刷新页面或重载扩展即可生效；现有消息会自动重新执行正则。
+
+> 提示：若需要同时对提示词与聊天消息生效，可以创建两条规则，分别设置 `promptOnly: true` 和 `promptOnly: false`。
+
 ## 技术特性
 
 - 使用 jQuery 构建，兼容 SillyTavern 环境

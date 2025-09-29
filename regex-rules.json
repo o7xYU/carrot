@@ -1,0 +1,36 @@
+[
+  {
+    "id": "cf01534d-e108-4684-a794-fff8bee6203f",
+    "scriptName": "来自小图-移除思维链",
+    "findRegex": "/(<thinking>[\\s\\S]*?<\\/thinking>)|(<!--[\\s\\S]*?-->)|(<details(?:\\s+close)?>\\s*<summary>IF[\\s\\S]*?<\\/details>)|(<section\\s+data-id\\s*=\\s*[\"']?(\\d+)[\"']?[^>]*>([\\s\\S]*?)<\\/section>)/g",
+    "replaceString": "",
+    "trimStrings": [],
+    "placement": [
+      2
+    ],
+    "disabled": false,
+    "markdownOnly": false,
+    "promptOnly": true,
+    "runOnEdit": true,
+    "substituteRegex": 0,
+    "minDepth": null,
+    "maxDepth": null
+  },
+  {
+    "id": "08d7874b-e7ad-4043-9729-7b18a5fb3e91",
+    "scriptName": "BHL-user气泡（水滴+头像",
+    "disabled": false,
+    "runOnEdit": true,
+    "findRegex": "/^“(.*?)”$/gm",
+    "replaceString": "<div style=\"display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;\">\n   <div class=\"B_U_avar\" style=\"width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;\">\n </div>\n    <div style=\"padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;\">\n    <span style=\"position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);\"></span>\n      $1\n      <span style=\"position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;\"></span>\n    </div>\n  </div>",
+    "trimStrings": [],
+    "placement": [
+      1
+    ],
+    "substituteRegex": 0,
+    "minDepth": null,
+    "maxDepth": 2,
+    "markdownOnly": true,
+    "promptOnly": false
+  }
+]

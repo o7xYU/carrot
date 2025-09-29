@@ -14,6 +14,249 @@
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
+    const currentScriptUrl = (() => {
+        try {
+            const script = document.currentScript;
+            if (script?.src) {
+                return script.src;
+            }
+        } catch (error) {
+            console.warn('胡萝卜插件：无法获取当前脚本URL', error);
+        }
+        return null;
+    })();
+
+    let regexRuleStateMap = new WeakMap();
+    const regexRuleSets = {
+        prompt: [],
+        message: [],
+    };
+    let regexRulesPromise = null;
+    let regexRulesReady = false;
+
+    function parseRegexLiteral(serialized) {
+        if (typeof serialized !== 'string') return null;
+        if (serialized.startsWith('/') && serialized.lastIndexOf('/') > 0) {
+            const lastSlashIndex = serialized.lastIndexOf('/');
+            const pattern = serialized.slice(1, lastSlashIndex);
+            const flags = serialized.slice(lastSlashIndex + 1);
+            try {
+                return new RegExp(pattern, flags);
+            } catch (error) {
+                console.error('胡萝卜插件：解析正则失败', serialized, error);
+                return null;
+            }
+        }
+        try {
+            return new RegExp(serialized, 'g');
+        } catch (error) {
+            console.error('胡萝卜插件：解析正则失败', serialized, error);
+            return null;
+        }
+    }
+
+    function normaliseRegexRule(raw) {
+        if (!raw || raw.disabled) return null;
+        const regex = parseRegexLiteral(raw.findRegex);
+        if (!regex) return null;
+        const replaceValue =
+            typeof raw.replaceString === 'string' ? raw.replaceString : '';
+        const minDepthValue =
+            raw.minDepth === null || raw.minDepth === undefined
+                ? null
+                : Number(raw.minDepth);
+        const maxDepthValue =
+            raw.maxDepth === null || raw.maxDepth === undefined
+                ? null
+                : Number(raw.maxDepth);
+        return {
+            id: raw.id || (typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `rule-${Date.now()}`),
+            name: raw.scriptName || '未命名规则',
+            regex,
+            replaceValue,
+            runOnEdit: raw.runOnEdit !== false,
+            markdownOnly: !!raw.markdownOnly,
+            promptOnly: !!raw.promptOnly,
+            substituteRegex: !!raw.substituteRegex,
+            minDepth: Number.isFinite(minDepthValue) ? minDepthValue : null,
+            maxDepth: Number.isFinite(maxDepthValue) ? maxDepthValue : null,
+        };
+    }
+
+    function computeElementDepth(element) {
+        let depth = 0;
+        let node = element;
+        while (node && node !== document.body) {
+            if (node.id === 'chat') break;
+            node = node.parentElement;
+            depth += 1;
+        }
+        return depth;
+    }
+
+    function detectMarkdownContent(element) {
+        if (!element) return false;
+        if (element.dataset?.render === 'markdown') return true;
+        if (element.dataset?.format === 'markdown') return true;
+        if (element.classList?.contains('markdown')) return true;
+        if (element.closest?.('.markdown')) return true;
+        const html = element.innerHTML;
+        return /<\/?(?:p|ul|ol|li|pre|code|strong|em|blockquote|h[1-6])\b/i.test(
+            html,
+        );
+    }
+
+    function applyRegexRuleToString(value, rule) {
+        if (!value) return value;
+        return value.replace(rule.regex, rule.replaceValue);
+    }
+
+    function applyRegexRulesToElement(element, context = {}) {
+        if (!regexRulesReady || !element || !regexRuleSets.message.length) {
+            return false;
+        }
+
+        let state = regexRuleStateMap.get(element);
+        let appliedRuleIds = state?.appliedRuleIds;
+        if (!appliedRuleIds) {
+            appliedRuleIds = new Set();
+            state = { appliedRuleIds };
+        }
+
+        const isEdit = context.isEdit ?? appliedRuleIds.size > 0;
+        const depth = context.depth ?? computeElementDepth(element);
+        const isMarkdown =
+            context.isMarkdown ?? detectMarkdownContent(element);
+
+        let html = element.innerHTML;
+        let mutated = false;
+
+        for (const rule of regexRuleSets.message) {
+            if (rule.markdownOnly && !isMarkdown) continue;
+            if (rule.minDepth !== null && depth < rule.minDepth) continue;
+            if (rule.maxDepth !== null && depth > rule.maxDepth) continue;
+            if (!rule.runOnEdit && isEdit && appliedRuleIds.has(rule.id)) {
+                continue;
+            }
+            const nextHtml = applyRegexRuleToString(html, rule);
+            if (nextHtml !== html) {
+                mutated = true;
+                html = nextHtml;
+                appliedRuleIds.add(rule.id);
+            }
+        }
+
+        if (mutated) {
+            element.innerHTML = html;
+        }
+
+        if (appliedRuleIds.size) {
+            regexRuleStateMap.set(element, state);
+        }
+
+        return mutated;
+    }
+
+    function applyRegexRulesToPromptText(text) {
+        if (!regexRulesReady || !regexRuleSets.prompt.length) return text;
+        let result = text;
+        for (const rule of regexRuleSets.prompt) {
+            if (rule.markdownOnly) continue;
+            const next = applyRegexRuleToString(result, rule);
+            if (next !== result) {
+                result = next;
+            }
+        }
+        return result;
+    }
+
+    async function fetchRegexRules() {
+        const tried = new Set();
+        const sources = [];
+        if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+            sources.push(chrome.runtime.getURL('regex-rules.json'));
+        }
+        if (currentScriptUrl) {
+            try {
+                sources.push(
+                    new URL('regex-rules.json', currentScriptUrl).toString(),
+                );
+            } catch (error) {
+                console.warn('胡萝卜插件：拼接正则配置路径失败', error);
+            }
+        }
+        sources.push('regex-rules.json');
+
+        for (const url of sources) {
+            if (!url || tried.has(url)) continue;
+            tried.add(url);
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (error) {
+                console.warn('胡萝卜插件：加载正则规则失败', url, error);
+            }
+        }
+        return [];
+    }
+
+    async function ensureRegexRulesLoaded() {
+        if (regexRulesPromise) return regexRulesPromise;
+        regexRulesPromise = (async () => {
+            try {
+                const rawRules = await fetchRegexRules();
+                configureRegexRules(rawRules);
+            } catch (error) {
+                console.error('胡萝卜插件：初始化正则规则失败', error);
+                configureRegexRules([]);
+            } finally {
+                regexRulesReady = true;
+            }
+            return regexRuleSets;
+        })();
+        return regexRulesPromise;
+    }
+
+    function configureRegexRules(rawRules) {
+        regexRuleSets.prompt = [];
+        regexRuleSets.message = [];
+        regexRuleStateMap = new WeakMap();
+
+        if (!Array.isArray(rawRules)) return;
+
+        rawRules.forEach((raw) => {
+            const rule = normaliseRegexRule(raw);
+            if (!rule) return;
+            if (rule.promptOnly) {
+                regexRuleSets.prompt.push(rule);
+            } else {
+                regexRuleSets.message.push(rule);
+            }
+        });
+    }
+
+    function reprocessAllMessagesForRegex() {
+        if (!regexRulesReady || !regexRuleSets.message.length) return;
+        const chatContainer = document.getElementById('chat');
+        if (!chatContainer) return;
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+            regexRuleStateMap.delete(element);
+            applyRegexRulesToElement(element, {
+                isEdit: false,
+                isMarkdown: detectMarkdownContent(element),
+                depth: computeElementDepth(element),
+            });
+        });
+    }
+
+    const regexRulesReadyPromise = ensureRegexRulesLoaded();
+    regexRulesReadyPromise.then(() => {
+        reprocessAllMessagesForRegex();
+    });
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
         try {
@@ -1109,13 +1352,19 @@
                     stickerCategoriesContainer.appendChild(o));
             }));
     }
-    function insertIntoSillyTavern(t) {
-        const o = document.querySelector('#send_textarea');
-        o
-            ? ((o.value += (o.value.trim() ? '\n' : '') + t),
-              o.dispatchEvent(new Event('input', { bubbles: !0 })),
-              o.focus())
-            : alert('未能找到SillyTavern的输入框！');
+    async function insertIntoSillyTavern(t) {
+        const target = document.querySelector('#send_textarea');
+        if (!target) {
+            alert('未能找到SillyTavern的输入框！');
+            return;
+        }
+
+        await ensureRegexRulesLoaded();
+        const processedText = applyRegexRulesToPromptText(t);
+        const prefix = target.value.trim() ? '\n' : '';
+        target.value += `${prefix}${processedText}`;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.focus();
     }
     
     const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
@@ -1223,6 +1472,13 @@
     async function processMessageElement(element) {
         if (!element) return;
 
+        const regexContext = {
+            isEdit: regexRuleStateMap.has(element),
+            isMarkdown: detectMarkdownContent(element),
+            depth: computeElementDepth(element),
+        };
+        const regexChanged = applyRegexRulesToElement(element, regexContext);
+
         const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
@@ -1254,7 +1510,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = regexChanged || replacedSticker;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
