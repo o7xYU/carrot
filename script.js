@@ -12,23 +12,16 @@
     }
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
-    const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
-    const BHL_USER_TEXT_REGEX = /^“(.*?)”$/gm;
-    const BHL_CHARACTER_TEXT_REGEX = /^"(.*?)"$/gm;
-    const BHL_USER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
-    const BHL_CHARACTER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const CIP_REGEXES = window.CIP_REGEXES;
+    if (!CIP_REGEXES) {
+        throw new Error('胡萝卜插件：未找到 CIP_REGEXES 定义');
+    }
+    const { STICKERS, BHL, UNSPLASH } = CIP_REGEXES;
+    const stickerPlaceholderRegex = STICKERS.PLACEHOLDER;
+    const BHL_PLACEHOLDER_DEFINITIONS = BHL.PLACEHOLDER_DEFINITIONS;
+    const ALL_BHL_REGEXES = BHL.ALL_REGEXES;
+    const unsplashPlaceholderRegex = UNSPLASH.PLACEHOLDER;
     const MESSAGE_SELECTOR = '.mes_text, .mes.block';
-    const BHL_PLACEHOLDER_DEFINITIONS = [
-        { type: 'userText', regex: BHL_USER_TEXT_REGEX, priority: 1 },
-        { type: 'characterText', regex: BHL_CHARACTER_TEXT_REGEX, priority: 2 },
-        { type: 'voice', regex: BHL_USER_VOICE_REGEX, priority: 3 },
-    ];
-    const ALL_BHL_REGEXES = [
-        BHL_USER_TEXT_REGEX,
-        BHL_CHARACTER_TEXT_REGEX,
-        BHL_USER_VOICE_REGEX,
-        BHL_CHARACTER_VOICE_REGEX,
-    ];
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -1133,8 +1126,6 @@
               o.focus())
             : alert('未能找到SillyTavern的输入框！');
     }
-    
-    const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
     const processedMessages = new WeakSet();
 
     function getUnsplashCacheKey(query) {

@@ -4,6 +4,6 @@
   "version": "4.4",
   "manifest_version": 3,
   "description": "一个提供多种格式化输入选项的浮动面板，由一个可拖拽的胡萝卜按钮触发。",
-  "js": ["script.js"],
+  "js": ["regexes.js", "script.js"],
   "css": ["style.css"]
 }
