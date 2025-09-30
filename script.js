@@ -17,17 +17,26 @@
     const BHL_CHARACTER_TEXT_REGEX = /^"(.*?)"$/gm;
     const BHL_USER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
     const BHL_CHARACTER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const BHL_TIMESTAMP_REGEX = /^『(.*?) \|(.*?)』$/gm;
+    const BHL_SYSTEM_PROMPT_REGEX = /\+(.*?)\+/g;
+    const BHL_RECALL_REGEX = /^-(.*?)-$/gm;
     const MESSAGE_SELECTOR = '.mes_text, .mes.block';
     const BHL_PLACEHOLDER_DEFINITIONS = [
         { type: 'userText', regex: BHL_USER_TEXT_REGEX, priority: 1 },
         { type: 'characterText', regex: BHL_CHARACTER_TEXT_REGEX, priority: 2 },
         { type: 'voice', regex: BHL_USER_VOICE_REGEX, priority: 3 },
+        { type: 'timestamp', regex: BHL_TIMESTAMP_REGEX, priority: 4 },
+        { type: 'systemPrompt', regex: BHL_SYSTEM_PROMPT_REGEX, priority: 5 },
+        { type: 'recall', regex: BHL_RECALL_REGEX, priority: 6 },
     ];
     const ALL_BHL_REGEXES = [
         BHL_USER_TEXT_REGEX,
         BHL_CHARACTER_TEXT_REGEX,
         BHL_USER_VOICE_REGEX,
         BHL_CHARACTER_VOICE_REGEX,
+        BHL_TIMESTAMP_REGEX,
+        BHL_SYSTEM_PROMPT_REGEX,
+        BHL_RECALL_REGEX,
     ];
 
     function setUnsplashAccessKey(value) {
@@ -642,7 +651,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '“<img src="{url}" style="display: block; width: 100px; height: 100px; object-fit: contain; border-radius: 15px;" alt="Sticker"  description="{desc}">”',
+        stickers: '“[{desc}]”',
         recall: '--',
     };
 
@@ -1491,6 +1500,38 @@
 </div>
 `);
         }
+        if (type === 'timestamp') {
+            const firstPart = convertMultilineToHtml(match[1] || '');
+            const secondPart = convertMultilineToHtml(match[2] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #8e8e93; font-family: 'linja waso', sans-serif; font-size: 13px; margin: 9px 0;">
+  ${firstPart}   ${secondPart}
+</div>
+`);
+        }
+        if (type === 'systemPrompt') {
+            const contentHtml = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #888888; font-size: 14px; margin: 10px 0;">系统提示：${contentHtml}</div>
+`);
+        }
+        if (type === 'recall') {
+            const contentHtml = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; margin-bottom: 6px;">
+  <details style="display: inline-block;">
+    <summary style="color: #999999; font-style: italic; font-size: 13px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      对方撤回了一条消息
+    </summary>
+    <div style="padding: 8px 12px; margin-top: 8px; background-color: rgba(0,0,0,0.04); border-radius: 10px; text-align: left;">
+      <p style="margin: 0; color: #555; font-style: normal; font-size: 14px; line-height: 1.4;">
+        ${contentHtml}
+      </p>
+    </div>
+  </details>
+</div>
+`);
+        }
         return null;
     }
 
@@ -1515,7 +1556,7 @@
 
         textNodes.forEach((textNode) => {
             const original = textNode.nodeValue || '';
-            if (!original || !/[“"=]/.test(original)) {
+            if (!original || !/[“"=『\+-]/.test(original)) {
                 return;
             }
 
