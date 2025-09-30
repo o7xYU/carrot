@@ -13,10 +13,10 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
-    const BHL_USER_TEXT_REGEX = /^“(.*?)”$/gm;
-    const BHL_CHARACTER_TEXT_REGEX = /^"(.*?)"$/gm;
-    const BHL_USER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
-    const BHL_CHARACTER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const BHL_USER_TEXT_REGEX = /“([^”]*?)”/g;
+    const BHL_CHARACTER_TEXT_REGEX = /"([^"]*?)"/g;
+    const BHL_USER_VOICE_REGEX = /=([^|=]*?)\|([^=]*?)=/g;
+    const BHL_CHARACTER_VOICE_REGEX = /=([^|=]*?)\|([^=]*?)=/g;
     const BHL_TIMESTAMP_REGEX = /^『(.*?) \|(.*?)』$/gm;
     const BHL_SYSTEM_PROMPT_REGEX = /\+(.*?)\+/g;
     const BHL_RECALL_REGEX = /^-(.*?)-$/gm;
@@ -1425,11 +1425,20 @@
         return determineMessageSpeaker(element) || 'character';
     }
 
-    function createTextSpan(text) {
-        if (!text) return null;
-        const span = document.createElement('span');
-        span.textContent = text;
-        return span;
+    function appendPlainTextNodes(fragment, text) {
+        if (!fragment) return;
+        if (text == null || text === '') return;
+        const parts = String(text).split(/\r?\n/);
+        parts.forEach((part, index) => {
+            if (part.length) {
+                const span = document.createElement('span');
+                span.textContent = part;
+                fragment.appendChild(span);
+            }
+            if (index < parts.length - 1) {
+                fragment.appendChild(document.createElement('br'));
+            }
+        });
     }
 
     function createFragmentFromHTML(html) {
@@ -1466,7 +1475,7 @@
         if (type === 'userText') {
             const content = convertMultilineToHtml(match[1] || '');
             return createFragmentFromHTML(`
-<div style="display: flex;margin-bottom: 4px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
+<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
   <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
  </div>
     <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
@@ -1480,7 +1489,7 @@
         if (type === 'characterText') {
             const content = convertMultilineToHtml(match[1] || '');
             return createFragmentFromHTML(`
-<div style="display: flex;margin-bottom: 4px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">
+<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">
  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
  </div>
  <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;">
@@ -1497,7 +1506,7 @@
             const detailHtml = convertMultilineToHtml(match[2] || '');
             if (speaker === 'user') {
                 return createFragmentFromHTML(`
-<div style="text-align: right; margin-bottom: 4px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+<div style="text-align: right; margin-bottom: 8px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
   <details style="
     display: inline-block;
     max-width: 400px;
@@ -1543,7 +1552,7 @@
 `);
             }
             return createFragmentFromHTML(`
-<div style="display: flex; margin-bottom: 4px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+<div style="display: flex; margin-bottom: 8px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
   <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
  </div>
   <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px; line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
@@ -2385,115 +2394,211 @@
         return false;
     }
 
+    const STANDALONE_BHL_TYPES = new Set(['userText', 'characterText', 'voice']);
+
+    function isStandaloneBHLMatch(definition, match, source) {
+        if (!definition || !match || !source) return false;
+        if (!STANDALONE_BHL_TYPES.has(definition.type)) {
+            return true;
+        }
+
+        const start = match.index;
+        const end = start + match[0].length;
+
+        let left = start - 1;
+        while (left >= 0) {
+            const ch = source[left];
+            if (ch === '\n' || ch === '\r') break;
+            left--;
+        }
+        const leading = source.slice(left + 1, start);
+        if (/[^\s]/u.test(leading)) {
+            return false;
+        }
+
+        let right = end;
+        while (right < source.length) {
+            const ch = source[right];
+            if (ch === '\n' || ch === '\r') break;
+            right++;
+        }
+        const trailing = source.slice(end, right);
+        if (/[^\s]/u.test(trailing)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function findNextValidBHLMatch(definition, source, startIndex) {
+        if (!definition?.regex || !source?.length) return null;
+        definition.regex.lastIndex = startIndex;
+        let match = null;
+        while ((match = definition.regex.exec(source))) {
+            if (isStandaloneBHLMatch(definition, match, source)) {
+                return match;
+            }
+        }
+        return null;
+    }
+
     function replaceBHLPlaceholders(element) {
         if (!element) return false;
 
-        const textNodes = [];
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    if (
+                        node.nodeType === Node.ELEMENT_NODE &&
+                        node.tagName === 'BR'
+                    ) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                },
+            },
+        );
+
+        const segments = [];
         while (walker.nextNode()) {
-            textNodes.push(walker.currentNode);
+            const current = walker.currentNode;
+            if (current.nodeType === Node.TEXT_NODE) {
+                segments.push({ type: 'text', value: current.nodeValue || '' });
+            } else if (
+                current.nodeType === Node.ELEMENT_NODE &&
+                current.tagName === 'BR'
+            ) {
+                segments.push({ type: 'text', value: '\n' });
+            }
         }
 
-        if (!textNodes.length) return false;
+        if (!segments.length) return false;
+
+        const source = segments.map((segment) => segment.value).join('');
+        if (!source) return false;
+
+        let hasPlaceholder = false;
+        for (const definition of BHL_PLACEHOLDER_DEFINITIONS) {
+            definition.regex.lastIndex = 0;
+            if (definition.regex.exec(source)) {
+                hasPlaceholder = true;
+                break;
+            }
+        }
+        resetBHLRegexes();
+
+        if (!hasPlaceholder) return false;
 
         const messageSpeaker = determineMessageSpeaker(element);
-        let replacedAny = false;
+        const parts = [];
+        let cursor = 0;
 
-        textNodes.forEach((textNode) => {
-            const original = textNode.nodeValue || '';
-            if (!original || !/[“"=+『』-]/.test(original)) {
-                return;
-            }
+        while (cursor < source.length) {
+            let selected = null;
+            let selectedDefinition = null;
 
-            let cursor = 0;
-            const parts = [];
-            let replacedInNode = false;
-
-            while (cursor < original.length) {
-                let selected = null;
-                let selectedDefinition = null;
-
-                for (const definition of BHL_PLACEHOLDER_DEFINITIONS) {
-                    definition.regex.lastIndex = cursor;
-                    const match = definition.regex.exec(original);
-                    if (!match) continue;
-                    if (
-                        !selected ||
-                        match.index < selected.index ||
-                        (match.index === selected.index &&
-                            shouldPreferBHLDefinition(
-                                definition,
-                                selectedDefinition,
-                                messageSpeaker,
-                            ))
-                    ) {
-                        selected = match;
-                        selectedDefinition = definition;
-                    }
-                }
-
-                resetBHLRegexes();
-
-                if (!selected || !selectedDefinition) {
-                    break;
-                }
-
-                if (selected.index > cursor) {
-                    parts.push({
-                        type: 'text',
-                        value: original.slice(cursor, selected.index),
-                    });
-                }
-
-                parts.push({
-                    type: 'placeholder',
-                    definition: selectedDefinition,
-                    match: selected,
-                });
-
-                cursor = selected.index + selected[0].length;
-                replacedInNode = true;
-            }
-
-            if (!replacedInNode) {
-                return;
-            }
-
-            if (cursor < original.length) {
-                parts.push({ type: 'text', value: original.slice(cursor) });
-            }
-
-            const fragment = document.createDocumentFragment();
-            parts.forEach((part) => {
-                if (part.type === 'text') {
-                    const span = createTextSpan(part.value);
-                    if (span) {
-                        fragment.appendChild(span);
-                    }
-                    return;
-                }
-
-                const placeholderFragment = createBHLPlaceholderFragment(
-                    part.definition,
-                    part.match,
-                    element,
+            for (const definition of BHL_PLACEHOLDER_DEFINITIONS) {
+                const match = findNextValidBHLMatch(
+                    definition,
+                    source,
+                    cursor,
                 );
+                if (!match) continue;
 
-                if (placeholderFragment) {
-                    fragment.appendChild(placeholderFragment);
-                } else {
-                    const fallback = createTextSpan(part.match[0]);
-                    if (fallback) {
-                        fragment.appendChild(fallback);
-                    }
+                if (
+                    !selected ||
+                    match.index < selected.index ||
+                    (match.index === selected.index &&
+                        shouldPreferBHLDefinition(
+                            definition,
+                            selectedDefinition,
+                            messageSpeaker,
+                        ))
+                ) {
+                    selected = match;
+                    selectedDefinition = definition;
                 }
+            }
+
+            resetBHLRegexes();
+
+            if (!selected || !selectedDefinition) {
+                break;
+            }
+
+            if (selected.index > cursor) {
+                parts.push({
+                    type: 'text',
+                    value: source.slice(cursor, selected.index),
+                });
+            }
+
+            parts.push({
+                type: 'placeholder',
+                definition: selectedDefinition,
+                match: selected,
             });
 
-            textNode.parentNode.replaceChild(fragment, textNode);
-            replacedAny = true;
+            cursor = selected.index + selected[0].length;
+        }
+
+        if (!parts.length) {
+            resetBHLRegexes();
+            return false;
+        }
+
+        if (cursor < source.length) {
+            parts.push({ type: 'text', value: source.slice(cursor) });
+        }
+
+        const hasBHLPlaceholder = parts.some(
+            (part) => part.type === 'placeholder',
+        );
+        if (!hasBHLPlaceholder) {
+            resetBHLRegexes();
+            return false;
+        }
+
+        const fragment = document.createDocumentFragment();
+        let textBuffer = '';
+
+        const flushText = () => {
+            if (!textBuffer) return;
+            appendPlainTextNodes(fragment, textBuffer);
+            textBuffer = '';
+        };
+
+        parts.forEach((part) => {
+            if (part.type === 'text') {
+                textBuffer += part.value;
+                return;
+            }
+
+            flushText();
+
+            const placeholderFragment = createBHLPlaceholderFragment(
+                part.definition,
+                part.match,
+                element,
+            );
+
+            if (placeholderFragment) {
+                fragment.appendChild(placeholderFragment);
+            } else {
+                appendPlainTextNodes(fragment, part.match[0]);
+            }
         });
 
-        return replacedAny;
+        flushText();
+
+        element.replaceChildren(fragment);
+        resetBHLRegexes();
+        return true;
     }
 
     async function processMessageElement(element) {
