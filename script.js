@@ -13,6 +13,64 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
+    const BHL_USER_TEXT_REGEX = /^“(.*?)”$/gm;
+    const BHL_CHARACTER_TEXT_REGEX = /^"(.*?)"$/gm;
+    const BHL_USER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const BHL_CHARACTER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const BHL_TIMESTAMP_REGEX = /^『(.*?) \|(.*?)』$/gm;
+    const BHL_SYSTEM_PROMPT_REGEX = /\+(.*?)\+/g;
+    const BHL_RECALL_REGEX = /^-(.*?)-$/gm;
+    const MESSAGE_SELECTOR = '.mes_text, .mes.block';
+    const BHL_PLACEHOLDER_DEFINITIONS = [
+        {
+            type: 'userText',
+            regex: BHL_USER_TEXT_REGEX,
+            priority: 1,
+            roleHint: 'user',
+        },
+        {
+            type: 'characterText',
+            regex: BHL_CHARACTER_TEXT_REGEX,
+            priority: 1,
+            roleHint: 'character',
+        },
+        {
+            type: 'voice',
+            regex: BHL_USER_VOICE_REGEX,
+            priority: 2,
+            roleHint: 'user',
+        },
+        {
+            type: 'voice',
+            regex: BHL_CHARACTER_VOICE_REGEX,
+            priority: 2,
+            roleHint: 'character',
+        },
+        {
+            type: 'timestamp',
+            regex: BHL_TIMESTAMP_REGEX,
+            priority: 3,
+        },
+        {
+            type: 'system',
+            regex: BHL_SYSTEM_PROMPT_REGEX,
+            priority: 4,
+        },
+        {
+            type: 'recall',
+            regex: BHL_RECALL_REGEX,
+            priority: 5,
+        },
+    ];
+    const ALL_BHL_REGEXES = [
+        BHL_USER_TEXT_REGEX,
+        BHL_CHARACTER_TEXT_REGEX,
+        BHL_USER_VOICE_REGEX,
+        BHL_CHARACTER_VOICE_REGEX,
+        BHL_TIMESTAMP_REGEX,
+        BHL_SYSTEM_PROMPT_REGEX,
+        BHL_RECALL_REGEX,
+    ];
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -626,7 +684,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '“<img src="{url}" style="display: block; width: 100px; height: 100px; object-fit: contain; border-radius: 15px;" alt="Sticker"  description="{desc}">”',
+        stickers: '[{desc}]',
         recall: '--',
     };
 
@@ -1201,6 +1259,23 @@
         return fetchPromise;
     }
 
+    function resolveMessageElement(node) {
+        if (!node) return null;
+        if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            return null;
+        }
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentElement;
+        }
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+            return null;
+        }
+        if (node.matches?.(MESSAGE_SELECTOR)) {
+            return node;
+        }
+        return node.closest?.(MESSAGE_SELECTOR) || null;
+    }
+
     function replacePlaceholderWithNode(container, placeholder, node) {
         const walker = document.createTreeWalker(
             container,
@@ -1220,9 +1295,425 @@
         return false;
     }
 
+    function escapeHtml(value) {
+        if (value == null) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function convertMultilineToHtml(value) {
+        return escapeHtml(value).replace(/\r?\n/g, '<br>');
+    }
+
+    const USER_ROLE_KEYWORDS = ['user', 'you', 'self', 'sender', 'mine', 'me', 'right'];
+    const CHARACTER_ROLE_KEYWORDS = [
+        'char',
+        'bot',
+        'assistant',
+        'npc',
+        'character',
+        'left',
+        'other',
+    ];
+    const USER_VOICE_HINTS_RAW = ['用户', '你', '我', '自己', 'me', 'mine'];
+    const USER_VOICE_HINTS = ['u:', 'u：', '[u]', '(u)', 'user', 'you'];
+    const CHARACTER_VOICE_HINTS_RAW = ['角色', '她', '他', '对方', 'ta'];
+    const CHARACTER_VOICE_HINTS = ['c:', 'c：', '[c]', '(c)', 'char', 'character', 'bot'];
+
+    function containsKeyword(value, keywords) {
+        return keywords.some((keyword) => value.includes(keyword));
+    }
+
+    function matchClassKeywords(classList, keywords) {
+        return classList.some((cls) =>
+            keywords.some(
+                (keyword) =>
+                    cls === keyword ||
+                    cls.startsWith(`${keyword}-`) ||
+                    cls.endsWith(`-${keyword}`) ||
+                    cls.includes(`${keyword}_`),
+            ),
+        );
+    }
+
+    function determineMessageSpeaker(element) {
+        const mes = element?.closest?.('.mes');
+        if (!mes) return null;
+
+        const datasetValues = Object.values(mes.dataset || {}).map((value) =>
+            String(value).toLowerCase(),
+        );
+        if (datasetValues.some((value) => containsKeyword(value, USER_ROLE_KEYWORDS))) {
+            return 'user';
+        }
+        if (
+            datasetValues.some((value) => containsKeyword(value, CHARACTER_ROLE_KEYWORDS))
+        ) {
+            return 'character';
+        }
+
+        const classList = Array.from(mes.classList || []).map((cls) =>
+            (cls || '').toLowerCase(),
+        );
+        if (matchClassKeywords(classList, USER_ROLE_KEYWORDS)) {
+            return 'user';
+        }
+        if (matchClassKeywords(classList, CHARACTER_ROLE_KEYWORDS)) {
+            return 'character';
+        }
+
+        const classString = classList.join(' ');
+        if (containsKeyword(classString, USER_ROLE_KEYWORDS)) {
+            return 'user';
+        }
+        if (containsKeyword(classString, CHARACTER_ROLE_KEYWORDS)) {
+            return 'character';
+        }
+
+        const authorAttr = (mes.getAttribute?.('data-author') || '').toLowerCase();
+        if (containsKeyword(authorAttr, USER_ROLE_KEYWORDS)) {
+            return 'user';
+        }
+        if (containsKeyword(authorAttr, CHARACTER_ROLE_KEYWORDS)) {
+            return 'character';
+        }
+
+        return null;
+    }
+
+    function guessSpeakerFromSummary(summary, element) {
+        const trimmed = (summary || '').trim();
+        const lower = trimmed.toLowerCase();
+        if (
+            USER_VOICE_HINTS.some(
+                (hint) => lower.startsWith(hint) || lower.includes(` ${hint}`),
+            ) ||
+            USER_VOICE_HINTS_RAW.some(
+                (hint) => trimmed.startsWith(hint) || trimmed.includes(` ${hint}`),
+            )
+        ) {
+            return 'user';
+        }
+        if (
+            CHARACTER_VOICE_HINTS.some(
+                (hint) => lower.startsWith(hint) || lower.includes(` ${hint}`),
+            ) ||
+            CHARACTER_VOICE_HINTS_RAW.some(
+                (hint) => trimmed.startsWith(hint) || trimmed.includes(` ${hint}`),
+            )
+        ) {
+            return 'character';
+        }
+        return determineMessageSpeaker(element) || 'character';
+    }
+
+    function createTextSpan(text) {
+        if (!text) return null;
+        const span = document.createElement('span');
+        span.textContent = text;
+        return span;
+    }
+
+    function createFragmentFromHTML(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html;
+        return template.content;
+    }
+
+    function createBHLPlaceholderFragment(definition, match, element) {
+        if (!definition || !match) return null;
+        const { type, roleHint } = definition;
+        if (type === 'userText') {
+            const content = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="display: flex;margin-bottom: 4px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
+  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+ </div>
+    <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
+    <span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>
+      ${content}
+      <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
+    </div>
+  </div>
+`);
+        }
+        if (type === 'characterText') {
+            const content = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="display: flex;margin-bottom: 4px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">
+ <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
+ </div>
+ <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;">
+  <span style="position: absolute;top: 5px; left: auto;right: 5px;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+  ${content}
+  <span style="position: absolute;top: 15px; left: auto;right: 5px;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
+ </div>
+</div>
+`);
+        }
+        if (type === 'voice') {
+            const speaker = roleHint || guessSpeakerFromSummary(match[1], element);
+            const summaryHtml = convertMultilineToHtml(match[1] || '');
+            const detailHtml = convertMultilineToHtml(match[2] || '');
+            if (speaker === 'user') {
+                return createFragmentFromHTML(`
+<div style="text-align: right; margin-bottom: 4px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+  <details style="
+    display: inline-block;
+    max-width: 400px;
+    text-align: left;
+    padding: 10px 14px;
+    border-radius: 24px !important;
+    font-size: 14px;
+    line-height: 1.4;
+    border-bottom-right-radius: 24px !important; /* user气泡通常是右下角不变 */
+    word-wrap: break-word;
+    position: relative;
+    transition: transform 0.2s;
+    background: transparent !important;
+    color: #333;
+    box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid rgba(200, 200, 200, 0.3) !important;
+    overflow: hidden;
+  ">
+    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
+      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
+        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
+      </div>
+      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px; ">${summaryHtml}</span>
+      <span style="position: absolute; top: 5px; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+      <span style="position: absolute; top: 15px; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
+    </summary>
+    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
+      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4; ">
+        ${detailHtml}
+      </p>
+    </div>
+  </details>
+
+  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; overflow: hidden; margin-left: 10px; flex-shrink: 0; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+  </div>
+</div>
+`);
+            }
+            return createFragmentFromHTML(`
+<div style="display: flex; margin-bottom: 4px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
+ </div>
+  <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px; line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
+    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
+      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
+        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
+      </div>
+      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px">${summaryHtml}</span>
+      <span style="position: absolute; top: 5px; left: auto; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+      <span style="position: absolute; top: 15px; left: auto; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
+    </summary>
+    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
+      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4;">
+        ${detailHtml}
+      </p>
+    </div>
+  </details>
+</div>
+`);
+        }
+        if (type === 'timestamp') {
+            const first = convertMultilineToHtml(match[1] || '');
+            const second = convertMultilineToHtml(match[2] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #8e8e93; font-family: 'linja waso', sans-serif; font-size: 13px; margin: 9px 0;">
+  ${first}&nbsp;&nbsp;&nbsp;${second}
+</div>
+`);
+        }
+        if (type === 'system') {
+            const content = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #888888; font-size: 14px; margin: 10px 0;">系统提示：${content}</div>
+`);
+        }
+        if (type === 'recall') {
+            const content = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; margin-bottom: 6px;">
+  <details style="display: inline-block;">
+    <summary style="color: #999999; font-style: italic; font-size: 13px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      对方撤回了一条消息
+    </summary>
+    <div style="padding: 8px 12px; margin-top: 8px; background-color: rgba(0,0,0,0.04); border-radius: 10px; text-align: left;">
+      <p style="margin: 0; color: #555; font-style: normal; font-size: 14px; line-height: 1.4;">
+        ${content}
+      </p>
+    </div>
+  </details>
+</div>
+`);
+        }
+        return null;
+    }
+
+    function resetBHLRegexes() {
+        ALL_BHL_REGEXES.forEach((regex) => {
+            regex.lastIndex = 0;
+        });
+    }
+
+    function shouldPreferBHLDefinition(candidate, current, messageSpeaker) {
+        if (!current) return true;
+        if (candidate.priority !== current.priority) {
+            return candidate.priority < current.priority;
+        }
+        if (
+            messageSpeaker &&
+            candidate.roleHint &&
+            candidate.roleHint === messageSpeaker &&
+            (!current.roleHint || current.roleHint !== messageSpeaker)
+        ) {
+            return true;
+        }
+        if (
+            messageSpeaker &&
+            current.roleHint &&
+            current.roleHint === messageSpeaker &&
+            (!candidate.roleHint || candidate.roleHint !== messageSpeaker)
+        ) {
+            return false;
+        }
+        return false;
+    }
+
+    function replaceBHLPlaceholders(element) {
+        if (!element) return false;
+
+        const textNodes = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            textNodes.push(walker.currentNode);
+        }
+
+        if (!textNodes.length) return false;
+
+        const messageSpeaker = determineMessageSpeaker(element);
+        let replacedAny = false;
+
+        textNodes.forEach((textNode) => {
+            const original = textNode.nodeValue || '';
+            if (!original || !/[“"=+『』-]/.test(original)) {
+                return;
+            }
+
+            let cursor = 0;
+            const parts = [];
+            let replacedInNode = false;
+
+            while (cursor < original.length) {
+                let selected = null;
+                let selectedDefinition = null;
+
+                for (const definition of BHL_PLACEHOLDER_DEFINITIONS) {
+                    definition.regex.lastIndex = cursor;
+                    const match = definition.regex.exec(original);
+                    if (!match) continue;
+                    if (
+                        !selected ||
+                        match.index < selected.index ||
+                        (match.index === selected.index &&
+                            shouldPreferBHLDefinition(
+                                definition,
+                                selectedDefinition,
+                                messageSpeaker,
+                            ))
+                    ) {
+                        selected = match;
+                        selectedDefinition = definition;
+                    }
+                }
+
+                resetBHLRegexes();
+
+                if (!selected || !selectedDefinition) {
+                    break;
+                }
+
+                if (selected.index > cursor) {
+                    parts.push({
+                        type: 'text',
+                        value: original.slice(cursor, selected.index),
+                    });
+                }
+
+                parts.push({
+                    type: 'placeholder',
+                    definition: selectedDefinition,
+                    match: selected,
+                });
+
+                cursor = selected.index + selected[0].length;
+                replacedInNode = true;
+            }
+
+            if (!replacedInNode) {
+                return;
+            }
+
+            if (cursor < original.length) {
+                parts.push({ type: 'text', value: original.slice(cursor) });
+            }
+
+            const fragment = document.createDocumentFragment();
+            parts.forEach((part) => {
+                if (part.type === 'text') {
+                    const span = createTextSpan(part.value);
+                    if (span) {
+                        fragment.appendChild(span);
+                    }
+                    return;
+                }
+
+                const placeholderFragment = createBHLPlaceholderFragment(
+                    part.definition,
+                    part.match,
+                    element,
+                );
+
+                if (placeholderFragment) {
+                    fragment.appendChild(placeholderFragment);
+                } else {
+                    const fallback = createTextSpan(part.match[0]);
+                    if (fallback) {
+                        fragment.appendChild(fallback);
+                    }
+                }
+            });
+
+            textNode.parentNode.replaceChild(fragment, textNode);
+            replacedAny = true;
+        });
+
+        return replacedAny;
+    }
+
     async function processMessageElement(element) {
         if (!element) return;
 
+        const replacedBHL = replaceBHLPlaceholders(element);
         const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
@@ -1254,7 +1745,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = replacedSticker || replacedBHL;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
@@ -1294,8 +1785,11 @@
 
         const processExisting = () => {
             chatContainer
-                .querySelectorAll('.mes_text')
-                .forEach((el) => processMessageElement(el));
+                .querySelectorAll(MESSAGE_SELECTOR)
+                .forEach((el) => {
+                    const target = resolveMessageElement(el);
+                    if (target) processMessageElement(target);
+                });
         };
 
         processExisting();
@@ -1303,36 +1797,34 @@
         const observer = new MutationObserver((mutations) => {
             const pending = new Set();
 
-            const queueElement = (element) => {
-                if (!element) return;
-                if (!element.classList?.contains('mes_text')) {
-                    element = element.closest?.('.mes_text');
+            const queueNode = (node) => {
+                if (!node) return;
+                if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                    node.childNodes.forEach((child) => queueNode(child));
+                    return;
                 }
-                if (element) pending.add(element);
+
+                const element = resolveMessageElement(node);
+                if (element) {
+                    pending.add(element);
+                }
             };
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData') {
-                    const parent = mutation.target?.parentElement;
-                    queueElement(parent);
+                    queueNode(mutation.target);
                     return;
                 }
 
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType !== Node.ELEMENT_NODE) {
-                            queueElement(node.parentElement);
+                        if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                            node.childNodes.forEach((child) => queueNode(child));
                             return;
                         }
-                        if (node.classList?.contains('mes_text')) {
-                            queueElement(node);
-                        } else {
-                            node
-                                .querySelectorAll?.('.mes_text')
-                                .forEach((el) => queueElement(el));
-                        }
+                        queueNode(node);
                     });
 
-                    queueElement(mutation.target);
+                    queueNode(mutation.target);
                 }
             });
             pending.forEach((element) => processMessageElement(element));
@@ -1373,11 +1865,13 @@
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
 
-        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
-            delete element.dataset.unsplashAttempts;
-            delete element.dataset.unsplashSignature;
-            processedMessages.delete(element);
-            processMessageElement(element);
+        chatContainer.querySelectorAll(MESSAGE_SELECTOR).forEach((element) => {
+            const target = resolveMessageElement(element);
+            if (!target) return;
+            delete target.dataset.unsplashAttempts;
+            delete target.dataset.unsplashSignature;
+            processedMessages.delete(target);
+            processMessageElement(target);
         });
     }
     function rebuildStickerLookup() {
@@ -1439,8 +1933,11 @@
     function reprocessStickerPlaceholders() {
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
-        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
-            replaceStickerPlaceholders(element);
+        chatContainer.querySelectorAll(MESSAGE_SELECTOR).forEach((element) => {
+            const target = resolveMessageElement(element);
+            if (target) {
+                replaceStickerPlaceholders(target);
+            }
         });
     }
     function saveStickerData() {
