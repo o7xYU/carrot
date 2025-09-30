@@ -15,6 +15,59 @@
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
     const bhlUserBubbleRegex = /^“([\s\S]*?)”$/gm;
     const bhlCharBubbleRegex = /^"([\s\S]*?)"$/gm;
+    const MESSAGE_ELEMENT_SELECTOR = '.mes_text, .mes.block';
+
+    function resolveMessageNodes(node) {
+        const resolved = [];
+        if (!node) return resolved;
+
+        let element =
+            node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        if (!element) return resolved;
+
+        if (element.matches?.('.mes_text')) {
+            resolved.push(element);
+            return resolved;
+        }
+
+        if (element.matches?.('.mes.block')) {
+            const innerTexts = element.querySelectorAll('.mes_text');
+            if (innerTexts.length) {
+                innerTexts.forEach((inner) => resolved.push(inner));
+            } else {
+                resolved.push(element);
+            }
+            return resolved;
+        }
+
+        const closest = element.closest?.(MESSAGE_ELEMENT_SELECTOR);
+        if (closest) {
+            return resolveMessageNodes(closest);
+        }
+
+        return resolved;
+    }
+
+    function collectMessageElements(root) {
+        const elements = [];
+        const seen = new Set();
+
+        const enqueueResolved = (node) => {
+            resolveMessageNodes(node).forEach((el) => {
+                if (el && !seen.has(el)) {
+                    seen.add(el);
+                    elements.push(el);
+                }
+            });
+        };
+
+        enqueueResolved(root);
+        root?.querySelectorAll?.(MESSAGE_ELEMENT_SELECTOR).forEach((node) => {
+            enqueueResolved(node);
+        });
+
+        return elements;
+    }
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -1334,9 +1387,9 @@
         if (!chatContainer) return;
 
         const processExisting = () => {
-            chatContainer
-                .querySelectorAll('.mes_text')
-                .forEach((el) => processMessageElement(el));
+            collectMessageElements(chatContainer).forEach((element) => {
+                processMessageElement(element);
+            });
         };
 
         processExisting();
@@ -1344,12 +1397,10 @@
         const observer = new MutationObserver((mutations) => {
             const pending = new Set();
 
-            const queueElement = (element) => {
-                if (!element) return;
-                if (!element.classList?.contains('mes_text')) {
-                    element = element.closest?.('.mes_text');
-                }
-                if (element) pending.add(element);
+            const queueElement = (node) => {
+                collectMessageElements(node).forEach((element) => {
+                    pending.add(element);
+                });
             };
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData') {
@@ -1364,13 +1415,7 @@
                             queueElement(node.parentElement);
                             return;
                         }
-                        if (node.classList?.contains('mes_text')) {
-                            queueElement(node);
-                        } else {
-                            node
-                                .querySelectorAll?.('.mes_text')
-                                .forEach((el) => queueElement(el));
-                        }
+                        queueElement(node);
                     });
 
                     queueElement(mutation.target);
@@ -1414,7 +1459,7 @@
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
 
-        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+        collectMessageElements(chatContainer).forEach((element) => {
             delete element.dataset.unsplashAttempts;
             delete element.dataset.unsplashSignature;
             processedMessages.delete(element);
@@ -1480,7 +1525,7 @@
     function reprocessStickerPlaceholders() {
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
-        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+        collectMessageElements(chatContainer).forEach((element) => {
             replaceStickerPlaceholders(element);
         });
     }
