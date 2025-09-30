@@ -3,31 +3,51 @@
     if (document.getElementById('cip-carrot-button')) return;
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
     const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
+    const REGEX_REPLACEMENT_STORAGE_KEY = 'cip_regex_enabled_v1';
     let unsplashAccessKey = '';
+    let regexReplacementEnabled = true;
     try {
         unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
+        const storedRegexToggle = localStorage.getItem(
+            REGEX_REPLACEMENT_STORAGE_KEY,
+        );
+        if (storedRegexToggle != null) {
+            regexReplacementEnabled = storedRegexToggle !== 'false';
+        }
     } catch (error) {
         console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
         unsplashAccessKey = '';
+        regexReplacementEnabled = true;
     }
+
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
-    const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
-    const BHL_USER_TEXT_REGEX = /^“(.*?)”$/gm;
-    const BHL_CHARACTER_TEXT_REGEX = /^"(.*?)"$/gm;
-    const BHL_USER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
-    const BHL_CHARACTER_VOICE_REGEX = /^=(.*?)\|(.*?)=$/gm;
+    const stickerPlaceholderRegex =
+        /^\s*(?:“\s*\[([^\[\]]+?)\]\s*”|\[([^\[\]]+?)\])\s*$/;
+    const BHL_USER_TEXT_REGEX = /^\s*“(.*?)”\s*$/gm;
+    const BHL_CHARACTER_TEXT_REGEX = /^\s*"(.*?)"\s*$/gm;
+    const BHL_USER_VOICE_REGEX = /^\s*=(.*?)\|(.*?)=\s*$/gm;
+    const BHL_CHARACTER_VOICE_REGEX = /^\s*=(.*?)\|(.*?)=\s*$/gm;
+    const BHL_TIMESTAMP_REGEX = /^\s*『(.*?) \|(.*?)』\s*$/gm;
+    const BHL_SYSTEM_PROMPT_REGEX = /^\s*\+(.*?)\+\s*$/gm;
+    const BHL_RECALL_REGEX = /^\s*-(.*?)-\s*$/gm;
     const MESSAGE_SELECTOR = '.mes_text, .mes.block';
     const BHL_PLACEHOLDER_DEFINITIONS = [
         { type: 'userText', regex: BHL_USER_TEXT_REGEX, priority: 1 },
         { type: 'characterText', regex: BHL_CHARACTER_TEXT_REGEX, priority: 2 },
         { type: 'voice', regex: BHL_USER_VOICE_REGEX, priority: 3 },
+        { type: 'timestamp', regex: BHL_TIMESTAMP_REGEX, priority: 4 },
+        { type: 'systemPrompt', regex: BHL_SYSTEM_PROMPT_REGEX, priority: 5 },
+        { type: 'recall', regex: BHL_RECALL_REGEX, priority: 6 },
     ];
     const ALL_BHL_REGEXES = [
         BHL_USER_TEXT_REGEX,
         BHL_CHARACTER_TEXT_REGEX,
         BHL_USER_VOICE_REGEX,
         BHL_CHARACTER_VOICE_REGEX,
+        BHL_TIMESTAMP_REGEX,
+        BHL_SYSTEM_PROMPT_REGEX,
+        BHL_RECALL_REGEX,
     ];
 
     function setUnsplashAccessKey(value) {
@@ -41,6 +61,44 @@
         } catch (error) {
             console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
         }
+    }
+
+    function updateRegexToggleButton() {
+        if (!regexToggleButton) return;
+        regexToggleButton.textContent = regexReplacementEnabled
+            ? '正则：开'
+            : '正则：关';
+        regexToggleButton.setAttribute(
+            'aria-pressed',
+            regexReplacementEnabled ? 'true' : 'false',
+        );
+        regexToggleButton.style.background = regexReplacementEnabled
+            ? 'rgba(255,255,255,0.6)'
+            : 'rgba(0,0,0,0.08)';
+        regexToggleButton.style.color = regexReplacementEnabled
+            ? '#2d2d2d'
+            : '#666666';
+        regexToggleButton.title = regexReplacementEnabled
+            ? '点击关闭正则替换'
+            : '点击开启正则替换';
+    }
+
+    function setRegexReplacementEnabled(value) {
+        const nextValue = value !== false && value !== 'false';
+        if (regexReplacementEnabled === nextValue) {
+            return;
+        }
+        regexReplacementEnabled = nextValue;
+        try {
+            localStorage.setItem(
+                REGEX_REPLACEMENT_STORAGE_KEY,
+                nextValue ? 'true' : 'false',
+            );
+        } catch (error) {
+            console.error('胡萝卜插件：写入正则替换开关失败', error);
+        }
+        updateRegexToggleButton();
+        refreshAllMessageElements();
     }
 
 
@@ -320,6 +378,33 @@
     const formatDisplay = get('cip-format-display'),
         insertButton = get('cip-insert-button'),
         recallButton = get('cip-recall-button');
+    const formatTextLabel = document.createElement('span');
+    formatTextLabel.id = 'cip-format-text-label';
+    const regexToggleButton = document.createElement('button');
+    regexToggleButton.id = 'cip-regex-toggle';
+    regexToggleButton.type = 'button';
+    regexToggleButton.className = 'cip-regex-toggle-btn';
+    regexToggleButton.style.marginLeft = '8px';
+    regexToggleButton.style.padding = '2px 10px';
+    regexToggleButton.style.borderRadius = '12px';
+    regexToggleButton.style.border = '1px solid rgba(0,0,0,0.2)';
+    regexToggleButton.style.background = 'rgba(255,255,255,0.4)';
+    regexToggleButton.style.cursor = 'pointer';
+    regexToggleButton.style.fontSize = '12px';
+    regexToggleButton.style.lineHeight = '1.4';
+    regexToggleButton.style.transition = 'all 0.2s ease';
+    formatDisplay.classList.add('cip-format-row');
+    formatDisplay.style.display = 'flex';
+    formatDisplay.style.justifyContent = 'space-between';
+    formatDisplay.style.alignItems = 'center';
+    formatTextLabel.style.flex = '1';
+    formatTextLabel.style.minWidth = '0';
+    formatDisplay.appendChild(formatTextLabel);
+    formatDisplay.appendChild(regexToggleButton);
+    regexToggleButton.addEventListener('click', () => {
+        setRegexReplacementEnabled(!regexReplacementEnabled);
+    });
+    updateRegexToggleButton();
     const mainInput = get('cip-main-input'),
         voiceDurationInput = get('cip-voice-duration'),
         voiceMessageInput = get('cip-voice-message');
@@ -642,7 +727,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '“<img src="{url}" style="display: block; width: 100px; height: 100px; object-fit: contain; border-radius: 15px;" alt="Sticker"  description="{desc}">”',
+        stickers: '“[{desc}]”',
         recall: '--',
     };
 
@@ -1003,16 +1088,18 @@
         queryAll('.cip-category-action-icon').forEach((e) => e.remove());
         switch (currentTab) {
             case 'text':
-                formatDisplay.textContent = `格式: ${formatTemplates.text[currentTextSubType].replace('{content}', '内容')}`;
+                formatTextLabel.textContent = `格式: ${formatTemplates.text[
+                    currentTextSubType
+                ].replace('{content}', '内容')}`;
                 break;
             case 'voice':
-                formatDisplay.textContent = "格式: =数字'|内容=";
+                formatTextLabel.textContent = "格式: =数字'|内容=";
                 break;
             case 'bunny':
-                formatDisplay.textContent = '格式: +内容+';
+                formatTextLabel.textContent = '格式: +内容+';
                 break;
             case 'stickers':
-                formatDisplay.textContent = '格式: !描述|链接!';
+                formatTextLabel.textContent = '格式: “[描述]”';
                 if (e) {
                     const t = document.createElement('i');
                     t.textContent = ' ➕';
@@ -1040,6 +1127,10 @@
                     };
                     e.appendChild(o);
                 }
+                break;
+            default:
+                formatTextLabel.textContent = '格式: --';
+                break;
         }
     }
     function switchTab(t) {
@@ -1382,6 +1473,21 @@
         return template.content;
     }
 
+    function ensureOriginalMessageHtmlStored(element) {
+        if (!element || element.dataset.cipOriginalHtml != null) {
+            return;
+        }
+        element.dataset.cipOriginalHtml = element.innerHTML;
+    }
+
+    function restoreOriginalMessageHtml(element) {
+        if (!element) return;
+        const originalHtml = element.dataset.cipOriginalHtml;
+        if (originalHtml != null && element.innerHTML !== originalHtml) {
+            element.innerHTML = originalHtml;
+        }
+    }
+
     function createBHLPlaceholderFragment(type, match, element) {
         if (!match) return null;
         if (type === 'userText') {
@@ -1491,6 +1597,38 @@
 </div>
 `);
         }
+        if (type === 'timestamp') {
+            const firstPart = convertMultilineToHtml(match[1] || '');
+            const secondPart = convertMultilineToHtml(match[2] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #8e8e93; font-family: 'linja waso', sans-serif; font-size: 13px; margin: 9px 0;">
+  ${firstPart}   ${secondPart}
+</div>
+`);
+        }
+        if (type === 'systemPrompt') {
+            const contentHtml = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; color: #888888; font-size: 14px; margin: 10px 0;">系统提示：${contentHtml}</div>
+`);
+        }
+        if (type === 'recall') {
+            const contentHtml = convertMultilineToHtml(match[1] || '');
+            return createFragmentFromHTML(`
+<div style="text-align: center; margin-bottom: 6px;">
+  <details style="display: inline-block;">
+    <summary style="color: #999999; font-style: italic; font-size: 13px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      对方撤回了一条消息
+    </summary>
+    <div style="padding: 8px 12px; margin-top: 8px; background-color: rgba(0,0,0,0.04); border-radius: 10px; text-align: left;">
+      <p style="margin: 0; color: #555; font-style: normal; font-size: 14px; line-height: 1.4;">
+        ${contentHtml}
+      </p>
+    </div>
+  </details>
+</div>
+`);
+        }
         return null;
     }
 
@@ -1515,7 +1653,7 @@
 
         textNodes.forEach((textNode) => {
             const original = textNode.nodeValue || '';
-            if (!original || !/[“"=]/.test(original)) {
+            if (!original || !/[“"=『\+-]/.test(original)) {
                 return;
             }
 
@@ -1609,8 +1747,16 @@
     async function processMessageElement(element) {
         if (!element) return;
 
-        const replacedBHL = replaceBHLPlaceholders(element);
-        const replacedSticker = replaceStickerPlaceholders(element);
+        ensureOriginalMessageHtmlStored(element);
+        restoreOriginalMessageHtml(element);
+
+        let replacedBHL = false;
+        let replacedSticker = false;
+
+        if (regexReplacementEnabled) {
+            replacedBHL = replaceBHLPlaceholders(element);
+            replacedSticker = replaceStickerPlaceholders(element);
+        }
 
         const html = element.innerHTML;
         const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(html);
@@ -1757,18 +1903,24 @@
         });
     }
 
-    function reprocessUnsplashPlaceholders() {
+    function refreshAllMessageElements({ resetUnsplash = true } = {}) {
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
 
         chatContainer.querySelectorAll(MESSAGE_SELECTOR).forEach((element) => {
             const target = resolveMessageElement(element);
             if (!target) return;
-            delete target.dataset.unsplashAttempts;
-            delete target.dataset.unsplashSignature;
-            processedMessages.delete(target);
+            if (resetUnsplash) {
+                delete target.dataset.unsplashAttempts;
+                delete target.dataset.unsplashSignature;
+                processedMessages.delete(target);
+            }
             processMessageElement(target);
         });
+    }
+
+    function reprocessUnsplashPlaceholders() {
+        refreshAllMessageElements();
     }
     function rebuildStickerLookup() {
         const nextLookup = new Map();
@@ -1784,57 +1936,71 @@
         });
         stickerLookup = nextLookup;
     }
+    function resolveStickerResource(description) {
+        if (!description) return null;
+        let lookupKey = description;
+        let url = stickerLookup.get(lookupKey);
+        if (!url) {
+            const stripped = lookupKey.replace(
+                /\.(?:jpe?g|png|gif|webp|svg|bmp|avif)$/i,
+                '',
+            );
+            if (stripped !== lookupKey) {
+                lookupKey = stripped;
+                url = stickerLookup.get(lookupKey);
+            }
+        }
+        if (!url) {
+            return null;
+        }
+        return { url, lookupKey };
+    }
+
+    function createStickerImage(src, description) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'Sticker';
+        img.style.display = 'block';
+        img.style.width = '100px';
+        img.style.height = '100px';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '0px';
+        if (description) {
+            img.setAttribute('description', description);
+        }
+        return img;
+    }
+
     function replaceStickerPlaceholders(element) {
         if (!element || !stickerLookup.size) return false;
-        const html = element.innerHTML;
-        const matches = Array.from(html.matchAll(stickerPlaceholderRegex));
-        if (!matches.length) return false;
-        let replacedAny = false;
-        for (const match of matches) {
-            const placeholder = match[0];
-            let description = match[1] ? match[1].trim() : '';
-            if (!description) continue;
-            if (description.startsWith('http')) continue;
-            let lookupKey = description;
-            let url = stickerLookup.get(lookupKey);
-            if (!url) {
-                const stripped = lookupKey.replace(
-                    /\.(?:jpe?g|png|gif|webp|svg|bmp|avif)$/i,
-                    '',
-                );
-                if (stripped !== lookupKey) {
-                    lookupKey = stripped;
-                    url = stickerLookup.get(lookupKey);
-                }
-            }
-            if (!url) continue;
-            const img = document.createElement('img');
-            img.src = url;
-            img.alt = 'Sticker';
-            img.style.display = 'block';
-            img.style.width = '100px';
-            img.style.height = '100px';
-            img.style.objectFit = 'contain';
-            img.style.borderRadius = '0px';
-            img.setAttribute('description', lookupKey);
-            const replaced = replacePlaceholderWithNode(
-                element,
-                placeholder,
-                img,
-            );
-            replacedAny = replaced || replacedAny;
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const candidates = [];
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const value = node.nodeValue;
+            if (!value) continue;
+            const match = value.match(stickerPlaceholderRegex);
+            if (!match) continue;
+            const description = (match[1] || match[2] || '').trim();
+            if (!description || description.startsWith('http')) continue;
+            candidates.push({ node, description });
         }
+        if (!candidates.length) return false;
+        let replacedAny = false;
+        candidates.forEach(({ node, description }) => {
+            const resolved = resolveStickerResource(description);
+            if (!resolved) return;
+            const parent = node.parentNode;
+            if (!parent) return;
+            const img = createStickerImage(resolved.url, resolved.lookupKey);
+            parent.insertBefore(img, node);
+            parent.removeChild(node);
+            replacedAny = true;
+        });
         return replacedAny;
     }
     function reprocessStickerPlaceholders() {
-        const chatContainer = document.getElementById('chat');
-        if (!chatContainer) return;
-        chatContainer.querySelectorAll(MESSAGE_SELECTOR).forEach((element) => {
-            const target = resolveMessageElement(element);
-            if (target) {
-                replaceStickerPlaceholders(target);
-            }
-        });
+        refreshAllMessageElements({ resetUnsplash: false });
     }
     function saveStickerData() {
         try {
