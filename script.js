@@ -20,6 +20,8 @@
     const BHL_TIMESTAMP_REGEX = /^『(.*?) \|(.*?)』$/gm;
     const BHL_SYSTEM_PROMPT_REGEX = /\+(.*?)\+/g;
     const BHL_RECALL_REGEX = /^-(.*?)-$/gm;
+    const BHL_STATUS_BAR_GLASS_REGEX = /<bunny>\s*([\s\S]*?)\s*([\s\S]*?)\s*([\s\S]*?)\s*([\s\S]*?)\s*([\s\S]*?)\s*<\/bunny>/g;
+    const BHL_LOVE_HUG_REGEX = /<QQ_LOVE>\s*体位:([\s\S]*?)\s*鸡鸡状态:([\s\S]*?)\s*抽插速度:([\s\S]*?)\s*位置描述:([\s\S]*?)\s*吮吸力度:([\s\S]*?)\s*揉捏力度:([\s\S]*?)\s*抓握位置:([\s\S]*?)\s*<\/QQ_LOVE>/g;
     const MESSAGE_SELECTOR = '.mes_text, .mes.block';
     const BHL_PLACEHOLDER_DEFINITIONS = [
         {
@@ -61,6 +63,16 @@
             regex: BHL_RECALL_REGEX,
             priority: 5,
         },
+        {
+            type: 'statusBarGlass',
+            regex: BHL_STATUS_BAR_GLASS_REGEX,
+            priority: 6,
+        },
+        {
+            type: 'loveHug',
+            regex: BHL_LOVE_HUG_REGEX,
+            priority: 7,
+        },
     ];
     const ALL_BHL_REGEXES = [
         BHL_USER_TEXT_REGEX,
@@ -70,6 +82,8 @@
         BHL_TIMESTAMP_REGEX,
         BHL_SYSTEM_PROMPT_REGEX,
         BHL_RECALL_REGEX,
+        BHL_STATUS_BAR_GLASS_REGEX,
+        BHL_LOVE_HUG_REGEX,
     ];
 
     function setUnsplashAccessKey(value) {
@@ -684,7 +698,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '[{desc}]',
+        stickers: '“[{desc}]”',
         recall: '--',
     };
 
@@ -1424,6 +1438,28 @@
         return template.content;
     }
 
+    function createCodeBlockFragment(code) {
+        const fragment = document.createDocumentFragment();
+        const container = document.createElement('div');
+        container.className = 'bhl-code-block';
+        container.style.whiteSpace = 'pre-wrap';
+        container.style.fontFamily = 'monospace';
+        container.style.margin = '8px 0';
+        container.textContent = '```\n' + code + '\n```';
+        fragment.appendChild(container);
+        return fragment;
+    }
+
+    function escapeJsString(value) {
+        if (value == null) return '';
+        return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/\r\n?|\n/g, '\\n')
+            .replace(/'/g, "\\'")
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+    }
+
     function createBHLPlaceholderFragment(definition, match, element) {
         if (!definition || !match) return null;
         const { type, roleHint } = definition;
@@ -1565,6 +1601,756 @@
   </details>
 </div>
 `);
+        }
+        if (type === 'statusBarGlass') {
+            const values = match
+                .slice(1, 6)
+                .map((value) => escapeHtml((value || '').trim()));
+            const [avatar, bubbleMain, crystal, timeInfo, dayNight] = values;
+            const html = `<html>
+<head>
+    <!-- disable-default-loading -->
+    <style>
+        /* 引入谷歌字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap');
+
+        /* 定义颜色和样式的变量 */
+        :root { 
+            --text-color: #333; 
+            --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
+            --bubble-bg: rgba(255, 255, 255, 0.15); /* 更透明的玻璃效果 */
+            --bubble-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
+            --bubble-text-color: #333; 
+            --glass-bg: rgba(255, 255, 255, 0.15); /* 匹配iOS玻璃效果 */
+            --glass-border: 1px solid rgba(255, 255, 255, 0.3); 
+        }
+
+        body { 
+            margin: 0; 
+            padding: 20px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background-image: url('https://source.unsplash.com/random/800x600?nature,sky'); 
+            background-size: cover; 
+            font-family: 'Roboto', sans-serif; 
+            overflow-x: hidden;
+        }
+
+        .status-bar-container { 
+            width: 100%; 
+            max-width: 500px; 
+            position: relative; 
+            padding-top: 60px; 
+            padding-bottom: 50px; 
+        }
+
+        .glass-oval { 
+            width: 100%; 
+            height: 40px; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 30px; 
+            box-sizing: border-box; 
+            background: var(--glass-bg); 
+            border-radius: 25px; 
+            border: var(--glass-border); 
+            backdrop-filter: blur(15px); /* 增强模糊以匹配iOS效果 */
+            -webkit-backdrop-filter: blur(15px); 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 更轻的阴影 */
+        }
+
+        @keyframes floatAnimation {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -6px); }
+        }
+
+        @keyframes slideLeft {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(calc(-50% - 50px)); } 
+        }
+
+        @keyframes wingFloatAnimation {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .avatar-container { 
+            position: absolute; 
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            cursor: pointer; 
+            z-index: 30; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            animation: floatAnimation 4s ease-in-out infinite;
+        }
+
+        .avatar-container.clicked {
+            animation: slideLeft 0.3s ease forwards; 
+        }
+
+        .avatar-image { 
+            width: 70px; 
+            height: 70px; 
+            object-fit: cover; 
+        }
+
+        .wing-container {
+            position: absolute;
+            top: 70px;
+            height: 33px;
+            z-index: -1;
+            animation: wingFloatAnimation 3.5s ease-in-out infinite;
+        }
+
+        .wing-container img { height: 100%; width: auto; }
+        .left-wing { left: -35px; }
+        .right-wing { right: -35px; }
+        .right-wing img { transform: scaleX(-1); }
+
+        .time-info { 
+            color: var(--text-color); 
+            text-shadow: var(--text-shadow); 
+            font-family: 'Playfair Display', serif; 
+            font-size: 14px; 
+            font-weight: 500; 
+            text-align: center; 
+            position: absolute; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            white-space: nowrap;
+        }
+
+        .icon-wrapper {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .day-night-icon, .crystal-ball-icon { 
+            font-size: 20px; 
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); 
+        }
+
+        .thinking-bubble-container {
+            position: absolute;
+            top: 0; 
+            left: calc(0% + 70px); /* 跟随avatar滑动后右侧 */
+            width: max-content; 
+            visibility: hidden; 
+            pointer-events: none;
+        }
+
+        .thinking-bubble-container .bubble-main {
+            position: absolute;
+            background: var(--bubble-bg);
+            box-shadow: var(--bubble-shadow);
+            border-radius: 16px; 
+            padding: 8px 12px; 
+            font-size: 12px;
+            top: 5px; 
+            left: 10px; 
+            width: max-content;
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word; /* 确保换行 */
+            max-width: 300px; /* 限制宽度 */
+            /* 每行20个字或到状态栏中间换行 */
+            max-width: calc(600px / 2); /* 状态栏宽度500px/2，约250px/2 */
+            overflow-wrap: break-word; /* 兼容性更好的换行 */
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            backdrop-filter: blur(10px); /* 匹配玻璃效果 */
+            -webkit-backdrop-filter: blur(10px); 
+            border: var(--glass-border);
+        }
+
+        .thinking-bubble-container.show { 
+            visibility: visible; 
+            transition-delay: 0.1s; 
+        }
+
+        .thinking-bubble-container.show .bubble-main { 
+            opacity: 1; 
+            transform: scale(1); 
+            transition-delay: 0.1s; 
+        }
+
+        .glass-bubble {
+            position: absolute;
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px); /* 统一玻璃模糊效果 */
+            -webkit-backdrop-filter: blur(15px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: var(--glass-border);
+            background: var(--glass-bg); /* 统一背景 */
+            color: var(--text-color);
+            font-size: 12px;
+            width: max-content;
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word; /* 确保换行 */
+            max-width: 400px; /* 限制宽度 */
+            /* 每行20个字或到状态栏中间换行 */
+            top: 140%;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+        }
+
+        #bubble-day-night {
+            left: -25px;
+        }
+
+        #bubble-crystal {
+            right: -25px;
+        }
+
+        .glass-bubble.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* --- 手机端适配媒体查询 --- */
+        @media (max-width: 600px) {
+            .status-bar-container {
+                padding-bottom: 60px; 
+            }
+
+            .time-info {
+                font-size: 11px;
+            }
+
+            .wing-container {
+                height: 28px;
+                top: 75px;
+            }
+
+            .left-wing { left: -20px; }
+            .right-wing { right: -20px; }
+
+            .thinking-bubble-container .bubble-main {
+                max-width: 90px; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar-container">
+        <div class="avatar-container" onclick="toggleBubble('bubble1')">
+            <img src="${avatar}" alt="Avatar" class="avatar-image">
+            <div class="thinking-bubble-container" id="bubble1">
+                <div class="bubble-main">${bubbleMain}</div>
+            </div> 
+        </div>
+        <div class="wing-container left-wing">
+            <img src="https://i.postimg.cc/bJwDKb36/aigei-com.png" alt="Left Wing">
+        </div>
+        <div class="wing-container right-wing">
+            <img src="https://i.postimg.cc/bJwDKb36/aigei-com.png" alt="Right Wing">
+        </div>
+        <div class="glass-oval">
+            <div class="icon-wrapper" onclick="toggleBubble('bubble-day-night')">
+                <div class="day-night-icon" id="dayNightIcon">☀️</div>
+                <div class="glass-bubble" id="bubble-day-night">${dayNight}</div>
+            </div>
+            <div class="time-info" id="timeDisplay">${timeInfo}</div>
+            <div class="icon-wrapper" onclick="toggleBubble('bubble-crystal')">
+                <div class="crystal-ball-icon">🔮</div>
+                <div class="glass-bubble" id="bubble-crystal">${crystal}</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setInitialState();
+        });
+
+        function setInitialState() {
+            const timeDisplay = document.getElementById('timeDisplay');
+            const timeString = timeDisplay.textContent;
+            const dayNightIcon = document.getElementById('dayNightIcon');
+            const match = timeString.match(/(\d{1,2}):\d{2}\s(AM|PM)/);
+
+            if (match) {
+                let hour = parseInt(match[1]);
+                const ampm = match[2];
+                if (ampm === 'PM' && hour !== 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                dayNightIcon.textContent = (hour >= 7 && hour < 18) ? '☀️' : '🌙';
+            }
+
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.avatar-container') && !event.target.closest('.icon-wrapper')) {
+                    hideAllBubbles();
+                    resetAvatar();
+                }
+            });
+        }
+
+        function hideAllBubbles() {
+            document.querySelectorAll('.thinking-bubble-container.show, .glass-bubble.show').forEach(b => b.classList.remove('show'));
+        }
+
+        function resetAvatar() {
+            const avatar = document.querySelector('.avatar-container');
+            avatar.classList.remove('clicked');
+        }
+
+        function toggleBubble(bubbleId) {
+            const bubble = document.getElementById(bubbleId);
+            const avatar = document.querySelector('.avatar-container');
+            const isShowing = bubble.classList.contains('show');
+
+            hideAllBubbles();
+
+            if (!isShowing) {
+                if (bubbleId === 'bubble1') {
+                    avatar.classList.add('clicked');
+                    setTimeout(() => {
+                        bubble.classList.add('show');
+                    }, 300); 
+                } else {
+                    bubble.classList.add('show');
+                }
+            } else {
+                resetAvatar();
+            }
+        }
+    </script>
+</body>
+</html>`;
+            return createCodeBlockFragment(html.trim());
+        }
+        if (type === 'loveHug') {
+            const rawValues = match.slice(1, 8).map((value) => (value || '').trim());
+            const [pose, penis, speed, depth, suck, knead, hands] = rawValues;
+            const poseHtml = escapeHtml(pose);
+            const penisHtml = escapeHtml(penis);
+            const suckHtml = escapeHtml(suck);
+            const kneadHtml = escapeHtml(knead);
+            const handsHtml = escapeHtml(hands);
+            const poseJs = escapeJsString(pose);
+            const penisJs = escapeJsString(penis);
+            const speedJs = escapeJsString(speed);
+            const depthJs = escapeJsString(depth);
+            const suckJs = escapeJsString(suck);
+            const kneadJs = escapeJsString(knead);
+            const handsJs = escapeJsString(hands);
+            const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BunnY'sLOVE二改抄袭禁止</title>
+    <style>
+      @import url('https://fontsapi.zeoseven.com/128/main/result.css');
+
+      body {
+        margin: 0;
+        background: transparent;
+        color: #F96E9A;
+        font-family: 'Hachi Maru Pop';
+        font-weight: normal;
+      }
+      :root {
+        --card-border: rgba(0, 0, 0, 0.15);
+        --accent: #f472b6;
+        --accent-2: #facc15;
+        --accent-3: #22d3ee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+
+      .qq-wrap {
+        max-width: 920px;
+        margin: 12px auto;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+      }
+      .panel {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: url('https://i.postimg.cc/qBGd6QJr/20250923000612-36-309.jpg') center/cover no-repeat;
+      }
+      .panel-inner {
+        position: relative;
+        padding: 16px;
+      }
+
+      .qq-row {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 16px;
+        align-items: stretch;
+      }
+
+      .pose-card {
+        position: relative;
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.5);
+        min-height: 240px;
+      }
+      .pose-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      /* ${poseHtml} 标签粉色荧光 */
+      .pose-name {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.6);
+        font-weight: 600;
+        color: #F96E9A;
+        border: 1px solid rgba(244, 114, 182, 0.55);
+        box-shadow: 0 0 6px rgba(244, 114, 182, 0.75), 0 0 14px rgba(244, 114, 182, 0.45),
+          0 0 22px rgba(244, 114, 182, 0.35);
+      }
+
+      .top-panel {
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.6);
+      }
+      .meter {
+        position: relative;
+        height: 18px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .meter-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      }
+      .meter-target {
+        position: absolute;
+        top: -6px;
+        width: 2px;
+        height: 30px;
+        background: var(--accent-3);
+      }
+      .meter-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #F96E9A;
+        margin-top: 8px;
+      }
+
+      .pulses {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .pulse-card {
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #F96E9A;
+      }
+      /* 仅更换贴图，保留 scale 脉冲效果 */
+      .pulse-dot {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        flex: 0 0 46px;
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        will-change: transform; /* 平滑缩放 */
+      }
+      .pulse-left {
+        background-image: url('https://i.postimg.cc/j5MkRNjP/63d9143b64a35gpi.gif');
+      }
+      .pulse-right {
+        background-image: url('https://i.postimg.cc/Hk0zp5Zn/680fb6555429d-Huw.gif');
+      }
+
+      .pulse-meta {
+        display: flex;
+        flex-direction: column;
+      }
+      .pulse-title {
+        font-weight: 600;
+        color: #F96E9A;
+      }
+      .pulse-sub {
+        font-size: 12px;
+        color: #F96E9A;
+      }
+
+      .infos {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .info-card {
+        position: relative;
+        background-color: rgba(255, 255, 255, 0.6);
+        border-radius: 6px;
+        padding: 10px;
+        color: #F96E9A;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .info-card .title {
+        font-size: 0.85em;
+        font-weight: 700;
+        color: #F96E9A;
+      }
+      .info-card .text {
+        font-size: 0.9em;
+        color: #F96E9A;
+        display: block;
+        margin-top: 1px;
+        padding: 0 5px;
+        white-space: pre-wrap;
+      }
+
+      /* ====== 移动端适配：≤640px 单列纵向五块 ====== */
+      @media (max-width: 640px) {
+        .qq-wrap {
+          max-width: 100%;
+          margin: 8px auto;
+        }
+        .panel-inner {
+          padding: 12px;
+        }
+        .qq-row {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        } /* 主栅格改为单列：体位卡 → 右侧内容 */
+        .pose-card {
+          min-height: 200px;
+        }
+
+        /* 右侧内容内部保持顺序：进度条 → 吮吸卡 → 揉捏卡 → 信息区 */
+        .pulses {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        } /* 脉冲两卡各占一行 */
+        .infos {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        } /* 信息区两卡各占一行（信息区整体仍视作第5块） */
+
+        .meter-labels {
+          font-size: 11px;
+        }
+        .pose-name {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="qq-wrap">
+      <details close>
+        <summary>爱的抱抱</summary>
+        <div class="panel">
+          <div class="panel-inner" id="qq">
+            <div class="qq-row">
+              <div class="pose-card">
+                <img id="poseImg" alt="pose" src="" />
+                <div class="pose-name" id="poseName">${poseHtml}</div>
+              </div>
+              <div>
+                <div class="top-panel">
+                  <div class="meter" id="meter">
+                    <div class="meter-fill" id="meterFill"></div>
+                    <div class="meter-target" id="meterTarget" style="left: 0%"></div>
+                  </div>
+                  <div class="meter-labels">
+                    <span>即将插入💓</span><span>浅浅研磨💕</span><span>渐入佳境💞</span><span>冲刺加速💗</span
+                    ><span>桃园深处💦</span>
+                  </div>
+                </div>
+
+                <div class="pulses">
+                  <div class="pulse-card">
+                    <div class="pulse-dot pulse-left" id="pulse5"></div>
+                    <div class="pulse-meta">
+                      <div class="pulse-title">吮吸力度👅</div>
+                      <div class="pulse-sub">${suckHtml}/100</div>
+                    </div>
+                  </div>
+                  <div class="pulse-card">
+                    <div class="pulse-dot pulse-right" id="pulse6"></div>
+                    <div class="pulse-meta">
+                      <div class="pulse-title">揉捏力度👐</div>
+                      <div class="pulse-sub">${kneadHtml}/100</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="infos">
+                  <div class="info-card">
+                    <span class="title">🍆唧唧状态:</span><br />
+                    <span class="text" id="detail2">${penisHtml}</span>
+                  </div>
+                  <div class="info-card">
+                    <span class="title">📍抓握位置:</span><br />
+                    <span class="text" id="detail7">${handsHtml}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <script>
+      // 默认占位图（当 $1 未匹配到映射时使用）
+      const DEFAULT_POSE_IMG = 'https://i.postimg.cc/dQ7zJH80/680fb656626de-Ry-D.gif';
+
+      // 体位 -> 图片映射（可自行扩展）
+      const POSE_IMAGES = {
+        default: DEFAULT_POSE_IMG,
+        Missionary: 'https://i.postimg.cc/Wbpn8tXJ/period-sex-postions-missionary.gif',
+        'Doggy Style': 'https://i.postimg.cc/HkqXqL4z/period-sex-postions-stand-up-doogie.gif',
+        'Standing Doggy':
+          'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=800&auto=format&fit=crop',
+        'Reverse Cowgirl': 'https://i.postimg.cc/28zDxdsF/reverse-cowgirl.jpg',
+        Spooning: 'https://i.postimg.cc/pd0ZgvrL/spooning-best-sex-position-men-like-most.jpg',
+        Standing: 'https://i.postimg.cc/j2nJ30wm/standing-best-sex-position-men-like-most.jpg',
+        Lotus: 'https://i.postimg.cc/VLGkrHJb/woman-on-top-best-sex-position-men-like-most.jpg',
+        Nelson: 'https://i.postimg.cc/m2x0dYK6/25050861.webp',
+        'Prone Bone':
+          'https://i.postimg.cc/4y8H34CY/OIP-b2p-XNqd-Kx-Gpy-I99md-CNO3-AAAAA-w-228-h-154-c-7-r-0-o-5-dpr-1-3-pid-1.jpg',
+        Wheelbarrow: 'https://i.postimg.cc/2yvjszkp/wheelbarrow.jpg',
+        'face down': 'https://i.postimg.cc/8CWyf9zp/the-eveyrgirl-sex-position-lazy-churner-1024x853.jpg',
+        'The Pogo Stick': 'https://i.postimg.cc/mDK2pcGN/Pogo-stick.jpg',
+        Flatiron: 'https://i.postimg.cc/PxP4H7vz/flatiron-best-sex-position-men-like-most.jpg',
+        'hold breast fuck': 'https://i.postimg.cc/Hxh67m1h/giphy.gif',
+        'The Butter Churner': 'https://i.postimg.cc/G2CXFK4k/Satin-Minions-266079-Face-Down-Animation-3.gif',
+        'The overpass': 'https://i.postimg.cc/d1hV92gV/The-overpass.jpg',
+      };
+
+      // 深度映射（位置描述 $4）
+      const DEPTH_MAP = { 即将插入: 0, 浅浅研磨: 20, 渐入佳境: 70, 冲刺加速: 90, 桃园深处: 100 };
+
+      // 初始均显示占位符 $1~$7
+      const state = { pose: '${poseJs}', penis: '${penisJs}', speed: '${speedJs}', depthText: '${depthJs}', suck: '${suckJs}', knead: '${kneadJs}', hands: '${handsJs}' };
+
+      // DOM
+      const el = {
+        poseImg: document.getElementById('poseImg'),
+        poseName: document.getElementById('poseName'),
+        meterFill: document.getElementById('meterFill'),
+        meterTarget: document.getElementById('meterTarget'),
+        pulse5: document.getElementById('pulse5'),
+        pulse6: document.getElementById('pulse6'),
+        detail2: document.getElementById('detail2'),
+        detail7: document.getElementById('detail7'),
+      };
+
+      function resolvePoseImg(name) {
+        if (!name || name.startsWith('$')) return DEFAULT_POSE_IMG;
+        const key = Object.keys(POSE_IMAGES).find(k => k.toLowerCase() === String(name).toLowerCase());
+        return key && POSE_IMAGES[key] ? POSE_IMAGES[key] : DEFAULT_POSE_IMG;
+      }
+
+      function num(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      }
+      function tgtPct() {
+        const x = DEPTH_MAP[state.depthText];
+        return typeof x === 'number' ? x : 0;
+      }
+
+      // 渲染静态文案（保留 $ 占位显示）
+      function syncUI() {
+        el.poseImg.src = resolvePoseImg(state.pose);
+        el.poseName.textContent = state.pose;
+        el.detail2.textContent = state.penis;
+        el.detail7.textContent = state.hands;
+      }
+
+      // 动画：进度条往返 + 脉冲呼吸（保留脉冲效果）
+      let rafId = null,
+        t = 0;
+      function animate(now) {
+        if (!animate.last) animate.last = now;
+        const dt = (now - animate.last) / 1000;
+        animate.last = now;
+
+        const speed = num(state.speed);
+        const v = Math.max(0, Math.min(100, speed)) * 0.1; // %/s
+        const target = tgtPct();
+
+        t += dt * v;
+        const tri = 1 - Math.abs((t % 2) - 1); // 0..1..0
+        const cur = tri * Math.max(0, target);
+        el.meterFill.style.width = cur + '%';
+        el.meterTarget.style.left = target + '%';
+
+        const w = 0.5 + 0.5 * Math.sin(t * 2 * Math.PI);
+        const baseScale = 0.9 + 0.2 * w;
+        const s5 = 0.85 + 0.003 * Math.max(0, Math.min(100, num(state.suck)));
+        const s6 = 0.85 + 0.003 * Math.max(0, Math.min(100, num(state.knead)));
+        el.pulse5.style.transform = `scale(${baseScale * s5})`;
+        el.pulse6.style.transform = `scale(${baseScale * s6})`;
+
+        rafId = requestAnimationFrame(animate);
+      }
+
+      // 外部 API（供 ST 调用）
+      window.updateQQStatus = function ({ pose, penis, speed, depthText, suck, knead, hands }) {
+        if (pose !== undefined) state.pose = pose;
+        if (penis !== undefined) state.penis = penis;
+        if (speed !== undefined) state.speed = speed;
+        if (depthText !== undefined) state.depthText = depthText;
+        if (suck !== undefined) state.suck = suck;
+        if (knead !== undefined) state.knead = knead;
+        if (hands !== undefined) state.hands = hands;
+        syncUI();
+      };
+
+      syncUI();
+      rafId = requestAnimationFrame(animate);
+    </script>
+  </body>
+</html>`;
+            return createCodeBlockFragment(html.trim());
         }
         return null;
     }
