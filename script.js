@@ -15,6 +15,8 @@
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
     const bhlUserBubbleRegex = /^“([\s\S]*?)”$/gm;
     const bhlCharBubbleRegex = /^"([\s\S]*?)"$/gm;
+    const bhlUserVoiceRegex = /^=([\s\S]*?)\|([\s\S]*?)=$/gm;
+    const bhlCharVoiceRegex = /^=([\s\S]*?)\|([\s\S]*?)=$/gm;
     const MESSAGE_ELEMENT_SELECTOR = '.mes_text, .mes.block';
 
     function resolveMessageNodes(node) {
@@ -67,6 +69,57 @@
         });
 
         return elements;
+    }
+
+    function detectMessageRole(element) {
+        const container =
+            element?.closest?.(
+                '.mes, .mes.block, .mes_block, .message, .chat-message, .chatMessage',
+            ) || element?.parentElement;
+
+        if (!container) return 'char';
+
+        const { classList = [], className = '' } = container;
+        const normalizedClassName = typeof className === 'string' ? className : '';
+
+        const userClassPatterns = [
+            'mes_you',
+            'mes-you',
+            'mes_you_block',
+            'you',
+            'is-you',
+            'from-user',
+            'message-user',
+            'user-message',
+        ];
+
+        if (
+            userClassPatterns.some((name) => classList?.contains?.(name)) ||
+            /mes[_\s-]?you\b/.test(normalizedClassName) ||
+            /\buser\b/.test(normalizedClassName)
+        ) {
+            return 'user';
+        }
+
+        const dataRole =
+            container.dataset?.role ||
+            container.dataset?.owner ||
+            container.dataset?.speaker ||
+            container.dataset?.type ||
+            '';
+
+        if (typeof dataRole === 'string') {
+            const normalizedRole = dataRole.toLowerCase();
+            if (['user', 'you', 'player', 'self'].includes(normalizedRole)) {
+                return 'user';
+            }
+        }
+
+        if (container.dataset?.isYou === 'true' || container.dataset?.isUser === 'true') {
+            return 'user';
+        }
+
+        return 'char';
     }
 
     function setUnsplashAccessKey(value) {
@@ -1290,6 +1343,15 @@
                 .replace(/'/g, '&#39;')
                 .replace(/\r?\n/g, '<br>');
 
+        const formatInlineContent = (content) =>
+            content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/\r?\n/g, ' ');
+
         const createUserBubble = (contentHtml) => `
 <div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
    <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
@@ -1311,6 +1373,102 @@
   <span style="position: absolute;top: 15px; left: auto;right: 5px;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
  </div>
 </div>`;
+
+        const createUserVoiceBubble = (summaryHtml, contentHtml) => `
+<div style="text-align: right; margin-bottom: 8px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+  <details style="
+    display: inline-block;
+    max-width: 400px;
+    text-align: left;
+    padding: 10px 14px;
+    border-radius: 24px !important;
+    font-size: 14px;
+    line-height: 1.4;
+    border-bottom-right-radius: 24px !important; /* user气泡通常是右下角不变 */
+    word-wrap: break-word;
+    position: relative;
+    transition: transform 0.2s;
+    background: transparent !important;
+    color: #333;
+    box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid rgba(200, 200, 200, 0.3) !important;
+    overflow: hidden;
+  ">
+    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
+      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
+        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
+      </div>
+      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px; ">${summaryHtml}</span>
+      <span style="position: absolute; top: 5px; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+      <span style="position: absolute; top: 15px; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
+    </summary>
+    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
+      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4; ">
+        ${contentHtml}
+      </p>
+    </div>
+  </details>
+
+  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; overflow: hidden; margin-left: 10px; flex-shrink: 0; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+  </div>
+</div>`;
+
+        const createCharVoiceBubble = (summaryHtml, contentHtml) => `
+<div style="display: flex; margin-bottom: 8px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
+  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
+ </div>
+  <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px; line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
+    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
+      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
+        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
+        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
+      </div>
+      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px">${summaryHtml}</span>
+      <span style="position: absolute; top: 5px; left: auto; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+      <span style="position: absolute; top: 15px; left: auto; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
+    </summary>
+    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
+      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4;">
+        ${contentHtml}
+      </p>
+    </div>
+  </details>
+</div>`;
+
+        const messageRole = detectMessageRole(element);
+
+        if (messageRole === 'user') {
+            bhlUserVoiceRegex.lastIndex = 0;
+            const userVoiceMatch = bhlUserVoiceRegex.exec(rawText);
+            bhlUserVoiceRegex.lastIndex = 0;
+            if (userVoiceMatch) {
+                const summary = formatInlineContent(userVoiceMatch[1] || '');
+                const content = formatContent(userVoiceMatch[2] || '');
+                element.innerHTML = createUserVoiceBubble(summary, content);
+                return true;
+            }
+        } else {
+            bhlCharVoiceRegex.lastIndex = 0;
+            const charVoiceMatch = bhlCharVoiceRegex.exec(rawText);
+            bhlCharVoiceRegex.lastIndex = 0;
+            if (charVoiceMatch) {
+                const summary = formatInlineContent(charVoiceMatch[1] || '');
+                const content = formatContent(charVoiceMatch[2] || '');
+                element.innerHTML = createCharVoiceBubble(summary, content);
+                return true;
+            }
+        }
 
         bhlUserBubbleRegex.lastIndex = 0;
         const userMatch = bhlUserBubbleRegex.exec(rawText);
@@ -2057,3 +2215,4 @@
     }
     init();
 })();
+
