@@ -13,6 +13,8 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
+    const bhlUserBubbleRegex = /^“([\s\S]*?)”$/gm;
+    const bhlCharBubbleRegex = /^"([\s\S]*?)"$/gm;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -1220,9 +1222,48 @@
         return false;
     }
 
+    function replaceBHLPlaceholders(element) {
+        if (!element) return false;
+
+        let html = element.innerHTML;
+        let replaced = false;
+
+        html = html.replace(bhlUserBubbleRegex, (_, content) => {
+            replaced = true;
+            return `<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
+   <div class="B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+ </div>
+    <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
+    <span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>
+      ${content}
+      <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
+    </div>
+  </div>`;
+        });
+
+        html = html.replace(bhlCharBubbleRegex, (_, content) => {
+            replaced = true;
+            return `<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">
+ <div class="B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
+ </div>
+ <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;">
+  <span style="position: absolute;top: 5px; left: auto;right: 5px;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
+  ${content}
+  <span style="position: absolute;top: 15px; left: auto;right: 5px;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
+ </div>
+</div>`;
+        });
+
+        if (!replaced) return false;
+
+        element.innerHTML = html;
+        return true;
+    }
+
     async function processMessageElement(element) {
         if (!element) return;
 
+        const replacedBHL = replaceBHLPlaceholders(element);
         const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
@@ -1254,7 +1295,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = replacedSticker || replacedBHL;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
