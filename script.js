@@ -13,10 +13,10 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
-    const bhlUserBubbleRegex = /^“([\s\S]*?)”$/gm;
-    const bhlCharBubbleRegex = /^"([\s\S]*?)"$/gm;
-    const bhlUserVoiceRegex = /^=([\s\S]*?)\|([\s\S]*?)=$/gm;
-    const bhlCharVoiceRegex = /^=([\s\S]*?)\|([\s\S]*?)=$/gm;
+    const bhlUserBubbleRegex = /“([^”]*)”/g;
+    const bhlCharBubbleRegex = /"([^"]*)"/g;
+    const bhlUserVoiceRegex = /=([^=|]*?)\|([^=]*?)=/g;
+    const bhlCharVoiceRegex = /=([^=|]*?)\|([^=]*?)=/g;
     const MESSAGE_ELEMENT_SELECTOR = '.mes_text, .mes.block';
 
     function resolveMessageNodes(node) {
@@ -1345,8 +1345,8 @@
     function replaceBHLPlaceholders(element) {
         if (!element) return false;
 
-        const rawText = element.textContent?.trim();
-        if (!rawText) return false;
+        const rawTextContent = element.textContent || '';
+        if (!rawTextContent.trim()) return false;
 
         const formatContent = (content) =>
             content
@@ -1429,15 +1429,15 @@
     </div>
   </details>
 
-  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; overflow: hidden; margin-left: 10px; flex-shrink: 0; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
+  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; overflow: hidden;margin-left: 10px; flex-shrink: 0; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
   </div>
 </div>`;
 
         const createCharVoiceBubble = (summaryHtml, contentHtml) => `
 <div style="display: flex; margin-bottom: 8px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
-  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
+  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px;overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover;background-position: center;">
  </div>
-  <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px; line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
+  <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px;line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
     <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
       <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
       <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
@@ -1461,46 +1461,96 @@
 </div>`;
 
         const messageRole = detectMessageRole(element);
+        const bubblePattern =
+            messageRole === 'user' ? bhlUserBubbleRegex : bhlCharBubbleRegex;
+        const voicePattern =
+            messageRole === 'user' ? bhlUserVoiceRegex : bhlCharVoiceRegex;
 
-        if (messageRole === 'user') {
-            bhlUserVoiceRegex.lastIndex = 0;
-            const userVoiceMatch = bhlUserVoiceRegex.exec(rawText);
-            bhlUserVoiceRegex.lastIndex = 0;
-            if (userVoiceMatch) {
-                const summary = formatInlineContent(userVoiceMatch[1] || '');
-                const content = formatContent(userVoiceMatch[2] || '');
-                element.innerHTML = createUserVoiceBubble(summary, content);
-                return true;
+        const fragment = document.createDocumentFragment();
+        let hasReplacement = false;
+        const text = rawTextContent;
+
+        const execFromIndex = (regex, input, startIndex) => {
+            if (!regex) return null;
+            regex.lastIndex = startIndex;
+            const match = regex.exec(input);
+            regex.lastIndex = 0;
+            return match && match.index >= startIndex ? match : null;
+        };
+
+        const appendPlainText = (textSegment) => {
+            if (!textSegment) return;
+            const safeHtml = formatContent(textSegment);
+            if (!safeHtml) return;
+            const span = document.createElement('span');
+            span.innerHTML = safeHtml;
+            fragment.appendChild(span);
+        };
+
+        const appendHTML = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = html.trim();
+            fragment.appendChild(template.content);
+        };
+
+        let cursor = 0;
+        while (cursor < text.length) {
+            const bubbleMatch = execFromIndex(bubblePattern, text, cursor);
+            const voiceMatch = execFromIndex(voicePattern, text, cursor);
+
+            let nextMatch = null;
+            let matchType = null;
+
+            if (bubbleMatch && (!nextMatch || bubbleMatch.index < nextMatch.index)) {
+                nextMatch = bubbleMatch;
+                matchType = 'bubble';
             }
-        } else {
-            bhlCharVoiceRegex.lastIndex = 0;
-            const charVoiceMatch = bhlCharVoiceRegex.exec(rawText);
-            bhlCharVoiceRegex.lastIndex = 0;
-            if (charVoiceMatch) {
-                const summary = formatInlineContent(charVoiceMatch[1] || '');
-                const content = formatContent(charVoiceMatch[2] || '');
-                element.innerHTML = createCharVoiceBubble(summary, content);
-                return true;
+
+            if (voiceMatch && (!nextMatch || voiceMatch.index < nextMatch.index)) {
+                nextMatch = voiceMatch;
+                matchType = 'voice';
             }
+
+            if (!nextMatch) {
+                break;
+            }
+
+            if (nextMatch.index > cursor) {
+                appendPlainText(text.slice(cursor, nextMatch.index));
+            }
+
+            if (matchType === 'bubble') {
+                const bubbleContent = formatContent(nextMatch[1] || '');
+                const bubbleHtml =
+                    messageRole === 'user'
+                        ? createUserBubble(bubbleContent)
+                        : createCharBubble(bubbleContent);
+                appendHTML(bubbleHtml);
+            } else {
+                const summary = formatInlineContent(nextMatch[1] || '');
+                const content = formatContent(nextMatch[2] || '');
+                const voiceHtml =
+                    messageRole === 'user'
+                        ? createUserVoiceBubble(summary, content)
+                        : createCharVoiceBubble(summary, content);
+                appendHTML(voiceHtml);
+            }
+
+            hasReplacement = true;
+            cursor = nextMatch.index + nextMatch[0].length;
         }
 
-        bhlUserBubbleRegex.lastIndex = 0;
-        const userMatch = bhlUserBubbleRegex.exec(rawText);
-        bhlUserBubbleRegex.lastIndex = 0;
-        if (userMatch) {
-            element.innerHTML = createUserBubble(formatContent(userMatch[1] || ''));
-            return true;
+        if (cursor < text.length) {
+            appendPlainText(text.slice(cursor));
         }
 
-        bhlCharBubbleRegex.lastIndex = 0;
-        const charMatch = bhlCharBubbleRegex.exec(rawText);
-        bhlCharBubbleRegex.lastIndex = 0;
-        if (charMatch) {
-            element.innerHTML = createCharBubble(formatContent(charMatch[1] || ''));
-            return true;
+        if (!hasReplacement) {
+            return false;
         }
 
-        return false;
+        element.innerHTML = '';
+        element.appendChild(fragment);
+        return true;
     }
 
     async function processMessageElement(element) {
