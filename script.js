@@ -13,128 +13,6 @@
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
-    const bhlUserBubbleRegex = /“([^”]*)”/g;
-    const bhlCharBubbleRegex = /"([^"]*)"/g;
-    const bhlUserVoiceRegex = /=([^=|]*?)\|([^=]*?)=/g;
-    const bhlCharVoiceRegex = /=([^=|]*?)\|([^=]*?)=/g;
-    const MESSAGE_ELEMENT_SELECTOR = '.mes_text, .mes.block';
-
-    function resolveMessageNodes(node) {
-        const resolved = [];
-        if (!node) return resolved;
-
-        let element =
-            node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-        if (!element) return resolved;
-
-        if (element.matches?.('.mes_text')) {
-            resolved.push(element);
-            return resolved;
-        }
-
-        if (element.matches?.('.mes.block')) {
-            const innerTexts = element.querySelectorAll('.mes_text');
-            if (innerTexts.length) {
-                innerTexts.forEach((inner) => resolved.push(inner));
-            } else {
-                resolved.push(element);
-            }
-            return resolved;
-        }
-
-        const closest = element.closest?.(MESSAGE_ELEMENT_SELECTOR);
-        if (closest) {
-            return resolveMessageNodes(closest);
-        }
-
-        return resolved;
-    }
-
-    function collectMessageElements(root) {
-        const elements = [];
-        const seen = new Set();
-
-        const enqueueResolved = (node) => {
-            resolveMessageNodes(node).forEach((el) => {
-                if (el && !seen.has(el)) {
-                    seen.add(el);
-                    elements.push(el);
-                }
-            });
-        };
-
-        const visit = (node) => {
-            if (!node) return;
-
-            if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                node.childNodes.forEach((child) => visit(child));
-                return;
-            }
-
-            enqueueResolved(node);
-
-            if (typeof node.querySelectorAll === 'function') {
-                node.querySelectorAll(MESSAGE_ELEMENT_SELECTOR).forEach((child) => {
-                    enqueueResolved(child);
-                });
-            }
-        };
-
-        visit(root);
-
-        return elements;
-    }
-
-    function detectMessageRole(element) {
-        const container =
-            element?.closest?.(
-                '.mes, .mes.block, .mes_block, .message, .chat-message, .chatMessage',
-            ) || element?.parentElement;
-
-        if (!container) return 'char';
-
-        const { classList = [], className = '' } = container;
-        const normalizedClassName = typeof className === 'string' ? className : '';
-
-        const userClassPatterns = [
-            'mes_you',
-            'mes-you',
-            'mes_you_block',
-            'you',
-            'is-you',
-            'from-user',
-            'message-user',
-            'user-message',
-        ];
-
-        if (
-            userClassPatterns.some((name) => classList?.contains?.(name)) ||
-            /mes[_\s-]?you\b/.test(normalizedClassName) ||
-            /\buser\b/.test(normalizedClassName)
-        ) {
-            return 'user';
-        }
-
-        const dataRole =
-            container.dataset?.role ||
-            container.dataset?.owner ||
-            container.dataset?.speaker ||
-            container.dataset?.type ||
-            '';
-
-        if (typeof dataRole === 'string') {
-            const normalizedRole = dataRole.toLowerCase();
-            if (['user', 'you', 'player', 'self'].includes(normalizedRole)) {
-                return 'user';
-            }
-        }
-
-        if (container.dataset?.isYou === 'true' || container.dataset?.isUser === 'true') {
-            return 'user';
-        }
-
-        return 'char';
-    }
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -631,6 +509,7 @@
                 'cip_avatar_profiles_v1',
                 'cip_last_avatar_profile_v1',
                 'cip_custom_command_v1',
+                'cip_button_position_v4',
                 'cip_sync_filename_v1' // 同时导出文件名设置
             ];
 
@@ -691,12 +570,11 @@
                 
                 let settingsApplied = false;
                 for (const key in importedSettings) {
-                     if (!Object.prototype.hasOwnProperty.call(importedSettings, key)) continue;
-                     if (key === 'cip_button_position_v4') continue; // ← 导入时忽略浮标位置
-                     localStorage.setItem(key, importedSettings[key]);
-                     settingsApplied = true;
+                    if (Object.prototype.hasOwnProperty.call(importedSettings, key)) {
+                        localStorage.setItem(key, importedSettings[key]);
+                        settingsApplied = true;
+                    }
                 }
-
                 
                 if (settingsApplied) {
                     alert('设置已成功导入！页面将自动刷新以应用所有更改。');
@@ -1342,221 +1220,9 @@
         return false;
     }
 
-    function replaceBHLPlaceholders(element) {
-        if (!element) return false;
-
-        const rawTextContent = element.textContent || '';
-        if (!rawTextContent.trim()) return false;
-
-        const formatContent = (content) =>
-            content
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/\r?\n/g, '<br>');
-
-        const formatInlineContent = (content) =>
-            content
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/\r?\n/g, ' ');
-
-        const createUserBubble = (contentHtml) => `
-<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;">
-   <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
- </div>
-    <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;">
-    <span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>
-      ${contentHtml}
-      <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
-    </div>
-  </div>`;
-
-        const createCharBubble = (contentHtml) => `
-<div style="display: flex;margin-bottom: 8px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">
- <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">
- </div>
- <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;">
-  <span style="position: absolute;top: 5px; left: auto;right: 5px;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
-  ${contentHtml}
-  <span style="position: absolute;top: 15px; left: auto;right: 5px;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span>
- </div>
-</div>`;
-
-        const createUserVoiceBubble = (summaryHtml, contentHtml) => `
-<div style="text-align: right; margin-bottom: 8px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
-  <details style="
-    display: inline-block;
-    max-width: 400px;
-    text-align: left;
-    padding: 10px 14px;
-    border-radius: 24px !important;
-    font-size: 14px;
-    line-height: 1.4;
-    border-bottom-right-radius: 24px !important; /* user气泡通常是右下角不变 */
-    word-wrap: break-word;
-    position: relative;
-    transition: transform 0.2s;
-    background: transparent !important;
-    color: #333;
-    box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;
-    border: 1px solid rgba(200, 200, 200, 0.3) !important;
-    overflow: hidden;
-  ">
-    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
-      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
-      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
-        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
-      </div>
-      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px; ">${summaryHtml}</span>
-      <span style="position: absolute; top: 5px; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
-      <span style="position: absolute; top: 15px; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
-    </summary>
-    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
-      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4; ">
-        ${contentHtml}
-      </p>
-    </div>
-  </details>
-
-  <div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; overflow: hidden;margin-left: 10px; flex-shrink: 0; background-image: url('https://i.postimg.cc/0NxXgWH8/640.jpg'); background-size: cover; background-position: center;">
-  </div>
-</div>`;
-
-        const createCharVoiceBubble = (summaryHtml, contentHtml) => `
-<div style="display: flex; margin-bottom: 8px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;">
-  <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px;overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover;background-position: center;">
- </div>
-  <details style="display: inline-block; max-width: 400px; padding: 10px 14px; border-radius: 24px !important; font-size: 14px;line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; color: #333; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;">
-    <summary style="display: flex; align-items: center; padding: 0 !important; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
-      <span style="font-size: 16px; color: #333; margin-right: 8px;">▶</span>
-      <div style="display: flex; align-items: center; height: 20px; gap: 2px;">
-        <span style="display: inline-block; width: 3px; height: 60%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 80%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 40%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 90%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 50%; background-color: #555; border-radius: 2px;"></span>
-        <span style="display: inline-block; width: 3px; height: 75%; background-color: #555; border-radius: 2px;"></span>
-      </div>
-      <span style="font-weight: normal; font-size: 15px; margin-left: 12px; margin-top: -2px">${summaryHtml}</span>
-      <span style="position: absolute; top: 5px; left: auto; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span>
-      <span style="position: absolute; top: 15px; left: auto; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;"></span>
-    </summary>
-    <div style="padding: 12px 14px !important; border-top: 1px solid rgba(0, 0, 0, 0.08);">
-      <p style="margin: 0; font-weight: normal; font-size: 14px; line-height: 1.4;">
-        ${contentHtml}
-      </p>
-    </div>
-  </details>
-</div>`;
-
-        const messageRole = detectMessageRole(element);
-        const bubblePattern =
-            messageRole === 'user' ? bhlUserBubbleRegex : bhlCharBubbleRegex;
-        const voicePattern =
-            messageRole === 'user' ? bhlUserVoiceRegex : bhlCharVoiceRegex;
-
-        const fragment = document.createDocumentFragment();
-        let hasReplacement = false;
-        const text = rawTextContent;
-
-        const execFromIndex = (regex, input, startIndex) => {
-            if (!regex) return null;
-            regex.lastIndex = startIndex;
-            const match = regex.exec(input);
-            regex.lastIndex = 0;
-            return match && match.index >= startIndex ? match : null;
-        };
-
-        const appendPlainText = (textSegment) => {
-            if (!textSegment) return;
-            const safeHtml = formatContent(textSegment);
-            if (!safeHtml) return;
-            const span = document.createElement('span');
-            span.innerHTML = safeHtml;
-            fragment.appendChild(span);
-        };
-
-        const appendHTML = (html) => {
-            const template = document.createElement('template');
-            template.innerHTML = html.trim();
-            fragment.appendChild(template.content);
-        };
-
-        let cursor = 0;
-        while (cursor < text.length) {
-            const bubbleMatch = execFromIndex(bubblePattern, text, cursor);
-            const voiceMatch = execFromIndex(voicePattern, text, cursor);
-
-            let nextMatch = null;
-            let matchType = null;
-
-            if (bubbleMatch && (!nextMatch || bubbleMatch.index < nextMatch.index)) {
-                nextMatch = bubbleMatch;
-                matchType = 'bubble';
-            }
-
-            if (voiceMatch && (!nextMatch || voiceMatch.index < nextMatch.index)) {
-                nextMatch = voiceMatch;
-                matchType = 'voice';
-            }
-
-            if (!nextMatch) {
-                break;
-            }
-
-            if (nextMatch.index > cursor) {
-                appendPlainText(text.slice(cursor, nextMatch.index));
-            }
-
-            if (matchType === 'bubble') {
-                const bubbleContent = formatContent(nextMatch[1] || '');
-                const bubbleHtml =
-                    messageRole === 'user'
-                        ? createUserBubble(bubbleContent)
-                        : createCharBubble(bubbleContent);
-                appendHTML(bubbleHtml);
-            } else {
-                const summary = formatInlineContent(nextMatch[1] || '');
-                const content = formatContent(nextMatch[2] || '');
-                const voiceHtml =
-                    messageRole === 'user'
-                        ? createUserVoiceBubble(summary, content)
-                        : createCharVoiceBubble(summary, content);
-                appendHTML(voiceHtml);
-            }
-
-            hasReplacement = true;
-            cursor = nextMatch.index + nextMatch[0].length;
-        }
-
-        if (cursor < text.length) {
-            appendPlainText(text.slice(cursor));
-        }
-
-        if (!hasReplacement) {
-            return false;
-        }
-
-        element.innerHTML = '';
-        element.appendChild(fragment);
-        return true;
-    }
-
     async function processMessageElement(element) {
         if (!element) return;
 
-        const replacedBHL = replaceBHLPlaceholders(element);
         const replacedSticker = replaceStickerPlaceholders(element);
 
         const html = element.innerHTML;
@@ -1588,7 +1254,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker || replacedBHL;
+        let replacedAny = replacedSticker;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
@@ -1627,9 +1293,9 @@
         if (!chatContainer) return;
 
         const processExisting = () => {
-            collectMessageElements(chatContainer).forEach((element) => {
-                processMessageElement(element);
-            });
+            chatContainer
+                .querySelectorAll('.mes_text')
+                .forEach((el) => processMessageElement(el));
         };
 
         processExisting();
@@ -1637,17 +1303,12 @@
         const observer = new MutationObserver((mutations) => {
             const pending = new Set();
 
-            const queueElement = (node) => {
-                if (!node) return;
-
-                if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                    node.childNodes.forEach((child) => queueElement(child));
-                    return;
+            const queueElement = (element) => {
+                if (!element) return;
+                if (!element.classList?.contains('mes_text')) {
+                    element = element.closest?.('.mes_text');
                 }
-
-                collectMessageElements(node).forEach((element) => {
-                    pending.add(element);
-                });
+                if (element) pending.add(element);
             };
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData') {
@@ -1658,17 +1319,17 @@
 
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                            queueElement(node);
-                            return;
-                        }
-
                         if (node.nodeType !== Node.ELEMENT_NODE) {
                             queueElement(node.parentElement);
                             return;
                         }
-
-                        queueElement(node);
+                        if (node.classList?.contains('mes_text')) {
+                            queueElement(node);
+                        } else {
+                            node
+                                .querySelectorAll?.('.mes_text')
+                                .forEach((el) => queueElement(el));
+                        }
                     });
 
                     queueElement(mutation.target);
@@ -1712,7 +1373,7 @@
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
 
-        collectMessageElements(chatContainer).forEach((element) => {
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
             delete element.dataset.unsplashAttempts;
             delete element.dataset.unsplashSignature;
             processedMessages.delete(element);
@@ -1778,7 +1439,7 @@
     function reprocessStickerPlaceholders() {
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
-        collectMessageElements(chatContainer).forEach((element) => {
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
             replaceStickerPlaceholders(element);
         });
     }
@@ -2292,4 +1953,3 @@
     }
     init();
 })();
-
