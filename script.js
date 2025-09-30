@@ -63,10 +63,24 @@
             });
         };
 
-        enqueueResolved(root);
-        root?.querySelectorAll?.(MESSAGE_ELEMENT_SELECTOR).forEach((node) => {
+        const visit = (node) => {
+            if (!node) return;
+
+            if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                node.childNodes.forEach((child) => visit(child));
+                return;
+            }
+
             enqueueResolved(node);
-        });
+
+            if (typeof node.querySelectorAll === 'function') {
+                node.querySelectorAll(MESSAGE_ELEMENT_SELECTOR).forEach((child) => {
+                    enqueueResolved(child);
+                });
+            }
+        };
+
+        visit(root);
 
         return elements;
     }
@@ -1574,6 +1588,13 @@
             const pending = new Set();
 
             const queueElement = (node) => {
+                if (!node) return;
+
+                if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                    node.childNodes.forEach((child) => queueElement(child));
+                    return;
+                }
+
                 collectMessageElements(node).forEach((element) => {
                     pending.add(element);
                 });
@@ -1587,10 +1608,16 @@
 
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                            queueElement(node);
+                            return;
+                        }
+
                         if (node.nodeType !== Node.ELEMENT_NODE) {
                             queueElement(node.parentElement);
                             return;
                         }
+
                         queueElement(node);
                     });
 
