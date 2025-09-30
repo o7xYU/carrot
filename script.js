@@ -1121,6 +1121,286 @@
     const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
     const processedMessages = new WeakSet();
 
+    const MESSAGE_ROLE_CLASS_MAP = {
+        user: [
+            'mes_user',
+            'mes-role-user',
+            'mes_role_user',
+            'message-user',
+            'role-user',
+        ],
+        assistant: [
+            'mes_bot',
+            'mes_assistant',
+            'mes-role-bot',
+            'mes-role-assistant',
+            'mes_role_bot',
+            'message-assistant',
+            'role-assistant',
+        ],
+        system: [
+            'mes_system',
+            'mes-role-system',
+            'mes_role_system',
+            'message-system',
+            'role-system',
+        ],
+    };
+
+    const ROLE_DATA_KEYS = [
+        'role',
+        'messageRole',
+        'mesRole',
+        'actorRole',
+        'sender',
+    ];
+
+    const DEPTH_DATA_KEYS = [
+        'depth',
+        'depthIndex',
+        'depthId',
+        'depthLevel',
+        'depthValue',
+        'messageDepth',
+        'replyDepth',
+    ];
+
+    const BOOLEAN_TRUE_VALUES = new Set(['true', '1', 'yes', 'y', 'on']);
+    const BOOLEAN_FALSE_VALUES = new Set(['false', '0', 'no', 'n', 'off']);
+    const MARKDOWN_CLASS_NAMES = [
+        'markdown',
+        'markdown-body',
+        'mes_markdown',
+        'markdown-message',
+        'is-markdown',
+    ];
+    const PLAIN_TEXT_CLASS_NAMES = [
+        'mes_plain',
+        'plain-text',
+        'is-plain',
+        'raw_text',
+    ];
+
+    function getMessageContainers(element) {
+        if (!element || typeof element.closest !== 'function') {
+            return { mes: null, block: null };
+        }
+
+        const block = element.closest('.mes_block');
+        const mes = element.closest('.mes') || block?.closest?.('.mes') || null;
+
+        return { mes, block };
+    }
+
+    function normalizeRoleValue(value) {
+        if (value == null) return '';
+        const normalized = String(value).trim().toLowerCase();
+        if (!normalized) return '';
+
+        if (['bot', 'assistant', 'char', 'character', 'ai'].includes(normalized)) {
+            return 'assistant';
+        }
+
+        if (['user', 'human', 'you', 'client'].includes(normalized)) {
+            return 'user';
+        }
+
+        if (['system', 'narrator', 'admin'].includes(normalized)) {
+            return 'system';
+        }
+
+        if (['assistant', 'user', 'system'].includes(normalized)) {
+            return normalized;
+        }
+
+        return '';
+    }
+
+    function parseBoolean(value) {
+        if (value == null) return null;
+        if (typeof value === 'boolean') return value;
+
+        const normalized = String(value).trim().toLowerCase();
+        if (!normalized) return null;
+
+        if (BOOLEAN_TRUE_VALUES.has(normalized)) return true;
+        if (BOOLEAN_FALSE_VALUES.has(normalized)) return false;
+
+        return null;
+    }
+
+    function getMessageRole(element) {
+        const { mes, block } = getMessageContainers(element);
+        const sources = [mes, block].filter(Boolean);
+
+        for (const source of sources) {
+            if (!source?.dataset) continue;
+            for (const key of ROLE_DATA_KEYS) {
+                if (key in source.dataset) {
+                    const normalized = normalizeRoleValue(source.dataset[key]);
+                    if (normalized) {
+                        return normalized;
+                    }
+                }
+            }
+
+            const isSystem = parseBoolean(
+                source.dataset.isSystem ?? source.dataset.system,
+            );
+            if (isSystem === true) return 'system';
+
+            const isUser = parseBoolean(
+                source.dataset.isUser ?? source.dataset.user,
+            );
+            if (isUser === true) return 'user';
+
+            const isAssistant = parseBoolean(
+                source.dataset.isAssistant ?? source.dataset.assistant,
+            );
+            if (isAssistant === true) return 'assistant';
+        }
+
+        for (const source of sources) {
+            if (!source?.classList) continue;
+            for (const [role, classNames] of Object.entries(
+                MESSAGE_ROLE_CLASS_MAP,
+            )) {
+                if (classNames.some((className) => source.classList.contains(className))) {
+                    return role;
+                }
+            }
+        }
+
+        return 'assistant';
+    }
+
+    function parseDepthValue(value) {
+        if (value == null) return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function getMessageDepth(element) {
+        const { mes, block } = getMessageContainers(element);
+        const sources = [mes, block].filter(Boolean);
+
+        for (const source of sources) {
+            const dataset = source.dataset || {};
+            for (const key of DEPTH_DATA_KEYS) {
+                if (key in dataset) {
+                    const depth = parseDepthValue(dataset[key]);
+                    if (depth != null) return depth;
+                }
+            }
+
+            const attrDepth = source.getAttribute?.('data-depth');
+            const attrDepthIndex = source.getAttribute?.('data-depth-index');
+            const attrDepthLevel = source.getAttribute?.('data-depth-level');
+            const attrDepthValue =
+                attrDepth ?? attrDepthIndex ?? attrDepthLevel ?? null;
+            const parsedAttr = parseDepthValue(attrDepthValue);
+            if (parsedAttr != null) return parsedAttr;
+        }
+
+        let depth = 0;
+        let current = block || mes;
+        while (current) {
+            if (current.classList?.contains('mes_block')) {
+                const datasetDepth = parseDepthValue(current.dataset?.depth);
+                if (datasetDepth != null) return datasetDepth;
+                depth += 1;
+            }
+            current = current.parentElement?.closest?.('.mes_block');
+        }
+
+        if (depth > 0) return depth;
+
+        if (mes?.parentElement) {
+            const siblings = Array.from(
+                mes.parentElement.querySelectorAll('.mes, .mes_block'),
+            );
+            const index = siblings.indexOf(mes);
+            if (index !== -1) return index;
+        }
+
+        return 0;
+    }
+
+    function isMarkdownMessage(element) {
+        const { mes, block } = getMessageContainers(element);
+        const sources = [mes, block].filter(Boolean);
+
+        for (const source of sources) {
+            const dataset = source.dataset || {};
+            const boolFromDataset =
+                parseBoolean(dataset.markdown) ??
+                parseBoolean(dataset.isMarkdown) ??
+                parseBoolean(dataset.markdownOnly) ??
+                parseBoolean(dataset.markdownMessage);
+            if (boolFromDataset !== null) return boolFromDataset;
+
+            const format = (dataset.format || dataset.textFormat || '').toLowerCase();
+            if (format.includes('markdown')) return true;
+            if (format.includes('plain')) return false;
+
+            const attrMarkdown = source.getAttribute?.('data-markdown');
+            const parsedAttr = parseBoolean(attrMarkdown);
+            if (parsedAttr !== null) return parsedAttr;
+
+            if (source.classList) {
+                if (
+                    MARKDOWN_CLASS_NAMES.some((className) =>
+                        source.classList.contains(className),
+                    )
+                ) {
+                    return true;
+                }
+                if (
+                    PLAIN_TEXT_CLASS_NAMES.some((className) =>
+                        source.classList.contains(className),
+                    )
+                ) {
+                    return false;
+                }
+            }
+        }
+
+        const textElement =
+            mes?.querySelector('.mes_text') ||
+            block?.querySelector('.mes_text') ||
+            (element?.classList?.contains?.('mes_text') ? element : element?.closest?.('.mes_text')) ||
+            element;
+
+        if (textElement?.classList) {
+            if (
+                MARKDOWN_CLASS_NAMES.some((className) =>
+                    textElement.classList.contains(className),
+                )
+            ) {
+                return true;
+            }
+            if (
+                PLAIN_TEXT_CLASS_NAMES.some((className) =>
+                    textElement.classList.contains(className),
+                )
+            ) {
+                return false;
+            }
+        }
+
+        if (typeof textElement?.matches === 'function') {
+            if (
+                textElement.matches(
+                    '.markdown, .markdown-body, .markdown-message, .mes_markdown',
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function getUnsplashCacheKey(query) {
         return `${UNSPLASH_CACHE_PREFIX}${query}`;
     }
