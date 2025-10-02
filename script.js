@@ -73,10 +73,7 @@
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
-                    <div id="cip-sync-button" title="同步设置">☁️</div>
-                    <div id="cip-theme-button" title="主题设置">👕</div>
-                    <div id="cip-alarm-button" title="定时指令">⏰</div>
-                    <div id="cip-avatar-button" title="头像配置">🐰</div>
+                    <div id="cip-settings-button" title="设置">⚙️</div>
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
@@ -251,6 +248,138 @@
             `
         );
 
+        const settingsPanel = create(
+            'div',
+            'cip-settings-panel',
+            'cip-frosted-glass hidden',
+            `
+            <nav id="cip-settings-tabs">
+                <button class="cip-settings-tab-button active" data-settings-tab="theme">👕 主题</button>
+                <button class="cip-settings-tab-button" data-settings-tab="avatar">🐰 头像</button>
+                <button class="cip-settings-tab-button" data-settings-tab="alarm">⏰ 定时</button>
+                <button class="cip-settings-tab-button" data-settings-tab="sync">☁️ 同步</button>
+            </nav>
+            <div id="cip-settings-content">
+                <div id="cip-settings-theme-content" class="cip-settings-section active">
+                    <div class="cip-theme-options-grid">
+                        <label for="cip-color-accent">主要/高亮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-accent" data-var="--cip-accent-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-accent">
+                        </div>
+
+                        <label for="cip-color-accent-hover">高亮悬浮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-accent-hover" data-var="--cip-accent-hover-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-accent-hover">
+                        </div>
+
+                        <label for="cip-color-insert-text">插入按钮文字:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-insert-text" data-var="--cip-insert-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-insert-text">
+                        </div>
+
+                        <label for="cip-color-panel-bg">面板背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-panel-bg" data-var="--cip-panel-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-panel-bg">
+                        </div>
+
+                        <label for="cip-color-tabs-bg">功能栏背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-tabs-bg" data-var="--cip-tabs-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-tabs-bg">
+                        </div>
+
+                        <label for="cip-color-text">功能栏字体:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-text" data-var="--cip-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-text">
+                        </div>
+
+                        <label for="cip-color-input-bg">输入框背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-input-bg" data-var="--cip-input-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-input-bg">
+                        </div>
+                    </div>
+                    <div class="cip-theme-manager">
+                        <div class="cip-theme-actions">
+                            <select id="cip-theme-select"></select>
+                            <button id="cip-delete-theme-btn" class="cip-delete-btn">删除</button>
+                        </div>
+                        <div class="cip-theme-save-new">
+                            <input type="text" id="cip-new-theme-name" placeholder="输入新配色方案名称...">
+                            <button id="cip-save-theme-btn" class="cip-save-btn">保存</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="cip-settings-avatar-content" class="cip-settings-section">
+                    <div class="cip-avatar-grid">
+                      <label for="cip-char-avatar-url">角色 (Char):</label>
+                      <input type="text" id="cip-char-avatar-url" placeholder="粘贴角色头像链接...">
+
+                      <label for="cip-user-avatar-url">你 (User):</label>
+                       <input type="text" id="cip-user-avatar-url" placeholder="粘贴你的头像链接...">
+                       <label for="cip-unsplash-access-key">Unsplash Access Key:</label>
+                       <input type="text" id="cip-unsplash-access-key" placeholder="输入你的 Unsplash Access Key...">
+                    </div>
+
+                    <div class="cip-avatar-manager">
+                     <div class="cip-avatar-actions">
+                           <select id="cip-avatar-profile-select"></select>
+                          <button id="cip-apply-avatar-btn" class="cip-apply-btn">应用</button>
+                         <button id="cip-delete-avatar-btn" class="cip-delete-btn">删除</button>
+                     </div>
+                        <div class="cip-avatar-save-new">
+                            <input type="text" id="cip-new-avatar-profile-name" placeholder="输入新配置名称...">
+                           <button id="cip-save-avatar-btn" class="cip-apply-btn">保存</button>
+                     </div>
+                    </div>
+                </div>
+                <div id="cip-settings-alarm-content" class="cip-settings-section">
+                    <div class="cip-alarm-grid">
+                        <label for="cip-alarm-hours">时:</label>
+                        <input type="number" id="cip-alarm-hours" min="0" placeholder="h">
+                        <label for="cip-alarm-minutes">分:</label>
+                        <input type="number" id="cip-alarm-minutes" min="0" max="59" placeholder="m">
+                        <label for="cip-alarm-seconds">秒:</label>
+                        <input type="number" id="cip-alarm-seconds" min="0" max="59" placeholder="s">
+                    </div>
+                    <div class="cip-alarm-grid" style="margin-top: 10px;">
+                        <label for="cip-alarm-repeat">次数:</label>
+                        <input type="number" id="cip-alarm-repeat" min="1" placeholder="默认1次">
+                        <span class="cip-alarm-note" colspan="2">(留空或1为单次)</span>
+                    </div>
+                    <textarea id="cip-alarm-command" placeholder="在此输入定时执行的指令..."></textarea>
+                    <div id="cip-alarm-status">状态: 未设置</div>
+                    <div class="cip-alarm-actions">
+                        <button id="cip-restore-defaults-btn">恢复默认</button>
+                        <button id="cip-stop-alarm-btn">停止</button>
+                        <button id="cip-start-alarm-btn">启动</button>
+                    </div>
+                </div>
+                <div id="cip-settings-sync-content" class="cip-settings-section">
+                    <div class="cip-sync-actions">
+                        <button id="cip-export-btn-panel">导出设置</button>
+                        <label for="cip-import-settings-input" id="cip-import-label-panel" class="cip-button-label">导入设置</label>
+                    </div>
+                    <div class="cip-sync-path-container">
+                        <label for="cip-sync-path-input">保存到:</label>
+                        <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
+                    </div>
+                    <div class="cip-sync-path-actions">
+                         <button id="cip-save-path-btn">保存</button>
+                         <button id="cip-load-path-btn">加载</button>
+                    </div>
+                    <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
+                </div>
+            </div>
+            <button id="cip-close-settings-panel-btn">关闭</button>
+            `
+        );
+
         return {
             carrotButton,
             inputPanel,
@@ -261,6 +390,7 @@
             alarmPanel,
             avatarPanel,
             syncPanel,
+            settingsPanel,
         };
     }
 // <BUNNY_CURSE>
@@ -277,6 +407,7 @@
         alarmPanel,
         avatarPanel,
         syncPanel,
+        settingsPanel,
     } = createUI();
     const anchor = document.querySelector(
         '#chat-buttons-container, #send_form',
@@ -291,6 +422,7 @@
         document.body.appendChild(alarmPanel);
         document.body.appendChild(avatarPanel);
         document.body.appendChild(syncPanel);
+        document.body.appendChild(settingsPanel);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -329,6 +461,10 @@
     const newThemeNameInput = get('cip-new-theme-name');
     const saveThemeBtn = get('cip-save-theme-btn');
     const deleteThemeBtn = get('cip-delete-theme-btn');
+    
+    // --- 新增: 设置面板元素引用 ---
+    const settingsButton = get('cip-settings-button');
+    const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
     
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
@@ -951,9 +1087,40 @@
         alarmRepeatInput.value = alarmData ? alarmData.repeat || 1 : 1;
         updateAlarmStatus(null);
     }
+    // --- 新增: 设置面板事件监听 ---
+    settingsButton.addEventListener('click', () => {
+        get('cip-settings-panel').classList.remove('hidden');
+        // 默认显示主题标签
+        switchSettingsTab('theme');
+    });
+    
+    closeSettingsPanelBtn.addEventListener('click', () => {
+        get('cip-settings-panel').classList.add('hidden');
+    });
+    
+    // 设置面板标签切换
+    function switchSettingsTab(tab) {
+        queryAll('.cip-settings-tab-button').forEach((btn) =>
+            btn.classList.toggle('active', btn.dataset.settingsTab === tab)
+        );
+        queryAll('.cip-settings-section').forEach((section) =>
+            section.classList.toggle('active', section.id === `cip-settings-${tab}-content`)
+        );
+    }
+    
+    queryAll('.cip-settings-tab-button').forEach((button) =>
+        button.addEventListener('click', (e) =>
+            switchSettingsTab(e.currentTarget.dataset.settingsTab)
+        )
+    );
+    
     // --- 新增: 头像配置事件监听 ---
-    avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
-    closeAvatarPanelBtn.addEventListener('click', () => get('cip-avatar-panel').classList.add('hidden'));
+    if (avatarButton) {
+        avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
+    }
+    if (closeAvatarPanelBtn) {
+        closeAvatarPanelBtn.addEventListener('click', () => get('cip-avatar-panel').classList.add('hidden'));
+    }
 
     applyAvatarBtn.addEventListener('click', () => {
         const charUrl = charAvatarUrlInput.value.trim();
@@ -982,8 +1149,12 @@
 
     // --- 新增: 导入/同步事件监听 ---
     importSettingsInput.addEventListener('change', importSettings);
-    syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
-    closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
+    if (syncButton) {
+        syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
+    }
+    if (closeSyncPanelBtn) {
+        closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
+    }
     exportBtnPanel.addEventListener('click', () => exportSettings());
     savePathBtn.addEventListener('click', saveToPath);
     loadPathBtn.addEventListener('click', () => {
@@ -1657,12 +1828,16 @@
     });
 
     // --- 主题设置事件监听 ---
-    themeButton.addEventListener('click', () =>
-        themePanel.classList.remove('hidden'),
-    );
-    closeThemePanelBtn.addEventListener('click', () =>
-        themePanel.classList.add('hidden'),
-    );
+    if (themeButton) {
+        themeButton.addEventListener('click', () =>
+            themePanel.classList.remove('hidden'),
+        );
+    }
+    if (closeThemePanelBtn) {
+        closeThemePanelBtn.addEventListener('click', () =>
+            themePanel.classList.add('hidden'),
+        );
+    }
 
     colorInputs.forEach((input) => {
         input.addEventListener('input', (e) => {
@@ -1714,12 +1889,16 @@
     deleteThemeBtn.addEventListener('click', deleteSelectedTheme);
 
     // --- 定时指令事件监听 ---
-    alarmButton.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.remove('hidden'),
-    );
-    closeAlarmPanelBtn.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.add('hidden'),
-    );
+    if (alarmButton) {
+        alarmButton.addEventListener('click', () =>
+            get('cip-alarm-panel').classList.remove('hidden'),
+        );
+    }
+    if (closeAlarmPanelBtn) {
+        closeAlarmPanelBtn.addEventListener('click', () =>
+            get('cip-alarm-panel').classList.add('hidden'),
+        );
+    }
     startAlarmBtn.addEventListener('click', () => startAlarm(false));
     stopAlarmBtn.addEventListener('click', () => stopAlarm());
     restoreDefaultsBtn.addEventListener('click', () => {
