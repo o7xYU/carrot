@@ -402,9 +402,13 @@ emoji-picker {
     height: 100vh;
     z-index: 1010;
 }
+#cip-settings-hub.hidden {
+    display: none;
+}
 .cip-modal-backdrop.hidden {
     opacity: 0;
     pointer-events: none;
+    display: none;
 }
 .cip-modal-content {
     width: 320px;
