@@ -132,7 +132,7 @@
 .cip-sub-options-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--cip-border-color);
     margin-bottom: 8px;
@@ -251,11 +251,7 @@
     align-items: center;
     gap: 8px;
 }
-#cip-sync-button,
-#cip-theme-button,
-#cip-alarm-button,
-#cip-export-settings-btn,
-#cip-import-settings-btn {
+#cip-settings-button {
     font-size: 24px;
     cursor: pointer;
     opacity: 0.7;
@@ -263,10 +259,7 @@
     position: relative;
     user-select: none;
 }
-#cip-export-settings-btn:hover,
-#cip-import-settings-btn:hover,
-#cip-theme-button:hover,
-#cip-alarm-button:hover {
+#cip-settings-button:hover {
     opacity: 1;
 }
 .cip-footer-actions {
@@ -399,34 +392,89 @@ emoji-picker {
     box-sizing: border-box;
 }
 
-/* --- 新增: 主题设置面板样式 --- */
-#cip-theme-settings-panel {
-    position: absolute;
+/* --- 设置面板样式 --- */
+#cip-settings-panel {
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 380px;
+    width: 400px;
     max-width: 90vw;
     max-height: 80vh;
-    z-index: 1004;
+    z-index: 1005;
     display: flex;
     flex-direction: column;
     padding: 20px;
     gap: 16px;
-    overflow-y: auto;
+    overflow: hidden;
+}
+#cip-settings-panel.hidden {
+    display: none;
+}
+.cip-settings-header {
+    border-bottom: 1px solid var(--cip-border-color);
+    padding-bottom: 8px;
+}
+#cip-settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.cip-settings-tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
     transition:
-        opacity var(--cip-transition-speed),
-        transform var(--cip-transition-speed);
+        background-color var(--cip-transition-speed),
+        color var(--cip-transition-speed);
 }
-#cip-theme-settings-panel.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.95);
+.cip-settings-tab.active {
+    background-color: var(--cip-accent-color);
+    color: #fff;
+    border-color: var(--cip-accent-color);
 }
-#cip-theme-settings-panel h3 {
-    margin: 0 0 10px 0;
+#cip-settings-sections {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-right: 4px;
+}
+.cip-settings-section {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+.cip-settings-section.active {
+    display: flex;
+}
+.cip-settings-section h3 {
+    margin: 0;
     text-align: center;
     color: var(--cip-text-color);
+}
+.cip-settings-footer {
+    display: flex;
+    justify-content: center;
+}
+.cip-settings-footer button {
+    padding: 10px 24px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: var(--cip-accent-color);
+    color: var(--cip-insert-text-color);
+    transition: background-color var(--cip-transition-speed);
+}
+.cip-settings-footer button:hover {
+    background-color: var(--cip-accent-hover-color);
 }
 .cip-theme-options-grid {
     display: grid;
@@ -533,49 +581,7 @@ emoji-picker {
     background-color: var(--cip-delete-color);
     color: white;
 }
-#cip-close-theme-panel-btn {
-    margin: 10px auto 0;
-    width: 50%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background-color: #ddd;
-    color: #333;
-    font-size: 16px;
-    transition: background-color var(--cip-transition-speed);
-}
-#cip-close-theme-panel-btn:hover {
-    background-color: #ccc;
-}
-
 /* --- 新增: 定时指令面板样式 --- */
-#cip-alarm-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 350px;
-    max-width: 90vw;
-    z-index: 1005; /* 比主题面板高一级 */
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    gap: 15px;
-    transition:
-        opacity var(--cip-transition-speed),
-        transform var(--cip-transition-speed);
-}
-#cip-alarm-panel.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.95);
-}
-#cip-alarm-panel h3 {
-    margin: 0 0 5px 0;
-    text-align: center;
-    color: var(--cip-text-color);
-}
 .cip-alarm-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -665,21 +671,6 @@ emoji-picker {
     flex-grow: 0;
     padding: 10px 15px;
 }
-#cip-close-alarm-panel-btn {
-    margin-top: 5px;
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background-color: var(--cip-accent-color);
-    color: #333;
-    font-size: 16px;
-    transition: background-color var(--cip-transition-speed);
-}
-#cip-close-alarm-panel-btn:hover {
-    background-color: var(--cip-accent-hover-color);
-}
 /* ---- */
 
 @media (max-width: 768px) {
@@ -695,7 +686,7 @@ emoji-picker {
 }
 @media (max-width: 480px) {
     .cip-modal-content,
-    #cip-theme-settings-panel {
+    #cip-settings-panel {
         width: calc(100vw - 20px);
         padding: 12px;
         gap: 12px;
@@ -704,7 +695,7 @@ emoji-picker {
         padding: 10px;
     }
     .cip-modal-content h3,
-    #cip-theme-settings-panel h3 {
+    .cip-settings-section h3 {
         font-size: 16px;
         margin: 0;
     }
@@ -773,50 +764,6 @@ emoji-picker {
     color: white;
 }
 /* --- 新增: 头像配置面板样式 --- */
-#cip-avatar-button {
-    font-size: 24px;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity var(--cip-transition-speed);
-    position: relative;
-    user-select: none;
-}
-
-#cip-avatar-button:hover {
-    opacity: 1;
-}
-
-#cip-avatar-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 380px;
-    max-width: 90vw;
-    max-height: 80vh;
-    z-index: 1006; /* 比定时面板层级更高 */
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    gap: 16px;
-    overflow-y: auto;
-    transition:
-        opacity var(--cip-transition-speed),
-        transform var(--cip-transition-speed);
-}
-
-#cip-avatar-panel.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.95);
-}
-
-#cip-avatar-panel h3 {
-    margin: 0 0 10px 0;
-    text-align: center;
-    color: var(--cip-text-color);
-}
-
 .cip-avatar-grid {
     display: grid;
     grid-template-columns: 100px 1fr;
@@ -887,47 +834,12 @@ emoji-picker {
     color: white;
 }
 
-#cip-close-avatar-panel-btn {
-    margin: 10px auto 0;
-    width: 50%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background-color: #ddd;
-    color: #333;
-    font-size: 16px;
-    transition: background-color var(--cip-transition-speed);
+.cip-avatar-manager button.cip-delete-btn {
+    background-color: var(--cip-delete-color);
+    color: white;
 }
 
-#cip-close-avatar-panel-btn:hover {
-    background-color: #ccc;
-}
 /* --- 新增: 同步设置面板样式 --- */
-#cip-sync-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 380px;
-    max-width: 90vw;
-    z-index: 1007; /* 层级最高 */
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    gap: 16px;
-    transition: opacity var(--cip-transition-speed), transform var(--cip-transition-speed);
-}
-#cip-sync-panel.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.95);
-}
-#cip-sync-panel h3 {
-    margin: 0 0 10px 0;
-    text-align: center;
-    color: var(--cip-text-color);
-}
 .cip-sync-actions, .cip-sync-path-actions {
     display: flex;
     gap: 10px;
@@ -977,19 +889,4 @@ emoji-picker {
     padding: 8px;
     background: rgba(0,0,0,0.05);
     border-radius: 8px;
-}
-#cip-close-sync-panel-btn {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background-color: var(--cip-accent-color);
-    color: var(--cip-insert-text-color);
-    font-size: 16px;
-    font-weight: bold;
-    transition: background-color var(--cip-transition-speed);
-}
-#cip-close-sync-panel-btn:hover {
-    background-color: var(--cip-accent-hover-color);
 }
