@@ -132,13 +132,13 @@
 .cip-sub-options-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--cip-border-color);
     margin-bottom: 8px;
 }
 .cip-sub-option-btn {
-    padding: 4px 10px;
+    padding: 4px 8px;
     font-size: 12px;
     border: 1px solid var(--cip-border-color);
     border-radius: 16px;
@@ -254,6 +254,8 @@
 #cip-sync-button,
 #cip-theme-button,
 #cip-alarm-button,
+#cip-avatar-button,
+#cip-settings-button,
 #cip-export-settings-btn,
 #cip-import-settings-btn {
     font-size: 24px;
@@ -266,7 +268,9 @@
 #cip-export-settings-btn:hover,
 #cip-import-settings-btn:hover,
 #cip-theme-button:hover,
-#cip-alarm-button:hover {
+#cip-alarm-button:hover,
+#cip-avatar-button:hover,
+#cip-settings-button:hover {
     opacity: 1;
 }
 .cip-footer-actions {
@@ -992,4 +996,136 @@ emoji-picker {
 }
 #cip-close-sync-panel-btn:hover {
     background-color: var(--cip-accent-hover-color);
+}
+
+/* --- 新增: 统一设置面板样式 --- */
+#cip-settings-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    max-width: 90vw;
+    max-height: 80vh;
+    z-index: 1008;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    transition:
+        opacity var(--cip-transition-speed),
+        transform var(--cip-transition-speed);
+}
+
+#cip-settings-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+#cip-settings-tabs {
+    display: flex;
+    padding: 0;
+    background-color: var(--cip-tabs-bg-color);
+    border-bottom: 1px solid var(--cip-border-color);
+    border-radius: var(--cip-border-radius) var(--cip-border-radius) 0 0;
+}
+
+.cip-settings-tab-button {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--cip-text-color);
+    transition: all var(--cip-transition-speed) ease;
+    position: relative;
+}
+
+.cip-settings-tab-button:first-child {
+    border-radius: var(--cip-border-radius) 0 0 0;
+}
+
+.cip-settings-tab-button:last-child {
+    border-radius: 0 var(--cip-border-radius) 0 0;
+}
+
+.cip-settings-tab-button.active {
+    background-color: var(--cip-active-bg-color);
+    font-weight: bold;
+}
+
+.cip-settings-tab-button:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+#cip-settings-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.cip-settings-section {
+    display: none;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.cip-settings-section.active {
+    display: flex;
+}
+
+#cip-close-settings-panel-btn {
+    margin: 0;
+    padding: 12px;
+    border-radius: 0 0 var(--cip-border-radius) var(--cip-border-radius);
+    border: none;
+    cursor: pointer;
+    background-color: var(--cip-accent-color);
+    color: var(--cip-insert-text-color);
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color var(--cip-transition-speed);
+}
+
+#cip-close-settings-panel-btn:hover {
+    background-color: var(--cip-accent-hover-color);
+}
+
+/* Settings panel specific styles for content sections */
+#cip-settings-panel .cip-theme-options-grid,
+#cip-settings-panel .cip-alarm-grid,
+#cip-settings-panel .cip-avatar-grid {
+    margin-bottom: 15px;
+}
+
+#cip-settings-panel textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: none;
+    border-radius: var(--cip-border-radius);
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    resize: vertical;
+    transition: background-color var(--cip-transition-speed) ease;
+    box-sizing: border-box;
+}
+
+/* Mobile responsive for settings panel */
+@media (max-width: 768px) {
+    #cip-settings-panel {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+    }
+    
+    .cip-settings-tab-button {
+        font-size: 12px;
+        padding: 10px 8px;
+    }
+    
+    #cip-settings-content {
+        padding: 15px;
+    }
 }
