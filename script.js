@@ -1,4 +1,4 @@
-// script.js (v2.5 - 新增unsplash)
+// script.js (v2.6 - 新增unsplash)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
@@ -509,7 +509,6 @@
                 'cip_avatar_profiles_v1',
                 'cip_last_avatar_profile_v1',
                 'cip_custom_command_v1',
-                'cip_button_position_v4',
                 'cip_sync_filename_v1' // 同时导出文件名设置
             ];
 
@@ -570,11 +569,12 @@
                 
                 let settingsApplied = false;
                 for (const key in importedSettings) {
-                    if (Object.prototype.hasOwnProperty.call(importedSettings, key)) {
-                        localStorage.setItem(key, importedSettings[key]);
-                        settingsApplied = true;
-                    }
+                     if (!Object.prototype.hasOwnProperty.call(importedSettings, key)) continue;
+                     if (key === 'cip_button_position_v4') continue; // ← 导入时忽略浮标位置
+                     localStorage.setItem(key, importedSettings[key]);
+                     settingsApplied = true;
                 }
+
                 
                 if (settingsApplied) {
                     alert('设置已成功导入！页面将自动刷新以应用所有更改。');
@@ -626,7 +626,7 @@
         },
         voice: "={duration}'|{message}=",
         bunny: '+{content}+',
-        stickers: '“<img src="{url}" style="display: block; width: 100px; height: 100px; object-fit: contain; border-radius: 15px;" alt="Sticker"  description="{desc}">”',
+        stickers: '“[{desc}]”',
         recall: '--',
     };
 
@@ -996,7 +996,7 @@
                 formatDisplay.textContent = '格式: +内容+';
                 break;
             case 'stickers':
-                formatDisplay.textContent = '格式: !描述|链接!';
+                formatDisplay.textContent = '格式: “[描述]”';
                 if (e) {
                     const t = document.createElement('i');
                     t.textContent = ' ➕';
