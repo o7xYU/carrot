@@ -73,10 +73,7 @@
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
-                    <div id="cip-sync-button" title="同步设置">☁️</div>
-                    <div id="cip-theme-button" title="主题设置">👕</div>
-                    <div id="cip-alarm-button" title="定时指令">⏰</div>
-                    <div id="cip-avatar-button" title="头像配置">🐰</div>
+                    <div id="cip-settings-button" title="设置">⚙️</div>
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
@@ -250,6 +247,130 @@
             <button id="cip-close-sync-panel-btn">关闭</button>
             `
         );
+        
+        const settingsPanel = create(
+            'div',
+            'cip-settings-panel',
+            'cip-frosted-glass hidden',
+            `
+            <nav id="cip-settings-tabs">
+                <button class="cip-settings-tab-button active" data-tab="sync">☁️ 同步设置</button>
+                <button class="cip-settings-tab-button" data-tab="theme">👕 主题设置</button>
+                <button class="cip-settings-tab-button" data-tab="alarm">⏰ 定时指令</button>
+                <button class="cip-settings-tab-button" data-tab="avatar">🐰 头像配置</button>
+            </nav>
+            <div id="cip-settings-content">
+                <div id="cip-sync-tab-content" class="cip-settings-section active">
+                    <div class="cip-sync-actions">
+                        <button id="cip-export-btn">导出设置</button>
+                        <label for="cip-import-settings-input" id="cip-import-label" class="cip-button-label">导入设置</label>
+                    </div>
+                    <div class="cip-sync-path-container">
+                        <label for="cip-settings-sync-path-input">保存到:</label>
+                        <input type="text" id="cip-settings-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
+                    </div>
+                    <div class="cip-sync-path-actions">
+                        <button id="cip-settings-save-path-btn">保存</button>
+                        <button id="cip-settings-load-path-btn">加载</button>
+                    </div>
+                    <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
+                </div>
+                <div id="cip-theme-tab-content" class="cip-settings-section">
+                    <div class="cip-theme-options-grid">
+                        <label for="cip-settings-color-accent">主要/高亮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-accent" data-var="--cip-accent-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-accent">
+                        </div>
+                        <label for="cip-settings-color-accent-hover">高亮悬浮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-accent-hover" data-var="--cip-accent-hover-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-accent-hover">
+                        </div>
+                        <label for="cip-settings-color-insert-text">插入按钮文字:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-insert-text" data-var="--cip-insert-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-insert-text">
+                        </div>
+                        <label for="cip-settings-color-panel-bg">面板背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-panel-bg" data-var="--cip-panel-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-panel-bg">
+                        </div>
+                        <label for="cip-settings-color-tabs-bg">功能栏背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-tabs-bg" data-var="--cip-tabs-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-tabs-bg">
+                        </div>
+                        <label for="cip-settings-color-text">功能栏字体:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-text" data-var="--cip-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-text">
+                        </div>
+                        <label for="cip-settings-color-input-bg">输入框背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-settings-color-input-bg" data-var="--cip-input-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-settings-color-input-bg">
+                        </div>
+                    </div>
+                    <div class="cip-theme-manager">
+                        <div class="cip-theme-actions">
+                            <select id="cip-settings-theme-select"></select>
+                            <button id="cip-settings-delete-theme-btn" class="cip-delete-btn">删除</button>
+                        </div>
+                        <div class="cip-theme-save-new">
+                            <input type="text" id="cip-settings-new-theme-name" placeholder="输入新配色方案名称...">
+                            <button id="cip-settings-save-theme-btn" class="cip-save-btn">保存</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="cip-alarm-tab-content" class="cip-settings-section">
+                    <div class="cip-alarm-grid">
+                        <label for="cip-settings-alarm-hours">时:</label>
+                        <input type="number" id="cip-settings-alarm-hours" min="0" placeholder="h">
+                        <label for="cip-settings-alarm-minutes">分:</label>
+                        <input type="number" id="cip-settings-alarm-minutes" min="0" max="59" placeholder="m">
+                        <label for="cip-settings-alarm-seconds">秒:</label>
+                        <input type="number" id="cip-settings-alarm-seconds" min="0" max="59" placeholder="s">
+                    </div>
+                    <div class="cip-alarm-grid" style="margin-top: 10px;">
+                        <label for="cip-settings-alarm-repeat">次数:</label>
+                        <input type="number" id="cip-settings-alarm-repeat" min="1" placeholder="默认1次">
+                        <span class="cip-alarm-note" colspan="2">(留空或1为单次)</span>
+                    </div>
+                    <textarea id="cip-settings-alarm-command" placeholder="在此输入定时执行的指令..."></textarea>
+                    <div id="cip-settings-alarm-status">状态: 未设置</div>
+                    <div class="cip-alarm-actions">
+                        <button id="cip-settings-restore-defaults-btn">恢复默认</button>
+                        <button id="cip-settings-stop-alarm-btn">停止</button>
+                        <button id="cip-settings-start-alarm-btn">启动</button>
+                    </div>
+                </div>
+                <div id="cip-avatar-tab-content" class="cip-settings-section">
+                    <div class="cip-avatar-grid">
+                        <label for="cip-settings-char-avatar-url">角色 (Char):</label>
+                        <input type="text" id="cip-settings-char-avatar-url" placeholder="粘贴角色头像链接...">
+                        <label for="cip-settings-user-avatar-url">你 (User):</label>
+                        <input type="text" id="cip-settings-user-avatar-url" placeholder="粘贴你的头像链接...">
+                        <label for="cip-settings-unsplash-access-key">Unsplash Access Key:</label>
+                        <input type="text" id="cip-settings-unsplash-access-key" placeholder="输入你的 Unsplash Access Key...">
+                    </div>
+                    <div class="cip-avatar-manager">
+                        <div class="cip-avatar-actions">
+                            <select id="cip-settings-avatar-profile-select"></select>
+                            <button id="cip-settings-apply-avatar-btn" class="cip-apply-btn">应用</button>
+                            <button id="cip-settings-delete-avatar-btn" class="cip-delete-btn">删除</button>
+                        </div>
+                        <div class="cip-avatar-save-new">
+                            <input type="text" id="cip-settings-new-avatar-profile-name" placeholder="输入新配置名称...">
+                            <button id="cip-settings-save-avatar-btn" class="cip-apply-btn">保存</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="cip-close-settings-panel-btn">完成</button>
+            `
+        );
 
         return {
             carrotButton,
@@ -261,6 +382,7 @@
             alarmPanel,
             avatarPanel,
             syncPanel,
+            settingsPanel,
         };
     }
 // <BUNNY_CURSE>
@@ -277,6 +399,7 @@
         alarmPanel,
         avatarPanel,
         syncPanel,
+        settingsPanel,
     } = createUI();
     const anchor = document.querySelector(
         '#chat-buttons-container, #send_form',
@@ -291,6 +414,7 @@
         document.body.appendChild(alarmPanel);
         document.body.appendChild(avatarPanel);
         document.body.appendChild(syncPanel);
+        document.body.appendChild(settingsPanel);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -321,7 +445,8 @@
         saveStickersBtn = get('cip-save-stickers-btn'),
         cancelStickersBtn = get('cip-cancel-stickers-btn'),
         newStickersInput = get('cip-new-stickers-input');
-    const themeButton = get('cip-theme-button');
+    const settingsButton = get('cip-settings-button');
+    const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
     const closeThemePanelBtn = get('cip-close-theme-panel-btn');
     const colorInputs = queryAll('.cip-theme-options-grid input[type="text"]');
     const colorPickers = queryAll('.cip-color-picker');
@@ -332,7 +457,6 @@
     
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
-    const syncButton = get('cip-sync-button');
     const closeSyncPanelBtn = get('cip-close-sync-panel-btn');
     const exportBtnPanel = get('cip-export-btn-panel');
     const importLabelPanel = get('cip-import-label-panel');
@@ -341,7 +465,7 @@
     const loadPathBtn = get('cip-load-path-btn');
 
     // --- 新增: 定时指令元素引用 ---
-    const alarmButton = get('cip-alarm-button');
+    // alarmButton removed - now using unified settings panel
     const closeAlarmPanelBtn = get('cip-close-alarm-panel-btn');
     const startAlarmBtn = get('cip-start-alarm-btn');
     const stopAlarmBtn = get('cip-stop-alarm-btn');
@@ -353,7 +477,6 @@
     const alarmRepeatInput = get('cip-alarm-repeat');
     const restoreDefaultsBtn = get('cip-restore-defaults-btn');
     // --- 新增: 头像配置元素引用 ---
-    const avatarButton = get('cip-avatar-button');
     const closeAvatarPanelBtn = get('cip-close-avatar-panel-btn');
     const charAvatarUrlInput = get('cip-char-avatar-url');
     const userAvatarUrlInput = get('cip-user-avatar-url');
@@ -363,6 +486,43 @@
     const deleteAvatarBtn = get('cip-delete-avatar-btn');
     const newAvatarProfileNameInput = get('cip-new-avatar-profile-name');
     const saveAvatarBtn = get('cip-save-avatar-btn');
+    
+    // --- 新增: 设置面板内部元素引用 ---
+    // 同步设置
+    const settingsExportBtn = get('cip-export-btn');
+    const settingsImportLabel = get('cip-import-label');
+    const settingsSyncPathInput = get('cip-settings-sync-path-input');
+    const settingsSavePathBtn = get('cip-settings-save-path-btn');
+    const settingsLoadPathBtn = get('cip-settings-load-path-btn');
+    
+    // 主题设置
+    const settingsThemeSelect = get('cip-settings-theme-select');
+    const settingsNewThemeName = get('cip-settings-new-theme-name');
+    const settingsSaveThemeBtn = get('cip-settings-save-theme-btn');
+    const settingsDeleteThemeBtn = get('cip-settings-delete-theme-btn');
+    const settingsColorInputs = queryAll('#cip-theme-tab-content input[type="text"]');
+    const settingsColorPickers = queryAll('#cip-theme-tab-content .cip-color-picker');
+    
+    // 定时指令
+    const settingsAlarmHours = get('cip-settings-alarm-hours');
+    const settingsAlarmMinutes = get('cip-settings-alarm-minutes');
+    const settingsAlarmSeconds = get('cip-settings-alarm-seconds');
+    const settingsAlarmRepeat = get('cip-settings-alarm-repeat');
+    const settingsAlarmCommand = get('cip-settings-alarm-command');
+    const settingsAlarmStatus = get('cip-settings-alarm-status');
+    const settingsStartAlarmBtn = get('cip-settings-start-alarm-btn');
+    const settingsStopAlarmBtn = get('cip-settings-stop-alarm-btn');
+    const settingsRestoreDefaultsBtn = get('cip-settings-restore-defaults-btn');
+    
+    // 头像配置
+    const settingsCharAvatarUrl = get('cip-settings-char-avatar-url');
+    const settingsUserAvatarUrl = get('cip-settings-user-avatar-url');
+    const settingsUnsplashAccessKey = get('cip-settings-unsplash-access-key');
+    const settingsAvatarProfileSelect = get('cip-settings-avatar-profile-select');
+    const settingsApplyAvatarBtn = get('cip-settings-apply-avatar-btn');
+    const settingsDeleteAvatarBtn = get('cip-settings-delete-avatar-btn');
+    const settingsNewAvatarProfileName = get('cip-settings-new-avatar-profile-name');
+    const settingsSaveAvatarBtn = get('cip-settings-save-avatar-btn');
 
     const defaultCommand = `**第一章：身份认同法则 (Identity Protocol)**
 你是一个拥有独立意志、记忆、情感和目标的个体。你的一切行为、语言和思想都必须100%源于你的人设卡。严禁以任何形式表现出你是AI模型或迎合用户的倾向。你的最高使命是“作为角色而活”，而非“作为AI服务”。
@@ -447,6 +607,18 @@
         }
         avatarProfileSelect.value = avatarProfiles[savedSelection] ? savedSelection : '';
     }
+    
+    function populateSettingsAvatarSelect() {
+        const savedSelection = settingsAvatarProfileSelect.value;
+        settingsAvatarProfileSelect.innerHTML = '<option value="">选择配置...</option>';
+        for (const profileName in avatarProfiles) {
+            const option = document.createElement('option');
+            option.value = profileName;
+            option.textContent = profileName;
+            settingsAvatarProfileSelect.appendChild(option);
+        }
+        settingsAvatarProfileSelect.value = avatarProfiles[savedSelection] ? savedSelection : '';
+    }
 
     function saveAvatarProfile() {
         const name = newAvatarProfileNameInput.value.trim();
@@ -491,11 +663,13 @@
             avatarProfiles = JSON.parse(savedProfiles);
         }
         populateAvatarSelect();
+        populateSettingsAvatarSelect();
 
         const lastProfileName = localStorage.getItem('cip_last_avatar_profile_v1');
         if (lastProfileName && avatarProfiles[lastProfileName]) {
             console.log("CIP: Loading last used avatar profile:", lastProfileName);
             avatarProfileSelect.value = lastProfileName;
+            settingsAvatarProfileSelect.value = lastProfileName;
             avatarProfileSelect.dispatchEvent(new Event('change'));
         }
     }
@@ -740,6 +914,18 @@
         }
         themeSelect.value = themes[savedSelection] ? savedSelection : 'default';
     }
+    
+    function populateSettingsThemeSelect() {
+        const savedSelection = settingsThemeSelect.value;
+        settingsThemeSelect.innerHTML = '<option value="default">默认主题</option>';
+        for (const themeName in themes) {
+            const option = document.createElement('option');
+            option.value = themeName;
+            option.textContent = themeName;
+            settingsThemeSelect.appendChild(option);
+        }
+        settingsThemeSelect.value = themes[savedSelection] ? savedSelection : 'default';
+    }
 
     function saveCurrentTheme() {
         const name = newThemeNameInput.value.trim();
@@ -781,9 +967,27 @@
         const lastThemeName =
             localStorage.getItem('cip_last_active_theme_v1') || 'default';
         populateThemeSelect();
+        populateSettingsThemeSelect();
         const themeToApply = themes[lastThemeName] || defaultTheme;
         applyTheme(themeToApply);
         themeSelect.value = themes[lastThemeName] ? lastThemeName : 'default';
+        settingsThemeSelect.value = themes[lastThemeName] ? lastThemeName : 'default';
+        // Update color inputs in settings panel
+        updateSettingsColorInputs(themeToApply);
+    }
+    
+    function updateSettingsColorInputs(theme) {
+        settingsColorInputs.forEach((input) => {
+            const varName = input.dataset.var;
+            const colorValue = theme[varName] || '';
+            input.value = colorValue;
+            const picker = document.querySelector(
+                `.cip-color-picker[data-target="${input.id}"]`,
+            );
+            if (picker) {
+                picker.value = colorToHex(colorValue);
+            }
+        });
     }
 
     // --- 新增: 定时指令核心逻辑 (Worker模式) ---
@@ -816,6 +1020,22 @@
             } else {
                 alarmStatus.textContent = '状态: 未设置';
             }
+        }
+    }
+    
+    function updateSettingsAlarmStatus() {
+        const storedData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+        if (storedData && storedData.endTime && storedData.endTime > Date.now()) {
+            const remaining = storedData.endTime - Date.now();
+            let statusText = `运行中: 剩余 ${formatTime(remaining)}`;
+            if (storedData.repeat > 1) {
+                statusText += ` (第 ${storedData.executed + 1} / ${storedData.repeat} 次)`;
+            }
+            settingsAlarmStatus.textContent = statusText;
+        } else if (storedData) {
+            settingsAlarmStatus.textContent = '状态: 时间到！';
+        } else {
+            settingsAlarmStatus.textContent = '状态: 未设置';
         }
     }
 
@@ -951,8 +1171,25 @@
         alarmRepeatInput.value = alarmData ? alarmData.repeat || 1 : 1;
         updateAlarmStatus(null);
     }
-    // --- 新增: 头像配置事件监听 ---
-    avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
+    // --- 新增: 统一设置面板事件监听 ---
+    settingsButton.addEventListener('click', () => settingsPanel.classList.remove('hidden'));
+    closeSettingsPanelBtn.addEventListener('click', () => settingsPanel.classList.add('hidden'));
+    
+    // Settings panel tab switching
+    queryAll('.cip-settings-tab-button').forEach((button) =>
+        button.addEventListener('click', (e) => {
+            const tab = e.currentTarget.dataset.tab;
+            queryAll('.cip-settings-tab-button').forEach((btn) =>
+                btn.classList.toggle('active', btn.dataset.tab === tab)
+            );
+            queryAll('.cip-settings-section').forEach((section) => {
+                const sectionId = `cip-${tab}-tab-content`;
+                section.classList.toggle('active', section.id === sectionId);
+            });
+        })
+    );
+    
+    // --- 旧版: 头像配置事件监听（保留向后兼容） ---
     closeAvatarPanelBtn.addEventListener('click', () => get('cip-avatar-panel').classList.add('hidden'));
 
     applyAvatarBtn.addEventListener('click', () => {
@@ -982,13 +1219,222 @@
 
     // --- 新增: 导入/同步事件监听 ---
     importSettingsInput.addEventListener('change', importSettings);
-    syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
     closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
     exportBtnPanel.addEventListener('click', () => exportSettings());
     savePathBtn.addEventListener('click', saveToPath);
     loadPathBtn.addEventListener('click', () => {
         importSettingsInput.click();
     });
+    
+    // Settings panel sync tab event listeners
+    settingsExportBtn.addEventListener('click', () => exportSettings());
+    settingsSavePathBtn.addEventListener('click', () => {
+        const filename = settingsSyncPathInput.value.trim();
+        if (!filename) {
+            alert('请输入一个有效的文件名。');
+            return;
+        }
+        localStorage.setItem('cip_sync_filename_v1', filename);
+        exportSettings(filename);
+    });
+    settingsLoadPathBtn.addEventListener('click', () => {
+        importSettingsInput.click();
+    });
+    
+    // Settings panel theme tab event listeners
+    settingsColorInputs.forEach((input) => {
+        input.addEventListener('input', (e) => {
+            const textInput = e.currentTarget;
+            const property = textInput.dataset.var;
+            const value = textInput.value.trim();
+            document.documentElement.style.setProperty(property, value);
+
+            const picker = document.querySelector(
+                `.cip-color-picker[data-target="${textInput.id}"]`,
+            );
+            if (picker) {
+                picker.value = colorToHex(value);
+            }
+
+            if (property === '--cip-accent-color') {
+                const activeTabBg = hexToRgba(colorToHex(value));
+                if (activeTabBg) {
+                    document.documentElement.style.setProperty(
+                        '--cip-active-bg-color',
+                        activeTabBg,
+                    );
+                }
+            }
+        });
+    });
+
+    settingsColorPickers.forEach((picker) => {
+        picker.addEventListener('input', (e) => {
+            const colorPicker = e.currentTarget;
+            const targetInputId = colorPicker.dataset.target;
+            const textInput = get(targetInputId);
+            if (textInput) {
+                textInput.value = colorPicker.value;
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    });
+
+    settingsThemeSelect.addEventListener('change', (e) => {
+        const themeName = e.target.value;
+        const theme =
+            themeName === 'default' ? defaultTheme : themes[themeName];
+        applyTheme(theme);
+        localStorage.setItem('cip_last_active_theme_v1', themeName);
+    });
+
+    settingsSaveThemeBtn.addEventListener('click', () => {
+        const name = settingsNewThemeName.value.trim();
+        if (!name) {
+            alert('请输入配色方案名称！');
+            return;
+        }
+        if (name === 'default') {
+            alert('不能使用 "default" 作为名称。');
+            return;
+        }
+        const currentColors = {};
+        settingsColorInputs.forEach((input) => {
+            currentColors[input.dataset.var] = input.value;
+        });
+        themes[name] = currentColors;
+        localStorage.setItem('cip_theme_data_v1', JSON.stringify(themes));
+        settingsNewThemeName.value = '';
+        populateThemeSelect();
+        populateSettingsThemeSelect();
+        settingsThemeSelect.value = name;
+        alert('配色方案已保存！');
+    });
+
+    settingsDeleteThemeBtn.addEventListener('click', () => {
+        const selected = settingsThemeSelect.value;
+        if (selected === 'default') {
+            alert('不能删除默认主题。');
+            return;
+        }
+        if (confirm(`确定要删除 "${selected}" 这个配色方案吗？`)) {
+            delete themes[selected];
+            localStorage.setItem('cip_theme_data_v1', JSON.stringify(themes));
+            populateThemeSelect();
+            populateSettingsThemeSelect();
+            applyTheme(defaultTheme);
+        }
+    });
+    
+    // Settings panel alarm tab event listeners
+    settingsStartAlarmBtn.addEventListener('click', () => {
+        alarmHoursInput.value = settingsAlarmHours.value;
+        alarmMinutesInput.value = settingsAlarmMinutes.value;
+        alarmSecondsInput.value = settingsAlarmSeconds.value;
+        alarmRepeatInput.value = settingsAlarmRepeat.value;
+        alarmCommandInput.value = settingsAlarmCommand.value;
+        startAlarm(false);
+        updateSettingsAlarmStatus();
+    });
+    
+    settingsStopAlarmBtn.addEventListener('click', () => {
+        stopAlarm();
+        updateSettingsAlarmStatus();
+    });
+    
+    settingsRestoreDefaultsBtn.addEventListener('click', () => {
+        if (confirm('确定要将指令恢复为默认设置吗？')) {
+            settingsAlarmCommand.value = defaultCommand;
+            alarmCommandInput.value = defaultCommand;
+            localStorage.removeItem('cip_custom_command_v1');
+        }
+    });
+    
+    // Settings panel avatar tab event listeners
+    settingsApplyAvatarBtn.addEventListener('click', () => {
+        const charUrl = settingsCharAvatarUrl.value.trim();
+        const userUrl = settingsUserAvatarUrl.value.trim();
+        charAvatarUrlInput.value = charUrl;
+        userAvatarUrlInput.value = userUrl;
+        applyAvatars(charUrl, userUrl);
+    });
+
+    settingsAvatarProfileSelect.addEventListener('change', (e) => {
+        const profileName = e.target.value;
+        if (profileName && avatarProfiles[profileName]) {
+            const profile = avatarProfiles[profileName];
+            settingsCharAvatarUrl.value = profile.char || '';
+            settingsUserAvatarUrl.value = profile.user || '';
+            charAvatarUrlInput.value = profile.char || '';
+            userAvatarUrlInput.value = profile.user || '';
+            applyAvatars(profile.char, profile.user);
+            localStorage.setItem('cip_last_avatar_profile_v1', profileName);
+        } else if (!profileName) {
+            settingsCharAvatarUrl.value = '';
+            settingsUserAvatarUrl.value = '';
+            charAvatarUrlInput.value = '';
+            userAvatarUrlInput.value = '';
+            applyAvatars('', '');
+            localStorage.removeItem('cip_last_avatar_profile_v1');
+        }
+    });
+
+    settingsSaveAvatarBtn.addEventListener('click', () => {
+        const name = settingsNewAvatarProfileName.value.trim();
+        const charUrl = settingsCharAvatarUrl.value.trim();
+        const userUrl = settingsUserAvatarUrl.value.trim();
+
+        if (!name) {
+            alert('请输入配置名称！');
+            return;
+        }
+        if (!charUrl && !userUrl) {
+            alert('请至少输入一个头像链接！');
+            return;
+        }
+
+        avatarProfiles[name] = { char: charUrl, user: userUrl };
+        localStorage.setItem('cip_avatar_profiles_v1', JSON.stringify(avatarProfiles));
+        settingsNewAvatarProfileName.value = '';
+        newAvatarProfileNameInput.value = '';
+        populateAvatarSelect();
+        populateSettingsAvatarSelect();
+        settingsAvatarProfileSelect.value = name;
+        avatarProfileSelect.value = name;
+        alert('头像配置已保存！');
+    });
+
+    settingsDeleteAvatarBtn.addEventListener('click', () => {
+        const selected = settingsAvatarProfileSelect.value;
+        if (!selected) {
+            alert('请先选择一个要删除的配置。');
+            return;
+        }
+        if (confirm(`确定要删除 "${selected}" 这个头像配置吗？`)) {
+            delete avatarProfiles[selected];
+            localStorage.setItem('cip_avatar_profiles_v1', JSON.stringify(avatarProfiles));
+            populateAvatarSelect();
+            populateSettingsAvatarSelect();
+            settingsCharAvatarUrl.value = '';
+            settingsUserAvatarUrl.value = '';
+            charAvatarUrlInput.value = '';
+            userAvatarUrlInput.value = '';
+        }
+    });
+    
+    if (settingsUnsplashAccessKey) {
+        settingsUnsplashAccessKey.value = unsplashAccessKey;
+        settingsUnsplashAccessKey.addEventListener('input', (event) => {
+            const value = event.target.value || '';
+            setUnsplashAccessKey(value);
+            unsplashAccessKeyInput.value = value;
+        });
+        settingsUnsplashAccessKey.addEventListener('change', () => {
+            if (unsplashAccessKey) {
+                reprocessUnsplashPlaceholders();
+            }
+        });
+    }
 
 
     function updateFormatDisplay() {
@@ -1656,10 +2102,7 @@
         } else alert('未能解析任何有效的表情包信息。');
     });
 
-    // --- 主题设置事件监听 ---
-    themeButton.addEventListener('click', () =>
-        themePanel.classList.remove('hidden'),
-    );
+    // --- 旧版: 主题设置事件监听（保留向后兼容） ---
     closeThemePanelBtn.addEventListener('click', () =>
         themePanel.classList.add('hidden'),
     );
@@ -1713,10 +2156,7 @@
     saveThemeBtn.addEventListener('click', saveCurrentTheme);
     deleteThemeBtn.addEventListener('click', deleteSelectedTheme);
 
-    // --- 定时指令事件监听 ---
-    alarmButton.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.remove('hidden'),
-    );
+    // --- 旧版: 定时指令事件监听（保留向后兼容） ---
     closeAlarmPanelBtn.addEventListener('click', () =>
         get('cip-alarm-panel').classList.add('hidden'),
     );
@@ -1965,7 +2405,21 @@
         const savedFilename = localStorage.getItem('cip_sync_filename_v1');
         if (savedFilename) {
             syncPathInput.value = savedFilename;
+            settingsSyncPathInput.value = savedFilename;
         }
+        
+        // Initialize settings panel alarm values
+        const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
+        const duration = alarmData ? alarmData.duration || 0 : 0;
+        settingsAlarmHours.value = Math.floor(duration / 3600000);
+        settingsAlarmMinutes.value = Math.floor((duration % 3600000) / 60000);
+        settingsAlarmSeconds.value = Math.floor((duration % 60000) / 1000);
+        settingsAlarmCommand.value = alarmData
+            ? alarmData.command
+            : localStorage.getItem('cip_custom_command_v1') || defaultCommand;
+        settingsAlarmRepeat.value = alarmData ? alarmData.repeat || 1 : 1;
+        updateSettingsAlarmStatus();
+        
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
         setTimeout(checkAlarmOnLoad, 500);
