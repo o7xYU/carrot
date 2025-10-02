@@ -73,6 +73,7 @@
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
+                    <div id="cip-settings-button" title="设置">⚙️</div>
                     <div id="cip-sync-button" title="同步设置">☁️</div>
                     <div id="cip-theme-button" title="主题设置">👕</div>
                     <div id="cip-alarm-button" title="定时指令">⏰</div>
@@ -251,6 +252,29 @@
             `
         );
 
+        const settingsPanel = create(
+            'div',
+            'cip-settings-panel',
+            'cip-frosted-glass hidden',
+            `
+            <nav id="cip-settings-tabs">
+                <button class="cip-settings-tab-btn active" data-target="theme">主题设置</button>
+                <button class="cip-settings-tab-btn" data-target="avatar">头像配置</button>
+                <button class="cip-settings-tab-btn" data-target="alarm">定时指令</button>
+                <button class="cip-settings-tab-btn" data-target="sync">同步设置</button>
+            </nav>
+            <div id="cip-settings-content">
+                <div class="cip-settings-section active" data-section="theme"></div>
+                <div class="cip-settings-section" data-section="avatar"></div>
+                <div class="cip-settings-section" data-section="alarm"></div>
+                <div class="cip-settings-section" data-section="sync"></div>
+            </div>
+            <div class="cip-settings-footer">
+                <button id="cip-close-settings-panel-btn">完成</button>
+            </div>
+            `,
+        );
+
         return {
             carrotButton,
             inputPanel,
@@ -261,6 +285,7 @@
             alarmPanel,
             avatarPanel,
             syncPanel,
+            settingsPanel,
         };
     }
 // <BUNNY_CURSE>
@@ -291,6 +316,7 @@
         document.body.appendChild(alarmPanel);
         document.body.appendChild(avatarPanel);
         document.body.appendChild(syncPanel);
+        document.body.appendChild(settingsPanel);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -314,6 +340,7 @@
         addCategoryBtn = get('cip-add-category-btn'),
         stickerGrid = get('cip-sticker-grid');
     const emojiPickerBtn = get('cip-emoji-picker-btn');
+    const settingsButton = get('cip-settings-button');
     const saveCategoryBtn = get('cip-save-category-btn'),
         cancelCategoryBtn = get('cip-cancel-category-btn'),
         newCategoryNameInput = get('cip-new-category-name');
@@ -339,6 +366,8 @@
     const syncPathInput = get('cip-sync-path-input');
     const savePathBtn = get('cip-save-path-btn');
     const loadPathBtn = get('cip-load-path-btn');
+    const settingsPanelEl = get('cip-settings-panel');
+    const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
 
     // --- 新增: 定时指令元素引用 ---
     const alarmButton = get('cip-alarm-button');
@@ -1070,6 +1099,83 @@
             (selectedSticker = null),
             updateFormatDisplay());
     }
+
+    function switchSettingsTab(tab) {
+        queryAll('#cip-settings-panel .cip-settings-tab-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.target === tab);
+        });
+        queryAll('#cip-settings-panel .cip-settings-section').forEach((sec) => {
+            sec.classList.toggle('active', sec.dataset.section === tab);
+        });
+        // 确保嵌入的面板在设置面板内不受 .hidden 影响
+        if (themePanel) themePanel.classList.remove('hidden');
+        if (avatarPanel) avatarPanel.classList.remove('hidden');
+        if (alarmPanel) alarmPanel.classList.remove('hidden');
+        if (syncPanel) syncPanel.classList.remove('hidden');
+    }
+
+    function initSettingsPanelEmbed() {
+        if (!settingsPanelEl) return;
+        const themeSection = settingsPanelEl.querySelector(
+            '.cip-settings-section[data-section="theme"]',
+        );
+        const avatarSection = settingsPanelEl.querySelector(
+            '.cip-settings-section[data-section="avatar"]',
+        );
+        const alarmSection = settingsPanelEl.querySelector(
+            '.cip-settings-section[data-section="alarm"]',
+        );
+        const syncSection = settingsPanelEl.querySelector(
+            '.cip-settings-section[data-section="sync"]',
+        );
+
+        if (themePanel && themeSection && themePanel.parentElement !== themeSection) {
+            themeSection.appendChild(themePanel);
+        }
+        if (avatarPanel && avatarSection && avatarPanel.parentElement !== avatarSection) {
+            avatarSection.appendChild(avatarPanel);
+        }
+        if (alarmPanel && alarmSection && alarmPanel.parentElement !== alarmSection) {
+            alarmSection.appendChild(alarmPanel);
+        }
+        if (syncPanel && syncSection && syncPanel.parentElement !== syncSection) {
+            syncSection.appendChild(syncPanel);
+        }
+
+        // 移除 hidden 以便在设置面板中展示
+        if (themePanel) themePanel.classList.remove('hidden');
+        if (avatarPanel) avatarPanel.classList.remove('hidden');
+        if (alarmPanel) alarmPanel.classList.remove('hidden');
+        if (syncPanel) syncPanel.classList.remove('hidden');
+
+        // 绑定设置面板的Tab事件
+        queryAll('#cip-settings-panel .cip-settings-tab-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget.dataset.target;
+                switchSettingsTab(target);
+            });
+        });
+
+        if (closeSettingsPanelBtn) {
+            closeSettingsPanelBtn.addEventListener('click', () => {
+                settingsPanelEl.classList.add('hidden');
+            });
+        }
+
+        // 内部各面板原有“完成/关闭”按钮同时关闭设置面板
+        ;[
+            closeThemePanelBtn,
+            closeAlarmPanelBtn,
+            closeSyncPanelBtn,
+            closeAvatarPanelBtn,
+        ].forEach((btn) => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    settingsPanelEl.classList.add('hidden');
+                });
+            }
+        });
+    }
     function renderStickers(t) {
         if (((stickerGrid.innerHTML = ''), !t || !stickerData[t]))
             return void (stickerGrid.innerHTML =
@@ -1730,6 +1836,15 @@
     });
 
     // --- 5. 交互处理逻辑 (无变化) ---
+    // 设置齿轮按钮事件
+    if (settingsButton) {
+        settingsButton.addEventListener('click', () => {
+            if (settingsPanelEl) {
+                settingsPanelEl.classList.remove('hidden');
+                switchSettingsTab('theme');
+            }
+        });
+    }
     function showPanel() {
         if (inputPanel.classList.contains('active')) return;
         const btnRect = carrotButton.getBoundingClientRect();
@@ -1966,6 +2081,7 @@
         if (savedFilename) {
             syncPathInput.value = savedFilename;
         }
+        initSettingsPanelEmbed();
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
         setTimeout(checkAlarmOnLoad, 500);

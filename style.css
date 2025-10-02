@@ -132,13 +132,13 @@
 .cip-sub-options-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--cip-border-color);
     margin-bottom: 8px;
 }
 .cip-sub-option-btn {
-    padding: 4px 10px;
+    padding: 3px 8px;
     font-size: 12px;
     border: 1px solid var(--cip-border-color);
     border-radius: 16px;
@@ -251,6 +251,7 @@
     align-items: center;
     gap: 8px;
 }
+#cip-settings-button,
 #cip-sync-button,
 #cip-theme-button,
 #cip-alarm-button,
@@ -296,6 +297,13 @@
 }
 #cip-insert-button:hover {
     background-color: var(--cip-accent-hover-color); /* 应用变量 */
+}
+/* 将底部四个独立按钮隐藏，仅保留齿轮按钮入口 */
+#cip-footer-controls #cip-sync-button,
+#cip-footer-controls #cip-theme-button,
+#cip-footer-controls #cip-alarm-button,
+#cip-footer-controls #cip-avatar-button {
+    display: none;
 }
 emoji-picker {
     position: fixed;
@@ -992,4 +1000,95 @@ emoji-picker {
 }
 #cip-close-sync-panel-btn:hover {
     background-color: var(--cip-accent-hover-color);
+}
+/* --- 新增: 统一设置（齿轮）面板样式 --- */
+#cip-settings-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    max-width: 92vw;
+    max-height: 82vh;
+    z-index: 1010;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    overflow: hidden;
+}
+#cip-settings-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.96);
+}
+#cip-settings-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--cip-tabs-bg-color);
+    border-bottom: 1px solid var(--cip-border-color);
+    padding: 8px;
+}
+.cip-settings-tab-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: background-color var(--cip-transition-speed), color var(--cip-transition-speed);
+}
+.cip-settings-tab-btn.active {
+    background: var(--cip-active-bg-color);
+    font-weight: bold;
+}
+#cip-settings-content {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+.cip-settings-section { display: none; }
+.cip-settings-section.active { display: block; }
+.cip-settings-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 8px;
+}
+#cip-close-settings-panel-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #ddd;
+    color: #333;
+    font-size: 16px;
+    transition: background-color var(--cip-transition-speed);
+}
+#cip-close-settings-panel-btn:hover { background-color: #ccc; }
+
+/* 嵌入时重置子面板定位与尺寸 */
+#cip-settings-panel #cip-theme-settings-panel,
+#cip-settings-panel #cip-avatar-panel,
+#cip-settings-panel #cip-alarm-panel,
+#cip-settings-panel #cip-sync-panel {
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+}
+
+@media (max-width: 480px) {
+    #cip-settings-panel {
+        width: calc(100vw - 20px);
+        padding: 12px;
+        gap: 10px;
+        max-height: calc(100vh - 40px);
+    }
 }
