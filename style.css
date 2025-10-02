@@ -414,26 +414,36 @@ emoji-picker {
 }
 
 #cip-settings-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    display: flex;
+    border: 1px solid var(--cip-border-color);
+    border-radius: var(--cip-border-radius);
+    overflow: hidden;
+    background: var(--cip-tabs-bg-color);
 }
 
 .cip-settings-tab {
-    border: 1px solid var(--cip-border-color);
-    border-radius: var(--cip-border-radius);
-    background: var(--cip-tabs-bg-color);
+    flex: 1;
+    border: none;
+    background: transparent;
     color: var(--cip-text-color);
     padding: 8px 0;
     font-size: 14px;
     cursor: pointer;
     transition: all var(--cip-transition-speed) ease;
+    position: relative;
+}
+
+.cip-settings-tab:not(:last-child) {
+    border-right: 1px solid var(--cip-border-color);
 }
 
 .cip-settings-tab.active {
     background: var(--cip-accent-color);
     color: #fff;
-    border-color: var(--cip-accent-color);
+}
+
+.cip-settings-tab.active:not(:last-child) {
+    border-right-color: var(--cip-accent-color);
 }
 
 #cip-settings-content {
@@ -600,28 +610,10 @@ emoji-picker {
 }
 
 /* --- 新增: 定时指令面板样式 --- */
-#cip-alarm-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 350px;
-    max-width: 90vw;
-    z-index: 1005; /* 比主题面板高一级 */
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
+.cip-settings-section#cip-alarm-panel {
     gap: 15px;
-    transition:
-        opacity var(--cip-transition-speed),
-        transform var(--cip-transition-speed);
 }
-#cip-alarm-panel.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.95);
-}
-#cip-alarm-panel h3 {
+.cip-settings-section#cip-alarm-panel h3 {
     margin: 0 0 5px 0;
     text-align: center;
     color: var(--cip-text-color);
