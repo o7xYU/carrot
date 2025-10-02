@@ -393,6 +393,15 @@ emoji-picker {
     padding: 20px;
     box-sizing: border-box;
 }
+/* 仅设置中心使用固定定位，确保覆盖整个视口并正确居中 */
+#cip-settings-hub {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1010;
+}
 .cip-modal-backdrop.hidden {
     opacity: 0;
     pointer-events: none;
@@ -1027,6 +1036,8 @@ emoji-picker {
 }
 .cip-settings-panels {
     padding: 10px 0;
+    max-height: calc(80vh - 120px);
+    overflow-y: auto;
 }
 .cip-settings-panel-note {
     font-size: 12px;
