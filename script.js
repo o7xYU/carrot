@@ -73,10 +73,7 @@
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
-                    <div id="cip-sync-button" title="同步设置">☁️</div>
-                    <div id="cip-theme-button" title="主题设置">👕</div>
-                    <div id="cip-alarm-button" title="定时指令">⏰</div>
-                    <div id="cip-avatar-button" title="头像配置">🐰</div>
+                    <div id="cip-gear-button" title="设置">⚙️</div>
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
@@ -251,6 +248,30 @@
             `
         );
 
+        // 设置中心（齿轮）
+        const settingsHub = create(
+            'div',
+            'cip-settings-hub',
+            'cip-modal-backdrop hidden',
+            `
+            <div class="cip-modal-content cip-frosted-glass">
+                <h3>设置中心</h3>
+                <nav id="cip-settings-tabs">
+                    <button class="cip-settings-tab active" data-target="theme">主题</button>
+                    <button class="cip-settings-tab" data-target="avatar">头像</button>
+                    <button class="cip-settings-tab" data-target="alarm">定时</button>
+                    <button class="cip-settings-tab" data-target="sync">同步</button>
+                </nav>
+                <div class="cip-settings-panels">
+                    <div class="cip-settings-panel-note">选择上方标签以打开对应面板</div>
+                </div>
+                <div class="cip-modal-actions">
+                    <button id="cip-close-settings-hub">关闭</button>
+                </div>
+            </div>
+            `,
+        );
+
         return {
             carrotButton,
             inputPanel,
@@ -261,6 +282,7 @@
             alarmPanel,
             avatarPanel,
             syncPanel,
+            settingsHub,
         };
     }
 // <BUNNY_CURSE>
@@ -291,6 +313,7 @@
         document.body.appendChild(alarmPanel);
         document.body.appendChild(avatarPanel);
         document.body.appendChild(syncPanel);
+        document.body.appendChild(settingsHub);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -332,7 +355,7 @@
     
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
-    const syncButton = get('cip-sync-button');
+    const gearButton = get('cip-gear-button');
     const closeSyncPanelBtn = get('cip-close-sync-panel-btn');
     const exportBtnPanel = get('cip-export-btn-panel');
     const importLabelPanel = get('cip-import-label-panel');
@@ -952,7 +975,9 @@
         updateAlarmStatus(null);
     }
     // --- 新增: 头像配置事件监听 ---
-    avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
+    if (avatarButton) {
+        avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
+    }
     closeAvatarPanelBtn.addEventListener('click', () => get('cip-avatar-panel').classList.add('hidden'));
 
     applyAvatarBtn.addEventListener('click', () => {
@@ -982,12 +1007,41 @@
 
     // --- 新增: 导入/同步事件监听 ---
     importSettingsInput.addEventListener('change', importSettings);
-    syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
     closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
     exportBtnPanel.addEventListener('click', () => exportSettings());
     savePathBtn.addEventListener('click', saveToPath);
-    loadPathBtn.addEventListener('click', () => {
-        importSettingsInput.click();
+    loadPathBtn.addEventListener('click', () => { importSettingsInput.click(); });
+
+    // --- 新增：齿轮设置中心 ---
+    function openSettingsHub(defaultTab = 'theme') {
+        const tabs = document.querySelectorAll('#cip-settings-tabs .cip-settings-tab');
+        tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.target === defaultTab));
+        settingsHub.classList.remove('hidden');
+    }
+    function closeSettingsHub() {
+        settingsHub.classList.add('hidden');
+    }
+    gearButton.addEventListener('click', () => openSettingsHub('theme'));
+    document.getElementById('cip-close-settings-hub').addEventListener('click', closeSettingsHub);
+    document.querySelectorAll('#cip-settings-tabs .cip-settings-tab').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget.dataset.target;
+            switch (target) {
+                case 'theme':
+                    themePanel.classList.remove('hidden');
+                    break;
+                case 'avatar':
+                    get('cip-avatar-panel').classList.remove('hidden');
+                    break;
+                case 'alarm':
+                    get('cip-alarm-panel').classList.remove('hidden');
+                    break;
+                case 'sync':
+                    get('cip-sync-panel').classList.remove('hidden');
+                    break;
+            }
+            closeSettingsHub();
+        });
     });
 
 
@@ -1657,9 +1711,11 @@
     });
 
     // --- 主题设置事件监听 ---
-    themeButton.addEventListener('click', () =>
-        themePanel.classList.remove('hidden'),
-    );
+    if (themeButton) {
+        themeButton.addEventListener('click', () =>
+            themePanel.classList.remove('hidden'),
+        );
+    }
     closeThemePanelBtn.addEventListener('click', () =>
         themePanel.classList.add('hidden'),
     );
@@ -1714,9 +1770,11 @@
     deleteThemeBtn.addEventListener('click', deleteSelectedTheme);
 
     // --- 定时指令事件监听 ---
-    alarmButton.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.remove('hidden'),
-    );
+    if (alarmButton) {
+        alarmButton.addEventListener('click', () =>
+            get('cip-alarm-panel').classList.remove('hidden'),
+        );
+    }
     closeAlarmPanelBtn.addEventListener('click', () =>
         get('cip-alarm-panel').classList.add('hidden'),
     );
