@@ -55,20 +55,20 @@
             <nav id="cip-panel-tabs">
                 <button class="cip-tab-button active" data-tab="text">文字信息</button>
                 <button class="cip-tab-button" data-tab="voice">语音</button>
-                <button class="cip-tab-button" data-tab="bunny">BUNNY</button>
+                <button class="cip-tab-button" data-tab="wallet">钱包</button>
                 <button class="cip-tab-button" data-tab="stickers">表情包</button>
             </nav>
             <div id="cip-format-display"></div>
             <div id="cip-panel-content">
                  <div id="cip-text-content" class="cip-content-section">
-                    <div class="cip-sub-options-container"><button class="cip-sub-option-btn active" data-type="plain">纯文本</button><button class="cip-sub-option-btn" data-type="image">图片</button><button class="cip-sub-option-btn" data-type="video">视频</button><button class="cip-sub-option-btn" data-type="music">音乐</button><button class="cip-sub-option-btn" data-type="post">帖子</button></div>
+                    <div class="cip-sub-options-container"><button class="cip-sub-option-btn active" data-type="plain">纯文本</button><button class="cip-sub-option-btn" data-type="image">图片</button><button class="cip-sub-option-btn" data-type="video">视频</button><button class="cip-sub-option-btn" data-type="music">音乐</button><button class="cip-sub-option-btn" data-type="post">帖子</button><button class="cip-sub-option-btn" data-type="bunny">BUNNY</button></div>
                     <div class="cip-main-input-wrapper">
                         <textarea id="cip-main-input" placeholder="在此输入文字..."></textarea>
                         <div id="cip-emoji-picker-btn" title="Emoji">😊</div>
                     </div>
                 </div>
                 <div id="cip-voice-content" class="cip-content-section"><input type="number" id="cip-voice-duration" placeholder="输入时长 (秒, 仅数字)"><textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea></div>
-                <div id="cip-bunny-content" class="cip-content-section"><textarea id="cip-bunny-input" placeholder="在这里鞭策BUNNY吧..."></textarea></div>
+                <div id="cip-wallet-content" class="cip-content-section"><div class="cip-wallet-row"><input type="text" id="cip-wallet-platform" placeholder="平台名称"><input type="text" id="cip-wallet-amount" placeholder="金额/车牌号"></div><div class="cip-wallet-row"><input type="text" id="cip-wallet-message" placeholder="留言/物品名称"></div></div>
                 <div id="cip-stickers-content" class="cip-content-section"><div id="cip-sticker-categories" class="cip-sub-options-container"><button id="cip-add-category-btn" class="cip-sub-option-btn">+</button></div><div id="cip-sticker-grid"></div></div>
             </div>
             <div id="cip-panel-footer">
@@ -307,7 +307,9 @@
     const mainInput = get('cip-main-input'),
         voiceDurationInput = get('cip-voice-duration'),
         voiceMessageInput = get('cip-voice-message');
-    const bunnyInput = get('cip-bunny-input');
+    const walletPlatformInput = get('cip-wallet-platform');
+    const walletAmountInput = get('cip-wallet-amount');
+    const walletMessageInput = get('cip-wallet-message');
     const stickerCategoriesContainer = get('cip-sticker-categories'),
         addCategoryBtn = get('cip-add-category-btn'),
         stickerGrid = get('cip-sticker-grid');
@@ -623,11 +625,20 @@
             video: '“[{content}.mp4]”',
             music: '“[{content}.mp3]”',
             post: '“[{content}.link]”',
+            bunny: '+{content}+',
         },
         voice: "={duration}'|{message}=",
-        bunny: '+{content}+',
+        wallet: '[{platform}|{amount}|{message}]',
         stickers: '“[{desc}]”',
         recall: '--',
+    };
+    const textPlaceholderMap = {
+        plain: '在此输入文字...',
+        image: '在此输入文字...',
+        video: '在此输入文字...',
+        music: '在此输入文字...',
+        post: '在此输入文字...',
+        bunny: '在这里鞭策BUNNY吧...',
     };
 
     // --- 主题管理核心逻辑 (无变化) ---
@@ -992,8 +1003,8 @@
             case 'voice':
                 formatDisplay.textContent = "格式: =数字'|内容=";
                 break;
-            case 'bunny':
-                formatDisplay.textContent = '格式: +内容+';
+            case 'wallet':
+                formatDisplay.textContent = '格式: [平台名称|金额/车牌号|留言/物品名称]';
                 break;
             case 'stickers':
                 formatDisplay.textContent = '格式: “[描述]”';
@@ -1046,6 +1057,8 @@
             queryAll('#cip-text-content .cip-sub-option-btn').forEach((e) =>
                 e.classList.toggle('active', e.dataset.type === t),
             ),
+            (mainInput.placeholder =
+                textPlaceholderMap[t] || '在此输入文字...'),
             updateFormatDisplay());
     }
     function switchStickerCategory(t) {
@@ -1566,15 +1579,21 @@
                     voiceDurationInput.value = '';
                 }
                 break;
-            case 'bunny':
-                if (bunnyInput.value.trim()) {
-                    formattedText = formatTemplates.bunny.replace(
-                        '{content}',
-                        bunnyInput.value,
-                    );
-                    inputToClear = bunnyInput;
+            case 'wallet': {
+                const platform = walletPlatformInput.value.trim();
+                const amount = walletAmountInput.value.trim();
+                const message = walletMessageInput.value.trim();
+                if (platform && amount && message) {
+                    formattedText = formatTemplates.wallet
+                        .replace('{platform}', platform)
+                        .replace('{amount}', amount)
+                        .replace('{message}', message);
+                    walletPlatformInput.value = '';
+                    walletAmountInput.value = '';
+                    walletMessageInput.value = '';
                 }
                 break;
+            }
             case 'stickers':
                 if (selectedSticker) {
                     formattedText = formatTemplates.stickers
