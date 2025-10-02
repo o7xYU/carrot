@@ -263,6 +263,16 @@
     position: relative;
     user-select: none;
 }
+#cip-gear-button {
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--cip-transition-speed);
+    user-select: none;
+}
+#cip-gear-button:hover {
+    opacity: 1;
+}
 #cip-export-settings-btn:hover,
 #cip-import-settings-btn:hover,
 #cip-theme-button:hover,
@@ -992,4 +1002,34 @@ emoji-picker {
 }
 #cip-close-sync-panel-btn:hover {
     background-color: var(--cip-accent-hover-color);
+}
+
+/* 新增：设置中心（齿轮） */
+#cip-settings-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--cip-border-color);
+    padding-bottom: 8px;
+}
+.cip-settings-tab {
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 16px;
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+}
+.cip-settings-tab.active,
+.cip-settings-tab:hover {
+    background-color: var(--cip-active-bg-color);
+}
+.cip-settings-panels {
+    padding: 10px 0;
+}
+.cip-settings-panel-note {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
 }
