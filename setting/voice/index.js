@@ -1,9 +1,14 @@
 import {
-    DEFAULT_TTS_ENDPOINT,
     DEFAULT_TTS_MODEL,
     DEFAULT_TTS_VOICE,
     DEFAULT_TTS_SPEED,
+    DEFAULT_TTS_ENDPOINT,
+    DEFAULT_TTS_VENDOR,
+    TTS_VENDORS,
 } from '../tts/constants.js';
+import ElevenLabsProvider from '../tts/setting/tts/elevenlabs.js';
+
+const elevenLabsProvider = new ElevenLabsProvider();
 
 const voiceState = {
     elements: {},
@@ -19,6 +24,24 @@ const voiceState = {
     currentBubble: null,
 };
 
+const VENDOR_MAP = TTS_VENDORS.reduce((map, vendor) => {
+    map[vendor.id] = vendor;
+    return map;
+}, {});
+
+const SILICON_VENDOR_ID = 'siliconflow';
+const ELEVEN_VENDOR_ID = 'elevenlabs';
+const ELEVEN_DEFAULT_MODEL = 'eleven_multilingual_v2';
+const ELEVEN_DEFAULT_VOICE = 'EXAVITQu4vr4xnSDxMaL';
+
+function resolveEndpoint(vendorId) {
+    return VENDOR_MAP[vendorId]?.endpoint || DEFAULT_TTS_ENDPOINT;
+}
+
+function getVendorName(vendorId) {
+    return VENDOR_MAP[vendorId]?.name || VENDOR_MAP[SILICON_VENDOR_ID]?.name || '';
+}
+
 function getElements() {
     return voiceState.elements;
 }
@@ -27,8 +50,12 @@ function getDeps() {
     return voiceState.dependencies;
 }
 
-function getDefaultEndpoint() {
-    return DEFAULT_TTS_ENDPOINT;
+function getSelectedVendor() {
+    return getElements().ttsVendorSelect?.value || DEFAULT_TTS_VENDOR;
+}
+
+function getDefaultEndpoint(vendorId = getSelectedVendor()) {
+    return resolveEndpoint(vendorId);
 }
 
 function getTTSSettings() {
@@ -44,18 +71,30 @@ function getTTSSettings() {
             key: '',
             model: '',
             voice: '',
+            vendor: DEFAULT_TTS_VENDOR,
         };
     }
-    settings.endpoint = getDefaultEndpoint();
+    if (!settings.vendor && settings.endpoint) {
+        const matched = TTS_VENDORS.find(
+            (vendor) => vendor.endpoint === settings.endpoint,
+        );
+        if (matched) settings.vendor = matched.id;
+    }
+    if (!settings.vendor) settings.vendor = DEFAULT_TTS_VENDOR;
+    settings.endpoint = getDefaultEndpoint(settings.vendor);
     return settings;
 }
 
 function applyTTSSettingsToUI(settings) {
     const {
+        ttsVendorSelect,
         ttsKeyInput,
         ttsModelInput,
         ttsVoiceInput,
     } = getElements();
+    if (ttsVendorSelect) {
+        ttsVendorSelect.value = settings.vendor || DEFAULT_TTS_VENDOR;
+    }
     if (ttsKeyInput) ttsKeyInput.value = settings.key || '';
     if (ttsModelInput && settings.model) {
         if (
@@ -83,15 +122,18 @@ function applyTTSSettingsToUI(settings) {
 
 function readTTSSettingsFromUI() {
     const {
+        ttsVendorSelect,
         ttsKeyInput,
         ttsModelInput,
         ttsVoiceInput,
     } = getElements();
+    const vendor = ttsVendorSelect?.value || DEFAULT_TTS_VENDOR;
     return {
         key: (ttsKeyInput?.value || '').trim(),
         model: (ttsModelInput?.value || '').trim(),
         voice: (ttsVoiceInput?.value || '').trim(),
-        endpoint: getDefaultEndpoint(),
+        vendor,
+        endpoint: getDefaultEndpoint(vendor),
     };
 }
 
@@ -114,7 +156,7 @@ function updateTTSStatus(text, isError = false) {
 }
 
 async function fetchSiliconFlowTTS(text, settings) {
-    const base = getDefaultEndpoint();
+    const base = getDefaultEndpoint(settings.vendor || SILICON_VENDOR_ID);
     const endpoint = base.endsWith('/audio/speech')
         ? base
         : `${base.replace(/\/$/, '')}/audio/speech`;
@@ -142,6 +184,155 @@ async function fetchSiliconFlowTTS(text, settings) {
         throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     }
     return await res.blob();
+}
+
+async function fetchElevenLabsTTS(text, settings) {
+    const payload = {
+        key: settings.key,
+        model: settings.model || ELEVEN_DEFAULT_MODEL,
+        voice: settings.voice || ELEVEN_DEFAULT_VOICE,
+        stability: settings.stability,
+        similarity: settings.similarity,
+    };
+    if (!payload.key) throw new Error('请先填写ElevenLabs API Key');
+    return await elevenLabsProvider.synthesize(text, payload);
+}
+
+function updateVendorUI(vendor) {
+    const {
+        ttsKeyInput,
+        ttsUploadBtn,
+        ttsUploadFile,
+        ttsUploadFileBtn,
+        ttsVoiceDeleteBtn,
+        ttsVoiceInput,
+        ttsUploadName,
+        ttsUploadText,
+    } = getElements();
+    if (ttsKeyInput) {
+        ttsKeyInput.placeholder =
+            vendor === ELEVEN_VENDOR_ID
+                ? '填写ElevenLabs API Key'
+                : '填写硅基流动 API Key';
+    }
+    const disableUpload = vendor === ELEVEN_VENDOR_ID;
+    [
+        ttsUploadBtn,
+        ttsUploadFileBtn,
+        ttsUploadFile,
+        ttsVoiceDeleteBtn,
+        ttsUploadName,
+        ttsUploadText,
+    ]
+        .filter(Boolean)
+        .forEach((el) => {
+            el.disabled = disableUpload;
+        });
+    if (ttsVoiceInput && vendor !== ELEVEN_VENDOR_ID) {
+        ttsVoiceInput.disabled = false;
+    }
+}
+
+async function populateElevenLabsModels(settings) {
+    const { ttsModelInput } = getElements();
+    if (!ttsModelInput) return;
+    const models = await elevenLabsProvider.getModels(settings);
+    ttsModelInput.innerHTML = '';
+    models.forEach((model) => {
+        ttsModelInput.appendChild(new Option(model.name, model.id));
+    });
+    const fallback = models[0]?.id || '';
+    const value =
+        settings.model && ttsModelInput.querySelector(`option[value="${settings.model}"]`)
+            ? settings.model
+            : fallback;
+    if (value) ttsModelInput.value = value;
+}
+
+async function populateElevenLabsVoices(settings) {
+    const { ttsVoiceInput } = getElements();
+    if (!ttsVoiceInput) return;
+    const doc = getDeps().documentRef;
+    ttsVoiceInput.innerHTML = '';
+    if (!settings.key) {
+        ttsVoiceInput.appendChild(new Option('请先填写ElevenLabs API Key', ''));
+        ttsVoiceInput.disabled = true;
+        return;
+    }
+    ttsVoiceInput.disabled = false;
+    const voices = await elevenLabsProvider.getVoices(settings);
+    const groupMap = new Map();
+    voices.forEach((voice) => {
+        const group = voice.group || '其他';
+        if (!groupMap.has(group)) groupMap.set(group, []);
+        groupMap.get(group).push(voice);
+    });
+    if (doc && groupMap.size) {
+        groupMap.forEach((list, group) => {
+            const optGroup = doc.createElement('optgroup');
+            optGroup.label = group;
+            list.forEach((voice) => {
+                optGroup.appendChild(new Option(voice.name, voice.id));
+            });
+            ttsVoiceInput.appendChild(optGroup);
+        });
+    } else {
+        voices.forEach((voice) => {
+            ttsVoiceInput.appendChild(new Option(voice.name, voice.id));
+        });
+    }
+    if (!ttsVoiceInput.options.length) {
+        ttsVoiceInput.appendChild(new Option('未获取到音色', ''));
+        ttsVoiceInput.disabled = true;
+        return;
+    }
+    const match =
+        settings.voice &&
+        ttsVoiceInput.querySelector(`option[value="${settings.voice}"]`)
+            ? settings.voice
+            : ttsVoiceInput.querySelector('option[value]')?.value;
+    if (match) ttsVoiceInput.value = match;
+}
+
+async function loadElevenLabsOptions(settings, { updateStatus = true } = {}) {
+    try {
+        await populateElevenLabsModels(settings);
+        await populateElevenLabsVoices(settings);
+        if (updateStatus && settings.key) {
+            updateTTSStatus('已加载ElevenLabs模型与音色');
+        }
+    } catch (error) {
+        if (updateStatus) {
+            updateTTSStatus(`加载ElevenLabs数据失败: ${error.message || error}`, true);
+        }
+        throw error;
+    }
+}
+
+function setupVendorChangeHandler() {
+    const { ttsVendorSelect, ttsModelInput } = getElements();
+    if (!ttsVendorSelect) return;
+    ttsVendorSelect.addEventListener('change', async () => {
+        const vendor = getSelectedVendor();
+        updateVendorUI(vendor);
+        const settings = readTTSSettingsFromUI();
+        saveTTSSettings(settings);
+        if (vendor === ELEVEN_VENDOR_ID) {
+            try {
+                await loadElevenLabsOptions(settings, { updateStatus: false });
+                if (settings.key) {
+                    updateTTSStatus('已切换至ElevenLabs并加载音色');
+                } else {
+                    updateTTSStatus('请输入ElevenLabs API Key 以加载音色');
+                }
+            } catch (error) {
+                console.warn('加载ElevenLabs数据失败', error);
+            }
+        } else {
+            ttsModelInput?.dispatchEvent(new Event('change'));
+            updateTTSStatus('已切换至硅基流动');
+        }
+    });
 }
 
 function playNextAudio() {
@@ -201,10 +392,20 @@ function playImmediateBlob(blob) {
 
 async function synthesizeTTS(text, playOnReady = true) {
     const settings = readTTSSettingsFromUI();
-    if (!settings.key) throw new Error('请先填写硅基流动 API Key');
-    if (!settings.model) settings.model = DEFAULT_TTS_MODEL;
-    if (!settings.voice) settings.voice = DEFAULT_TTS_VOICE;
-    const blob = await fetchSiliconFlowTTS(text, settings);
+    const vendor = settings.vendor || DEFAULT_TTS_VENDOR;
+    if (vendor === ELEVEN_VENDOR_ID) {
+        if (!settings.model) settings.model = ELEVEN_DEFAULT_MODEL;
+        if (!settings.voice) settings.voice = ELEVEN_DEFAULT_VOICE;
+    } else {
+        if (!settings.key)
+            throw new Error(`请先填写${getVendorName(vendor)} API Key`);
+        if (!settings.model) settings.model = DEFAULT_TTS_MODEL;
+        if (!settings.voice) settings.voice = DEFAULT_TTS_VOICE;
+    }
+    const blob =
+        vendor === ELEVEN_VENDOR_ID
+            ? await fetchElevenLabsTTS(text, settings)
+            : await fetchSiliconFlowTTS(text, settings);
     if (playOnReady) {
         voiceState.queue.push(blob);
         if (!voiceState.isPlaying) playNextAudio();
@@ -238,6 +439,9 @@ function setupModelChangeHandler() {
     ttsModelInput.addEventListener('change', async () => {
         const doc = getDeps().documentRef;
         if (!doc) return;
+        if (getSelectedVendor() !== SILICON_VENDOR_ID) {
+            return;
+        }
         ttsVoiceInput.innerHTML = '';
         const cosyModel = 'FunAudioLLM/CosyVoice2-0.5B';
         const cosyPreset = [
@@ -339,6 +543,10 @@ function setupUploadHandlers() {
     if (ttsUploadBtn) {
         ttsUploadBtn.addEventListener('click', async () => {
             try {
+                if (getSelectedVendor() !== SILICON_VENDOR_ID) {
+                    updateTTSStatus('当前厂商不支持音色上传', true);
+                    return;
+                }
                 if (!ttsKeyInput?.value) {
                     throw new Error('请先填写硅基流动 API Key');
                 }
@@ -387,6 +595,10 @@ function setupDeleteVoiceHandler() {
     if (!ttsVoiceDeleteBtn || !ttsVoiceInput) return;
     ttsVoiceDeleteBtn.addEventListener('click', async () => {
         try {
+            if (getSelectedVendor() !== SILICON_VENDOR_ID) {
+                updateTTSStatus('当前厂商不支持删除操作', true);
+                return;
+            }
             const val = ttsVoiceInput.value || '';
             if (!val) {
                 updateTTSStatus('请先选择要删除的音色', true);
@@ -430,9 +642,19 @@ function setupDeleteVoiceHandler() {
 function setupRefreshHandler() {
     const { ttsRefreshVoicesBtn, ttsModelInput } = getElements();
     if (ttsRefreshVoicesBtn) {
-        ttsRefreshVoicesBtn.addEventListener('click', () => {
-            ttsModelInput?.dispatchEvent(new Event('change'));
-            updateTTSStatus('音色已刷新');
+        ttsRefreshVoicesBtn.addEventListener('click', async () => {
+            const vendor = getSelectedVendor();
+            if (vendor === ELEVEN_VENDOR_ID) {
+                const settings = readTTSSettingsFromUI();
+                try {
+                    await loadElevenLabsOptions(settings, { updateStatus: true });
+                } catch (error) {
+                    console.warn('刷新ElevenLabs音色失败', error);
+                }
+            } else {
+                ttsModelInput?.dispatchEvent(new Event('change'));
+                updateTTSStatus('音色已刷新');
+            }
         });
     }
 }
@@ -444,6 +666,17 @@ function setupCheckHandler() {
         const settings = readTTSSettingsFromUI();
         try {
             updateTTSStatus('连接中...');
+            if (settings.vendor === ELEVEN_VENDOR_ID) {
+                await loadElevenLabsOptions(settings, { updateStatus: false });
+                saveTTSSettings(readTTSSettingsFromUI());
+                if (settings.key) {
+                    updateTTSStatus('连接成功，已加载ElevenLabs音色');
+                } else {
+                    updateTTSStatus('请填写ElevenLabs API Key 以加载音色');
+                }
+                return;
+            }
+
             const models = [
                 'FunAudioLLM/CosyVoice2-0.5B',
                 'fnlp/MOSS-TTSD-v0.5',
@@ -582,9 +815,11 @@ export function initVoiceSettings(elements, dependencies = {}) {
     voiceState.dependencies = { ...voiceState.dependencies, ...dependencies };
 
     const { ttsModelInput } = getElements();
+    const initialSettings = getTTSSettings();
+    applyTTSSettingsToUI(initialSettings);
+    updateVendorUI(initialSettings.vendor || DEFAULT_TTS_VENDOR);
 
-    applyTTSSettingsToUI(getTTSSettings());
-
+    setupVendorChangeHandler();
     setupTabs();
     setupSaveAndTest();
     setupSpeedControls();
@@ -594,7 +829,21 @@ export function initVoiceSettings(elements, dependencies = {}) {
     setupRefreshHandler();
     setupCheckHandler();
 
-    ttsModelInput?.dispatchEvent(new Event('change'));
+    if ((initialSettings.vendor || DEFAULT_TTS_VENDOR) === ELEVEN_VENDOR_ID) {
+        loadElevenLabsOptions(initialSettings, { updateStatus: false })
+            .then(() => {
+                if (initialSettings.key) {
+                    updateTTSStatus('已加载ElevenLabs模型与音色');
+                } else {
+                    updateTTSStatus('请输入ElevenLabs API Key 以加载音色');
+                }
+            })
+            .catch((error) => {
+                console.warn('初始化ElevenLabs音色失败', error);
+            });
+    } else {
+        ttsModelInput?.dispatchEvent(new Event('change'));
+    }
 
     return {
         synthesizeTTS,

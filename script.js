@@ -335,6 +335,12 @@
 
                     <div id="cip-tts-pane-settings" class="cip-tts-pane active">
                         <div class="cip-tts-grid">
+                            <label for="cip-tts-vendor">厂商</label>
+                            <select id="cip-tts-vendor">
+                                <option value="siliconflow">硅基流动</option>
+                                <option value="elevenlabs">ElevenLabs</option>
+                            </select>
+
                             <label for="cip-tts-key">API</label>
                             <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
 
@@ -500,6 +506,7 @@
     const restoreDefaultsBtn = get('cip-restore-defaults-btn');
     // --- 新增: 语音设置元素引用 ---
     // provider/MiniMax 已移除
+    const ttsVendorSelect = get('cip-tts-vendor');
     const ttsKeyInput = get('cip-tts-key');
     const ttsModelInput = get('cip-tts-model');
     const ttsVoiceInput = get('cip-tts-voice');
@@ -702,6 +709,7 @@
 
         voiceApi = initVoiceSettings(
             {
+                ttsVendorSelect,
                 ttsKeyInput,
                 ttsModelInput,
                 ttsVoiceInput,
