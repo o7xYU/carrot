@@ -1,0 +1,323 @@
+```
+<html>
+<head>
+    <!-- disable-default-loading -->
+    <style>
+        /* 引入谷歌字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap');
+
+        /* 定义颜色和样式的变量 */
+        :root { 
+            --text-color: #333; 
+            --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
+            --bubble-bg: rgba(255, 255, 255, 0.15); /* 更透明的玻璃效果 */
+            --bubble-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
+            --bubble-text-color: #333; 
+            --glass-bg: rgba(255, 255, 255, 0.15); /* 匹配iOS玻璃效果 */
+            --glass-border: 1px solid rgba(255, 255, 255, 0.3); 
+        }
+
+        body { 
+            margin: 0; 
+            padding: 20px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background-image: url('https://source.unsplash.com/random/800x600?nature,sky'); 
+            background-size: cover; 
+            font-family: 'Roboto', sans-serif; 
+            overflow-x: hidden;
+        }
+
+        .status-bar-container { 
+            width: 100%; 
+            max-width: 500px; 
+            position: relative; 
+            padding-top: 60px; 
+            padding-bottom: 50px; 
+        }
+
+        .glass-oval { 
+            width: 100%; 
+            height: 40px; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 30px; 
+            box-sizing: border-box; 
+            background: var(--glass-bg); 
+            border-radius: 25px; 
+            border: var(--glass-border); 
+            backdrop-filter: blur(15px); /* 增强模糊以匹配iOS效果 */
+            -webkit-backdrop-filter: blur(15px); 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 更轻的阴影 */
+        }
+
+        @keyframes floatAnimation {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -6px); }
+        }
+
+        @keyframes slideLeft {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(calc(-50% - 50px)); } 
+        }
+
+        @keyframes wingFloatAnimation {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .avatar-container { 
+            position: absolute; 
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            cursor: pointer; 
+            z-index: 30; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            animation: floatAnimation 4s ease-in-out infinite;
+        }
+
+        .avatar-container.clicked {
+            animation: slideLeft 0.3s ease forwards; 
+        }
+
+        .avatar-image { 
+            width: 70px; 
+            height: 70px; 
+            object-fit: cover; 
+        }
+
+        .wing-container {
+            position: absolute;
+            top: 70px;
+            height: 33px;
+            z-index: -1;
+            animation: wingFloatAnimation 3.5s ease-in-out infinite;
+        }
+
+        .wing-container img { height: 100%; width: auto; }
+        .left-wing { left: -35px; }
+        .right-wing { right: -35px; }
+        .right-wing img { transform: scaleX(-1); }
+
+        .time-info { 
+            color: var(--text-color); 
+            text-shadow: var(--text-shadow); 
+            font-family: 'Playfair Display', serif; 
+            font-size: 14px; 
+            font-weight: 500; 
+            text-align: center; 
+            position: absolute; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            white-space: nowrap;
+        }
+
+        .icon-wrapper {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .day-night-icon, .crystal-ball-icon { 
+            font-size: 20px; 
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); 
+        }
+
+        .thinking-bubble-container {
+            position: absolute;
+            top: 0; 
+            left: calc(0% + 70px); /* 跟随avatar滑动后右侧 */
+            width: max-content; 
+            visibility: hidden; 
+            pointer-events: none;
+        }
+
+        .thinking-bubble-container .bubble-main {
+            position: absolute;
+            background: var(--bubble-bg);
+            box-shadow: var(--bubble-shadow);
+            border-radius: 16px; 
+            padding: 8px 12px; 
+            font-size: 12px;
+            top: 5px; 
+            left: 10px; 
+            width: max-content;
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word; /* 确保换行 */
+            max-width: 300px; /* 限制宽度 */
+            /* 每行20个字或到状态栏中间换行 */
+            max-width: calc(600px / 2); /* 状态栏宽度500px/2，约250px/2 */
+            overflow-wrap: break-word; /* 兼容性更好的换行 */
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            backdrop-filter: blur(10px); /* 匹配玻璃效果 */
+            -webkit-backdrop-filter: blur(10px); 
+            border: var(--glass-border);
+        }
+
+        .thinking-bubble-container.show { 
+            visibility: visible; 
+            transition-delay: 0.1s; 
+        }
+
+        .thinking-bubble-container.show .bubble-main { 
+            opacity: 1; 
+            transform: scale(1); 
+            transition-delay: 0.1s; 
+        }
+
+        .glass-bubble {
+            position: absolute;
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px); /* 统一玻璃模糊效果 */
+            -webkit-backdrop-filter: blur(15px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: var(--glass-border);
+            background: var(--glass-bg); /* 统一背景 */
+            color: var(--text-color);
+            font-size: 12px;
+            width: max-content;
+            white-space: normal;
+            word-break: break-all;
+            word-wrap: break-word; /* 确保换行 */
+            max-width: 400px; /* 限制宽度 */
+            /* 每行20个字或到状态栏中间换行 */
+            top: 140%;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+        }
+
+        #bubble-day-night {
+            left: -25px;
+        }
+
+        #bubble-crystal {
+            right: -25px;
+        }
+
+        .glass-bubble.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* --- 手机端适配媒体查询 --- */
+        @media (max-width: 600px) {
+            .status-bar-container {
+                padding-bottom: 60px; 
+            }
+
+            .time-info {
+                font-size: 11px;
+            }
+
+            .wing-container {
+                height: 28px;
+                top: 75px;
+            }
+
+            .left-wing { left: -20px; }
+            .right-wing { right: -20px; }
+
+            .thinking-bubble-container .bubble-main {
+                max-width: 90px; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar-container">
+        <div class="avatar-container" onclick="toggleBubble('bubble1')">
+            <img src="$1" alt="Avatar" class="avatar-image">
+            <div class="thinking-bubble-container" id="bubble1">
+                <div class="bubble-main">$2</div>
+            </div> 
+        </div>
+        <div class="wing-container left-wing">
+            <img src="https://i.postimg.cc/bJwDKb36/aigei-com.png" alt="Left Wing">
+        </div>
+        <div class="wing-container right-wing">
+            <img src="https://i.postimg.cc/bJwDKb36/aigei-com.png" alt="Right Wing">
+        </div>
+        <div class="glass-oval">
+            <div class="icon-wrapper" onclick="toggleBubble('bubble-day-night')">
+                <div class="day-night-icon" id="dayNightIcon">☀️</div>
+                <div class="glass-bubble" id="bubble-day-night">$5</div>
+            </div>
+            <div class="time-info" id="timeDisplay">$4</div>
+            <div class="icon-wrapper" onclick="toggleBubble('bubble-crystal')">
+                <div class="crystal-ball-icon">🔮</div>
+                <div class="glass-bubble" id="bubble-crystal">$3</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setInitialState();
+        });
+
+        function setInitialState() {
+            const timeDisplay = document.getElementById('timeDisplay');
+            const timeString = timeDisplay.textContent;
+            const dayNightIcon = document.getElementById('dayNightIcon');
+            const match = timeString.match(/(\d{1,2}):\d{2}\s(AM|PM)/);
+
+            if (match) {
+                let hour = parseInt(match[1]);
+                const ampm = match[2];
+                if (ampm === 'PM' && hour !== 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                dayNightIcon.textContent = (hour >= 7 && hour < 18) ? '☀️' : '🌙';
+            }
+
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.avatar-container') && !event.target.closest('.icon-wrapper')) {
+                    hideAllBubbles();
+                    resetAvatar();
+                }
+            });
+        }
+
+        function hideAllBubbles() {
+            document.querySelectorAll('.thinking-bubble-container.show, .glass-bubble.show').forEach(b => b.classList.remove('show'));
+        }
+
+        function resetAvatar() {
+            const avatar = document.querySelector('.avatar-container');
+            avatar.classList.remove('clicked');
+        }
+
+        function toggleBubble(bubbleId) {
+            const bubble = document.getElementById(bubbleId);
+            const avatar = document.querySelector('.avatar-container');
+            const isShowing = bubble.classList.contains('show');
+
+            hideAllBubbles();
+
+            if (!isShowing) {
+                if (bubbleId === 'bubble1') {
+                    avatar.classList.add('clicked');
+                    setTimeout(() => {
+                        bubble.classList.add('show');
+                    }, 300); 
+                } else {
+                    bubble.classList.add('show');
+                }
+            } else {
+                resetAvatar();
+            }
+        }
+    </script>
+</body>
+</html>
+```
