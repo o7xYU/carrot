@@ -1379,6 +1379,12 @@ emoji-picker {
     align-items: center;
     margin-bottom: 10px;
 }
+.cip-tts-vendor-group {
+    display: contents;
+}
+.cip-tts-vendor-group[hidden] {
+    display: none;
+}
 .cip-tts-grid label {
     font-size: 14px;
     color: var(--cip-text-color);
@@ -1391,6 +1397,11 @@ emoji-picker {
     background-color: var(--cip-input-bg-color);
     font-size: 14px;
     color: var(--cip-text-color);
+}
+.cip-tts-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .cip-tts-subsection {
     margin: 10px 0;
