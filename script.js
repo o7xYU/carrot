@@ -56,6 +56,61 @@ import { initTTSSettings } from './setting/tts/index.js';
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
+    async function waitForDocumentReady() {
+        if (document.readyState === 'loading') {
+            await new Promise((resolve) => {
+                document.addEventListener('DOMContentLoaded', resolve, {
+                    once: true,
+                });
+            });
+        }
+    }
+
+    async function waitForAnchor(selectors, timeout = 10000) {
+        const selectorList = Array.isArray(selectors) ? selectors : [selectors];
+        const combinedSelector = selectorList.join(', ');
+
+        const existing = document.querySelector(combinedSelector);
+        if (existing) return existing;
+
+        return new Promise((resolve) => {
+            let resolved = false;
+            const observer = new MutationObserver(() => {
+                const found = document.querySelector(combinedSelector);
+                if (found) {
+                    resolved = true;
+                    observer.disconnect();
+                    resolve(found);
+                }
+            });
+
+            const root = document.body || document.documentElement;
+            if (root) {
+                observer.observe(root, { childList: true, subtree: true });
+            }
+
+            if (timeout > 0) {
+                setTimeout(() => {
+                    if (!resolved) {
+                        observer.disconnect();
+                        resolve(null);
+                    }
+                }, timeout);
+            }
+        });
+    }
+
+    await waitForDocumentReady();
+    const anchor = await waitForAnchor(
+        ['#chat-buttons-container', '#send_form'],
+        15000,
+    );
+    if (!anchor) {
+        console.warn(
+            '胡萝卜输入面板：未能找到 SillyTavern UI 挂载点，继续以浮标模式加载。',
+        );
+    }
+
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
         try {
@@ -435,22 +490,12 @@ import { initTTSSettings } from './setting/tts/index.js';
         addStickersModal,
         settingsPanel,
     } = createUI();
-    const anchor = document.querySelector(
-        '#chat-buttons-container, #send_form',
-    );
-    if (anchor) {
-        document.body.appendChild(carrotButton);
-        document.body.appendChild(inputPanel);
-        document.body.appendChild(emojiPicker);
-        document.body.appendChild(addCategoryModal);
-        document.body.appendChild(addStickersModal);
-        document.body.appendChild(settingsPanel);
-    } else {
-        console.error(
-            '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
-        );
-        return;
-    }
+    document.body.appendChild(carrotButton);
+    document.body.appendChild(inputPanel);
+    document.body.appendChild(emojiPicker);
+    document.body.appendChild(addCategoryModal);
+    document.body.appendChild(addStickersModal);
+    document.body.appendChild(settingsPanel);
 
     // --- 3. 获取所有元素的引用 (已修改) ---
     const get = (id) => document.getElementById(id);
