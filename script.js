@@ -1,6 +1,45 @@
 // script.js (v2.7 - 新增tts)
-(function () {
+(async function () {
     if (document.getElementById('cip-carrot-button')) return;
+
+    let regexModule = null;
+    try {
+        let moduleUrl = './regex.js';
+        if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
+            moduleUrl = chrome.runtime.getURL('regex.js');
+        } else if (typeof document !== 'undefined') {
+            const scriptSrc =
+                document.currentScript?.src ||
+                document.querySelector?.('script[src*="script.js"]')?.src ||
+                null;
+            if (scriptSrc) {
+                moduleUrl = new URL('regex.js', scriptSrc).toString();
+            }
+        }
+        regexModule = await import(moduleUrl);
+    } catch (error) {
+        console.warn('胡萝卜插件：加载正则模块失败', error);
+    }
+
+    const regexExports = regexModule || {};
+    const {
+        applyRegexReplacements = () => false,
+        getRegexEnabled = () => true,
+        setRegexEnabled = () => {},
+    } = regexExports;
+
+    const regexModuleReady =
+        !!regexModule &&
+        typeof regexExports.applyRegexReplacements === 'function';
+    let regexEnabled = true;
+    if (regexModuleReady) {
+        try {
+            regexEnabled = !!getRegexEnabled();
+        } catch (error) {
+            regexEnabled = true;
+            console.warn('胡萝卜插件：读取正则开关状态失败', error);
+        }
+    }
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
     const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
     let unsplashAccessKey = '';
@@ -74,6 +113,7 @@
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
                     <div id="cip-settings-button" title="功能设置">⚙️</div>
+                    <button id="cip-regex-toggle" type="button" class="cip-regex-toggle" title="正则替换开关">正则</button>
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
@@ -420,6 +460,7 @@
         cancelStickersBtn = get('cip-cancel-stickers-btn'),
         newStickersInput = get('cip-new-stickers-input');
     const settingsButton = get('cip-settings-button');
+    const regexToggleButton = get('cip-regex-toggle');
     const settingsPanelEl = get('cip-settings-panel');
     const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
     const settingsTabs = Array.from(queryAll('.cip-settings-tab'));
@@ -497,6 +538,43 @@
     const frameOffsetYValue = get('cip-frame-offset-y-value');
     const frameResetBtn = get('cip-frame-reset-btn');
     const frameCloseBtn = get('cip-frame-close-btn');
+
+    function updateRegexToggleUI() {
+        if (!regexToggleButton) return;
+        if (!regexModuleReady) {
+            regexToggleButton.disabled = true;
+            regexToggleButton.classList.remove('active');
+            regexToggleButton.setAttribute('aria-pressed', 'false');
+            regexToggleButton.setAttribute('aria-disabled', 'true');
+            regexToggleButton.textContent = '正则--';
+            regexToggleButton.title = '正则模块加载失败';
+            return;
+        }
+
+        const isEnabled = !!regexEnabled;
+        regexToggleButton.disabled = false;
+        regexToggleButton.classList.toggle('active', isEnabled);
+        regexToggleButton.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+        regexToggleButton.setAttribute('aria-disabled', 'false');
+        regexToggleButton.textContent = isEnabled ? '正则✓' : '正则✕';
+        regexToggleButton.title = isEnabled
+            ? '点击关闭正则替换'
+            : '点击开启正则替换';
+    }
+
+    updateRegexToggleUI();
+
+    regexToggleButton?.addEventListener('click', () => {
+        if (!regexModuleReady) return;
+        regexEnabled = !regexEnabled;
+        try {
+            setRegexEnabled(!!regexEnabled);
+        } catch (error) {
+            console.warn('胡萝卜插件：写入正则开关状态失败', error);
+        }
+        updateRegexToggleUI();
+        reprocessRegexPlaceholders();
+    });
 
     // --- 新增: 头像框配置管理元素引用 ---
     const frameProfileSelect = get('cip-frame-profile-select');
@@ -1615,10 +1693,28 @@
         return false;
     }
 
+    function reprocessRegexPlaceholders() {
+        if (!regexModuleReady) return;
+        const chatContainer = document.getElementById('chat');
+        if (!chatContainer) return;
+        chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+            applyRegexReplacements(element, {
+                enabled: regexEnabled,
+                replacePlaceholderWithNode,
+                documentRef: document,
+            });
+        });
+    }
+
     async function processMessageElement(element) {
         if (!element) return;
 
         const replacedSticker = replaceStickerPlaceholders(element);
+        const replacedRegex = applyRegexReplacements(element, {
+            enabled: regexEnabled,
+            replacePlaceholderWithNode,
+            documentRef: document,
+        });
 
         // 使用 textContent 而不是 innerHTML 来避免HTML实体编码问题
         const text = element.textContent || element.innerText || '';
@@ -1649,7 +1745,7 @@
         processedMessages.add(element);
         element.dataset.unsplashAttempts = String(attempts + 1);
 
-        let replacedAny = replacedSticker;
+        let replacedAny = replacedSticker || replacedRegex;
         for (const match of matches) {
             const placeholder = match[0];
             const description = match[1]?.trim();
