@@ -1,4 +1,4 @@
-/* style.css (v1.8 - 移动设备优化 & 主题颜色设置) */
+/* style.css (v2) */
 :root {
     /* --- 默认主题颜色 --- */
     --cip-panel-bg-color: rgba(255, 255, 255, 0.25);
@@ -31,11 +31,74 @@
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
     }
+    /* 移动端：让子标题行可横向滚动且不换行 */
+    #cip-text-content .cip-sub-options-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        gap: 6px;
+    }
+
+    /* 移动端：设置面板使用动态视口单位，避免地址栏影响定位 */
+    #cip-settings-panel {
+        top: 50dvh;
+        left: 50dvw;
+        width: calc(100dvw - 40px);
+        max-width: 420px;
+        max-height: calc(100dvh - 60px);
+        padding: 16px;
+    }
+    #cip-settings-panel.hidden {
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    /* 移动端：定时设置布局优化 */
+    .cip-alarm-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        row-gap: 8px;
+        margin-bottom: 8px;
+    }
+    .cip-alarm-note {
+        grid-column: 1 / -1; /* 注释独占一行 */
+        text-align: left;
+        margin-top: -2px;
+    }
+    #cip-alarm-command {
+        width: 100%;
+        margin-top: 8px; /* 与上方网格拉开距离 */
+    }
+
+    /* 移动端：同步设置布局优化 */
+    .cip-sync-actions,
+    .cip-sync-path-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .cip-sync-actions button,
+    .cip-sync-actions .cip-button-label,
+    .cip-sync-path-actions button {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 120px;
+    }
+    .cip-sync-path-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .cip-sync-path-container label {
+        text-align: left;
+    }
+    #cip-sync-path-input {
+        width: 100%;
+    }
 }
 .cip-frosted-glass {
     background: var(--cip-panel-bg-color);
-    backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
     border-radius: var(--cip-border-radius);
     border: 1px solid var(--cip-border-color);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
@@ -57,6 +120,7 @@
     transition:
         transform 0.2s ease,
         background-color var(--cip-transition-speed) ease;
+    -webkit-user-select: none;
     user-select: none;
 }
 #cip-carrot-button.is-dragging {
@@ -124,18 +188,20 @@
 .cip-content-section {
     display: none;
     flex-direction: column;
-    gap: 10px;
+    gap: 3px;
 }
 .cip-content-section.active {
     display: flex;
 }
 .cip-sub-options-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap; /* 确保小标题不换行 */
+    gap: 6px; /* 减小间距 */
     padding-bottom: 8px;
     border-bottom: 1px solid var(--cip-border-color);
-    margin-bottom: 8px;
+    margin-bottom: 0px;
+    overflow-x: auto; /* 超出时允许横向滚动 */
+    scrollbar-width: thin;
 }
 .cip-sub-option-btn {
     padding: 4px 10px;
@@ -147,6 +213,7 @@
     color: var(--cip-text-color);
     transition: all var(--cip-transition-speed) ease;
     position: relative;
+    white-space: nowrap; /* 防止BUNNY等子标题换行 */
 }
 .cip-sub-option-btn.active {
     background-color: var(--cip-accent-color);
@@ -188,6 +255,7 @@
     opacity: 0.7;
     transition: opacity var(--cip-transition-speed);
     z-index: 2; /* 确保在文本域之上 */
+    -webkit-user-select: none;
     user-select: none;
 }
 .cip-main-input-wrapper #cip-emoji-picker-btn:hover {
@@ -261,7 +329,20 @@
     opacity: 0.7;
     transition: opacity var(--cip-transition-speed);
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
+}
+#cip-gear-button {
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--cip-transition-speed);
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+#cip-gear-button:hover {
+    opacity: 1;
 }
 #cip-export-settings-btn:hover,
 #cip-import-settings-btn:hover,
@@ -397,6 +478,85 @@ emoji-picker {
     gap: 15px;
     overflow-y: auto;
     box-sizing: border-box;
+}
+
+/* --- 新增: 主设置面板样式 --- */
+#cip-settings-panel {
+    position: fixed;
+    top: 50vh;
+    left: 50vw;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    max-width: 90vw;
+    max-height: calc(100dvh - 40px);
+    z-index: 1004;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    overflow-y: auto;
+    transition:
+        opacity var(--cip-transition-speed),
+        transform var(--cip-transition-speed);
+}
+#cip-settings-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+.cip-settings-header {
+    margin-bottom: 15px;
+}
+#cip-settings-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.cip-settings-tab {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+    font-size: 14px;
+}
+.cip-settings-tab:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.cip-settings-tab.active {
+    background: var(--cip-active-bg-color);
+    border-color: var(--cip-active-bg-color);
+}
+#cip-settings-sections {
+    flex: 1;
+    overflow-y: auto;
+}
+.cip-settings-section {
+    display: none;
+}
+.cip-settings-section.active {
+    display: block;
+}
+.cip-settings-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+#cip-close-settings-panel-btn {
+    padding: 10px 30px;
+    background: var(--cip-active-bg-color);
+    border: none;
+    border-radius: 20px;
+    color: white;
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+}
+#cip-close-settings-panel-btn:hover {
+    transform: scale(1.05);
 }
 
 /* --- 新增: 主题设置面板样式 --- */
@@ -608,6 +768,7 @@ emoji-picker {
     box-sizing: border-box;
     color: var(--cip-text-color);
     -moz-appearance: textfield; /* Firefox */
+    appearance: textfield;
 }
 .cip-alarm-grid input[type='number']::-webkit-outer-spin-button,
 .cip-alarm-grid input[type='number']::-webkit-inner-spin-button {
@@ -718,7 +879,7 @@ emoji-picker {
 
     #cip-input-panel {
         width: calc(100vw - 20px) !important;
-        max-width: 350px;
+        max-width: 400px;
         max-height: calc(100vh - 40px);
     }
     #cip-main-input,
@@ -779,6 +940,7 @@ emoji-picker {
     opacity: 0.7;
     transition: opacity var(--cip-transition-speed);
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -817,11 +979,126 @@ emoji-picker {
     color: var(--cip-text-color);
 }
 
+/* 头像与头像框分区样式 */
+.cip-avatar-section,
+.cip-frame-section {
+    padding: 15px;
+    border-radius: var(--cip-border-radius);
+    background: rgba(0, 0, 0, 0.03);
+    margin-bottom: 15px;
+}
+
+.cip-section-title {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--cip-accent-color);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--cip-accent-color);
+}
+
 .cip-avatar-grid {
     display: grid;
     grid-template-columns: 100px 1fr;
     gap: 12px;
     align-items: center;
+}
+
+.cip-frame-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.cip-frame-input-wrapper input {
+    flex: 1;
+}
+
+.cip-adjust-frame-btn {
+    padding: 6px 10px;
+    background-color: var(--cip-accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color var(--cip-transition-speed);
+    flex-shrink: 0;
+}
+
+.cip-adjust-frame-btn:hover {
+    background-color: var(--cip-accent-hover-color);
+}
+
+.cip-frame-adjust-panel {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--cip-border-radius);
+    border: 1px solid var(--cip-border-color);
+    transition: opacity var(--cip-transition-speed);
+}
+
+.cip-frame-adjust-panel.hidden {
+    display: none;
+}
+
+.cip-frame-adjust-panel h4 {
+    margin: 0 0 12px 0;
+    text-align: center;
+    color: var(--cip-text-color);
+    font-size: 14px;
+}
+
+.cip-adjust-control {
+    margin-bottom: 12px;
+}
+
+.cip-adjust-control label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--cip-text-color);
+}
+
+.cip-adjust-control input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+.cip-adjust-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.cip-adjust-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color var(--cip-transition-speed);
+}
+
+#cip-frame-reset-btn {
+    background-color: #888;
+    color: white;
+}
+
+#cip-frame-reset-btn:hover {
+    background-color: #666;
+}
+
+#cip-frame-apply-btn {
+    background-color: var(--cip-accent-color);
+    color: white;
+}
+
+#cip-frame-apply-btn:hover {
+    background-color: var(--cip-accent-hover-color);
 }
 
 .cip-avatar-grid label {
@@ -992,4 +1269,176 @@ emoji-picker {
 }
 #cip-close-sync-panel-btn:hover {
     background-color: var(--cip-accent-hover-color);
+}
+
+/* 新增：设置中心（齿轮） */
+#cip-settings-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--cip-border-color);
+    padding-bottom: 8px;
+}
+.cip-settings-tab {
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 16px;
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+}
+.cip-settings-tab.active,
+.cip-settings-tab:hover {
+    background-color: var(--cip-active-bg-color);
+}
+.cip-settings-panels {
+    padding: 10px 0;
+}
+.cip-settings-panel-note {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+}
+
+/* --- 新增: 语音设置面板样式 --- */
+.cip-tts-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.cip-tts-grid label {
+    font-size: 14px;
+    color: var(--cip-text-color);
+}
+.cip-tts-grid input,
+.cip-tts-grid select {
+    padding: 8px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 8px;
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    color: var(--cip-text-color);
+}
+.cip-tts-subsection {
+    margin: 10px 0;
+    padding: 12px;
+    background: rgba(0,0,0,0.03);
+    border-radius: var(--cip-border-radius);
+    border: 1px solid var(--cip-border-color);
+}
+.cip-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.cip-tts-range-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    align-items: center;
+}
+#cip-tts-test-text {
+    width: calc(100% - 20px);
+    min-height: 45px;
+    padding: 10px;
+    border: none;
+    border-radius: var(--cip-border-radius);
+    background-color: var(--cip-input-bg-color);
+    font-size: 14px;
+    resize: vertical;
+}
+.cip-tts-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.cip-tts-speed {
+    display: grid;
+    grid-template-columns: 110px 1fr 60px;
+    gap: 10px;
+    align-items: center;
+    margin-top: 8px;
+}
+.cip-tts-upload {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--cip-border-color);
+}
+.cip-tts-upload-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    align-items: center;
+}
+.cip-tts-upload-file-row { display:flex; align-items:center; gap:8px; }
+.cip-tts-upload-hint { font-size:12px; color:#666; }
+.cip-tts-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color var(--cip-transition-speed);
+    background-color: var(--cip-accent-color);
+    color: var(--cip-insert-text-color);
+}
+.cip-tts-status {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 子级语音导航 */
+.cip-tts-subtabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cip-tts-subtab {
+    padding: 4px 10px;
+    border: 1px solid var(--cip-border-color);
+    border-radius: 16px;
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
+}
+.cip-tts-subtab.active {
+    background-color: var(--cip-active-bg-color);
+}
+.cip-tts-divider { color: var(--cip-text-color); opacity: .6; }
+.cip-tts-separator { border: none; border-top: 1px solid var(--cip-border-color); margin: 6px 0 10px; }
+.cip-tts-pane { display: none; }
+.cip-tts-pane.active { display: block; }
+
+/* 音色删除按钮与行 */
+.cip-tts-voice-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+#cip-tts-voice-delete {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: var(--cip-delete-color);
+    color: #fff;
+    cursor: pointer;
+}
+
+/* 气泡点击朗读提示样式 */
+.cip-bubble-tts {
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .cip-tts-grid,
+    .cip-tts-range-grid {
+        grid-template-columns: 1fr;
+    }
 }
