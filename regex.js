@@ -6,6 +6,296 @@ const defaultDocument = typeof document !== 'undefined' ? document : null;
 const TEXT_NODE_FILTER =
     typeof NodeFilter !== 'undefined' ? NodeFilter.SHOW_TEXT : 4;
 
+function createIframeWrapper(doc, html, { className = '', minHeight = 400 } = {}) {
+    if (!doc) return null;
+    const wrapper = doc.createElement('div');
+    if (className) {
+        wrapper.className = className;
+    }
+    wrapper.style.width = '100%';
+    wrapper.style.maxWidth = '100%';
+    wrapper.style.display = 'block';
+
+    const iframe = doc.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('referrerpolicy', 'no-referrer');
+    iframe.style.width = '100%';
+    iframe.style.border = '0';
+    iframe.style.display = 'block';
+    iframe.style.backgroundColor = 'transparent';
+    iframe.style.minHeight = `${minHeight}px`;
+    iframe.srcdoc = html;
+
+    iframe.addEventListener('load', () => {
+        try {
+            const innerDoc = iframe.contentDocument;
+            if (!innerDoc) return;
+            const height =
+                innerDoc.body?.scrollHeight || innerDoc.documentElement?.scrollHeight;
+            if (height) {
+                iframe.style.height = `${height}px`;
+            }
+        } catch (error) {
+            console.warn('胡萝卜插件：iframe 高度调整失败', error);
+        }
+    });
+
+    wrapper.appendChild(iframe);
+    return wrapper;
+}
+
+function serializeForScript(data) {
+    return JSON.stringify(data).replace(/[<>\u2028\u2029]/g, (char) => {
+        switch (char) {
+            case '<':
+                return '\\u003C';
+            case '>':
+                return '\\u003E';
+function cleanTemplateContent(raw) {
+    if (typeof raw !== 'string') {
+        return '';
+    }
+    let content = raw.replace(/^\uFEFF/, '');
+    content = content.replace(/^```[\r\n]*/, '').replace(/```[\r\n]*$/, '');
+    return content.trim();
+}
+function resolveTemplateUrl(path) {
+    if (
+        typeof chrome !== 'undefined' &&
+        chrome &&
+        chrome.runtime &&
+        typeof chrome.runtime.getURL === 'function'
+    ) {
+        return chrome.runtime.getURL(path);
+    }
+    return path;
+}
+function loadHtmlTemplate(path) {
+    const url = resolveTemplateUrl(path);
+    if (typeof XMLHttpRequest !== 'undefined') {
+        try {
+            const request = new XMLHttpRequest();
+            request.open('GET', url, false);
+            if (typeof request.overrideMimeType === 'function') {
+                request.overrideMimeType('text/html');
+            }
+            request.send(null);
+            const status = request.status;
+            if ((status >= 200 && status < 300) || status === 0) {
+                return cleanTemplateContent(request.responseText || '');
+            }
+        } catch (error) {
+            console.warn(`胡萝卜插件：XHR 加载模板失败 ${path}`, error);
+    }
+    if (typeof require === 'function' && typeof __dirname !== 'undefined') {
+        try {
+            const fs = require('fs');
+            const pathModule = require('path');
+            const resolvedPath = pathModule.resolve(__dirname, path);
+            if (fs.existsSync(resolvedPath)) {
+                const content = fs.readFileSync(resolvedPath, 'utf8');
+                return cleanTemplateContent(content);
+            }
+        } catch (error) {
+            console.warn(`胡萝卜插件：读取本地模板失败 ${path}`, error);
+    }
+    return '';
+}
+function injectScriptIntoTemplate(template, script) {
+    if (!template) {
+        return '';
+    }
+    if (!script) {
+        return template;
+    }
+    const closingBodyIndex = template.lastIndexOf('</body>');
+    if (closingBodyIndex === -1) {
+        return `${template}${script}`;
+    }
+    return (
+        template.slice(0, closingBodyIndex) +
+        script +
+        template.slice(closingBodyIndex)
+    );
+}
+
+let BUNNY_TEMPLATE = '';
+let LOVE_TEMPLATE = '';
+try {
+    BUNNY_TEMPLATE = loadHtmlTemplate('bunny状态栏.html');
+} catch (error) {
+    console.warn('胡萝卜插件：初始化 bunny 模板失败', error);
+}
+try {
+    LOVE_TEMPLATE = loadHtmlTemplate('爱的抱抱.html');
+} catch (error) {
+    console.warn('胡萝卜插件：初始化爱的抱抱模板失败', error);
+}
+function buildBunnyStatusBarHtml(data) {
+    const payload = {
+        avatar: data?.avatar || '',
+        bubble: data?.bubble || '',
+        crystal: data?.crystal || '',
+        time: data?.time || '',
+        dayNight: data?.dayNight || '',
+    };
+    if (BUNNY_TEMPLATE) {
+        const script = `<script>
+window.__BHL_BUNNY_INITIAL__ = ${serializeForScript(payload)};
+(function() {
+    function apply() {
+        const data = window.__BHL_BUNNY_INITIAL__ || {};
+        const doc = document;
+        const avatarImage = doc.querySelector('.avatar-image');
+        if (avatarImage) {
+            avatarImage.src = data.avatar || '';
+
+        const bubbleMain = doc.querySelector('#bubble1 .bubble-main');
+        if (bubbleMain) {
+            bubbleMain.textContent = data.bubble || '';
+        const bubbleCrystal = doc.getElementById('bubble-crystal');
+        if (bubbleCrystal) {
+            bubbleCrystal.textContent = data.crystal || '';
+        const timeDisplay = doc.getElementById('timeDisplay');
+        if (timeDisplay) {
+            timeDisplay.textContent = data.time || '';
+        const bubbleDayNight = doc.getElementById('bubble-day-night');
+        if (bubbleDayNight) {
+            bubbleDayNight.textContent = data.dayNight || '';
+        if (typeof setInitialState === 'function') {
+            try {
+                setInitialState();
+            } catch (error) {
+                console.warn('胡萝卜插件：初始化 bunny 状态栏失败', error);
+            }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply, { once: true });
+    } else {
+        apply();
+    }
+})();
+</script>`;
+        return injectScriptIntoTemplate(BUNNY_TEMPLATE, script);
+    }
+    return `<div class="bhl-bunny-fallback">
+        <div>Avatar: ${payload.avatar}</div>
+        <div>Bubble: ${payload.bubble}</div>
+        <div>Crystal: ${payload.crystal}</div>
+        <div>Time: ${payload.time}</div>
+        <div>Day/Night: ${payload.dayNight}</div>
+    </div>`;
+}
+
+function buildLoveStatusHtml(data) {
+    const payload = {
+        pose: data?.pose || '',
+        penis: data?.penis || '',
+        speed: data?.speed || '',
+        depthText: data?.depthText || '',
+        suck: data?.suck || '',
+        knead: data?.knead || '',
+        hands: data?.hands || '',
+    };
+    if (LOVE_TEMPLATE) {
+        const script = `<script>
+window.__BHL_LOVE_INITIAL__ = ${serializeForScript(payload)};
+(function() {
+    function apply() {
+        const data = window.__BHL_LOVE_INITIAL__ || {};
+
+        if (typeof updateQQStatus === 'function') {
+            try {
+                updateQQStatus(data);
+            } catch (error) {
+                console.warn('胡萝卜插件：应用爱的抱抱数据失败', error);
+        const doc = document;
+        const suckSub = doc.querySelector('.pulses .pulse-card:first-child .pulse-sub');
+        if (suckSub) {
+            suckSub.textContent = String(data.suck || 0) + '/100';
+        const kneadSub = doc.querySelector('.pulses .pulse-card:last-child .pulse-sub');
+        if (kneadSub) {
+            kneadSub.textContent = String(data.knead || 0) + '/100';
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply, { once: true });
+    } else {
+        apply();
+    }
+})();
+</script>`;
+        return injectScriptIntoTemplate(LOVE_TEMPLATE, script);
+    }
+    return `<div class="bhl-love-fallback">
+        <div>体位: ${payload.pose}</div>
+        <div>鸡鸡状态: ${payload.penis}</div>
+        <div>抽插速度: ${payload.speed}</div>
+        <div>位置描述: ${payload.depthText}</div>
+        <div>吮吸力度: ${payload.suck}</div>
+        <div>揉捏力度: ${payload.knead}</div>
+        <div>抓握位置: ${payload.hands}</div>
+    </div>`;
+
+
+      function syncUI() {
+        if (el.poseImg) el.poseImg.src = resolvePoseImg(state.pose);
+        if (el.poseName) el.poseName.textContent = state.pose || '';
+        if (el.detail2) el.detail2.textContent = state.penis || '';
+        if (el.detail3) el.detail3.textContent = state.speed || '';
+        if (el.detail4) el.detail4.textContent = state.depthText || '';
+        if (el.detail5) el.detail5.textContent = state.suck || '';
+        if (el.detail6) el.detail6.textContent = state.knead || '';
+        if (el.detail7) el.detail7.textContent = state.hands || '';
+      }
+
+      let rafId = null, t = 0;
+      function animate(now) {
+        if (!animate.last) animate.last = now;
+        const dt = (now - animate.last) / 1000;
+        animate.last = now;
+
+        const speed = num(state.speed);
+        const v = Math.max(0, Math.min(100, speed)) * 0.1;
+        const target = tgtPct();
+
+        t += dt * v;
+        const tri = 1 - Math.abs((t % 2) - 1);
+        const cur = tri * Math.max(0, target);
+        if (el.meterFill) el.meterFill.style.width = cur + '%';
+        if (el.meterTarget) el.meterTarget.style.left = target + '%';
+
+        const w = 0.5 + 0.5 * Math.sin(t * 2 * Math.PI);
+        const baseScale = 0.9 + 0.2 * w;
+        const s5 = 0.85 + 0.003 * Math.max(0, Math.min(100, num(state.suck)));
+        const s6 = 0.85 + 0.003 * Math.max(0, Math.min(100, num(state.knead)));
+        const scale5 = baseScale * s5;
+        const scale6 = baseScale * s6;
+        if (el.pulse5) el.pulse5.style.transform = 'scale(' + scale5 + ')';
+        if (el.pulse6) el.pulse6.style.transform = 'scale(' + scale6 + ')';
+
+        rafId = requestAnimationFrame(animate);
+      }
+
+      window.updateQQStatus = function ({ pose, penis, speed, depthText, suck, knead, hands }) {
+        if (pose !== undefined) state.pose = pose;
+        if (penis !== undefined) state.penis = penis;
+        if (speed !== undefined) state.speed = speed;
+        if (depthText !== undefined) state.depthText = depthText;
+        if (suck !== undefined) state.suck = suck;
+        if (knead !== undefined) state.knead = knead;
+        if (hands !== undefined) state.hands = hands;
+        syncUI();
+      };
+
+      window.addEventListener('beforeunload', () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      });
+    </script>
+  </body>
+</html>`;
+}
+
 const REGEX_RULES = [
     {
         id: 'bhl-timestamp',
@@ -86,6 +376,63 @@ const REGEX_RULES = [
             outer.appendChild(details);
 
             return outer;
+        },
+    },
+    {
+        id: 'bhl-bunny-status',
+        pattern: /<bunny>\s*(.*?)\s*(.*?)\s*(.*?)\s*(.*?)\s*(.*?)\s*<\/bunny>/gis,
+        createNode({ documentRef, groups }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+            const normalized = Array.from(groups || [], (value) =>
+                typeof value === 'string' ? value.trim() : '',
+            );
+            const [avatar = '', bubble = '', crystal = '', time = '', dayNight = ''] = normalized;
+            const html = buildBunnyStatusBarHtml({
+                avatar,
+                bubble,
+                crystal,
+                time,
+                dayNight,
+            });
+            return createIframeWrapper(doc, html, {
+                className: 'cip-bhl-iframe cip-bhl-bunny-status',
+                minHeight: 360,
+            });
+        },
+    },
+    {
+        id: 'bhl-love-hug',
+        pattern:
+            /<QQ_LOVE>\s*体位:(.*?)\s*鸡鸡状态:(.*?)\s*抽插速度:(.*?)\s*位置描述:(.*?)\s*吮吸力度:(.*?)\s*揉捏力度:(.*?)\s*抓握位置:(.*?)\s*<\/QQ_LOVE>/gis,
+        createNode({ documentRef, groups }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+            const normalized = Array.from(groups || [], (value) =>
+                typeof value === 'string' ? value.trim() : '',
+            );
+            const [
+                pose = '',
+                penis = '',
+                speed = '',
+                depthText = '',
+                suck = '',
+                knead = '',
+                hands = '',
+            ] = normalized;
+            const html = buildLoveStatusHtml({
+                pose,
+                penis,
+                speed,
+                depthText,
+                suck,
+                knead,
+                hands,
+            });
+            return createIframeWrapper(doc, html, {
+                className: 'cip-bhl-iframe cip-bhl-love-status',
+                minHeight: 520,
+            });
         },
     },
 ];
