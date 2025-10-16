@@ -772,149 +772,216 @@
     let toggleBubblePlayback = async () => {};
     let clearBubblePlayback = () => {};
 
-    const [themeModule, avatarModule, alarmModule, syncModule, ttsModule] =
-        await Promise.all([
-            loadModule('./setting/theme.js'),
-            loadModule('./setting/avatar.js'),
-            loadModule('./setting/alarm.js'),
-            loadModule('./setting/sync.js'),
-            loadModule('./setting/tts/index.js'),
-        ]);
+    async function setupSettingsModules() {
+        let applyInitialSettings = () => {};
+        let scheduleAlarmCheck = () => {};
+        try {
+            const [themeModule, avatarModule, alarmModule, syncModule, ttsModule] =
+                await Promise.all([
+                    loadModule('./setting/theme.js'),
+                    loadModule('./setting/avatar.js'),
+                    loadModule('./setting/alarm.js'),
+                    loadModule('./setting/sync.js'),
+                    loadModule('./setting/tts/index.js'),
+                ]);
 
-    if (themeModule) {
-        initThemeSettings =
-            themeModule.initThemeSettings || initThemeSettings;
-        loadThemes = themeModule.loadThemes || loadThemes;
-        getDefaultTheme =
-            themeModule.getDefaultTheme || (() => ({ ...defaultThemeFallback }));
+            if (themeModule) {
+                initThemeSettings =
+                    themeModule.initThemeSettings || initThemeSettings;
+                loadThemes = themeModule.loadThemes || loadThemes;
+                getDefaultTheme =
+                    themeModule.getDefaultTheme || (() => ({ ...defaultThemeFallback }));
+            }
+
+            if (syncModule) {
+                initSyncSettings = syncModule.initSyncSettings || initSyncSettings;
+                getSavedSyncFilename =
+                    syncModule.getSavedSyncFilename || getSavedSyncFilename;
+            }
+
+            if (alarmModule) {
+                initAlarmSettings =
+                    alarmModule.initAlarmSettings || initAlarmSettings;
+                updateAlarmStatus =
+                    alarmModule.updateAlarmStatus || updateAlarmStatus;
+                setTimerWorker = alarmModule.setTimerWorker || setTimerWorker;
+                startAlarm = alarmModule.startAlarm || startAlarm;
+                stopAlarm = alarmModule.stopAlarm || stopAlarm;
+                checkAlarmOnLoad =
+                    alarmModule.checkAlarmOnLoad || checkAlarmOnLoad;
+            }
+
+            if (avatarModule) {
+                initAvatarSettings =
+                    avatarModule.initAvatarSettings || initAvatarSettings;
+                initAvatarStyler =
+                    avatarModule.initAvatarStyler || initAvatarStyler;
+                loadAvatarProfiles =
+                    avatarModule.loadAvatarProfiles || loadAvatarProfiles;
+                loadFrameProfiles =
+                    avatarModule.loadFrameProfiles || loadFrameProfiles;
+            }
+
+            if (ttsModule) {
+                initTTSSettings = ttsModule.initTTSSettings || initTTSSettings;
+                getStoredTTSSettings =
+                    ttsModule.getStoredTTSSettings || getStoredTTSSettings;
+                applyTTSSettingsToUI =
+                    ttsModule.applyTTSSettingsToUI || applyTTSSettingsToUI;
+                updateTTSStatus =
+                    ttsModule.updateTTSStatus || updateTTSStatus;
+                synthesizeTTS = ttsModule.synthesizeTTS || synthesizeTTS;
+                stopTTSPlayback =
+                    ttsModule.stopTTSPlayback || stopTTSPlayback;
+                playImmediateBlob =
+                    ttsModule.playImmediateBlob || playImmediateBlob;
+                toggleBubblePlayback =
+                    ttsModule.toggleBubblePlayback || toggleBubblePlayback;
+                clearBubblePlayback =
+                    ttsModule.clearBubblePlayback || clearBubblePlayback;
+            }
+
+            try {
+                initThemeSettings({
+                    colorInputs,
+                    colorPickers,
+                    themeSelect,
+                    newThemeNameInput,
+                    saveThemeBtn,
+                    deleteThemeBtn,
+                });
+
+                initSyncSettings({
+                    importSettingsInput,
+                    exportBtnPanel,
+                    savePathBtn,
+                    loadPathBtn,
+                    syncPathInput,
+                });
+
+                initAlarmSettings({
+                    startAlarmBtn,
+                    stopAlarmBtn,
+                    restoreDefaultsBtn,
+                    alarmHoursInput,
+                    alarmMinutesInput,
+                    alarmSecondsInput,
+                    alarmCommandInput,
+                    alarmStatus,
+                    alarmRepeatInput,
+                    defaultCommandText: defaultCommand,
+                });
+
+                initAvatarSettings({
+                    charAvatarUrlInput,
+                    userAvatarUrlInput,
+                    charAvatarFrameUrlInput,
+                    userAvatarFrameUrlInput,
+                    unsplashAccessKeyInput,
+                    avatarProfileSelect,
+                    applyAvatarBtn,
+                    deleteAvatarBtn,
+                    newAvatarProfileNameInput,
+                    saveAvatarBtn,
+                    frameProfileSelect,
+                    applyFrameBtn,
+                    deleteFrameBtn,
+                    newFrameProfileNameInput,
+                    saveFrameBtn,
+                    adjustCharFrameBtn,
+                    adjustUserFrameBtn,
+                    frameAdjustPanel,
+                    frameAdjustTitle,
+                    frameSizeSlider,
+                    frameSizeValue,
+                    frameOffsetXSlider,
+                    frameOffsetXValue,
+                    frameOffsetYSlider,
+                    frameOffsetYValue,
+                    frameResetBtn,
+                    frameCloseBtn,
+                    unsplashAccessKey,
+                    setUnsplashAccessKey,
+                    reprocessUnsplashPlaceholders,
+                });
+
+                initTTSSettings({
+                    ttsKeyInput,
+                    ttsModelInput,
+                    ttsVoiceInput,
+                    ttsEndpointInput,
+                    ttsEndpointLabel,
+                    ttsSpeedRange,
+                    ttsSpeedValue,
+                    ttsUploadName,
+                    ttsUploadText,
+                    ttsUploadFile,
+                    ttsUploadFileBtn,
+                    ttsUploadBtn,
+                    ttsRefreshVoicesBtn,
+                    ttsSaveBtn,
+                    ttsTestText,
+                    ttsTestBtn,
+                    ttsCheckBtn,
+                    ttsStatus,
+                    ttsVoiceDeleteBtn,
+                    ttsSubtabs,
+                    ttsPanes,
+                });
+            } catch (error) {
+                console.warn('胡萝卜插件：初始化设置面板模块失败', error);
+            }
+
+            applyInitialSettings = () => {
+                try {
+                    applyTTSSettingsToUI(getStoredTTSSettings());
+                } catch (error) {
+                    console.warn('胡萝卜插件：恢复语音设置失败', error);
+                }
+                try {
+                    loadThemes();
+                } catch (error) {
+                    console.warn('胡萝卜插件：应用主题设置失败', error);
+                }
+                try {
+                    loadAvatarProfiles();
+                    loadFrameProfiles();
+                } catch (error) {
+                    console.warn('胡萝卜插件：加载头像配置失败', error);
+                }
+                try {
+                    const savedFilename = getSavedSyncFilename();
+                    if (savedFilename) {
+                        syncPathInput.value = savedFilename;
+                    }
+                } catch (error) {
+                    console.warn('胡萝卜插件：恢复同步路径失败', error);
+                }
+            };
+
+            scheduleAlarmCheck = () => {
+                try {
+                    setTimeout(checkAlarmOnLoad, 500);
+                } catch (error) {
+                    console.warn('胡萝卜插件：检查定时任务失败', error);
+                }
+            };
+        } catch (error) {
+            console.warn('胡萝卜插件：加载设置模块失败', error);
+        }
+
+        return {
+            applyInitialSettings,
+            scheduleAlarmCheck,
+        };
     }
 
-    if (syncModule) {
-        initSyncSettings = syncModule.initSyncSettings || initSyncSettings;
-        getSavedSyncFilename =
-            syncModule.getSavedSyncFilename || getSavedSyncFilename;
-    }
-
-    if (alarmModule) {
-        initAlarmSettings = alarmModule.initAlarmSettings || initAlarmSettings;
-        updateAlarmStatus = alarmModule.updateAlarmStatus || updateAlarmStatus;
-        setTimerWorker = alarmModule.setTimerWorker || setTimerWorker;
-        startAlarm = alarmModule.startAlarm || startAlarm;
-        stopAlarm = alarmModule.stopAlarm || stopAlarm;
-        checkAlarmOnLoad = alarmModule.checkAlarmOnLoad || checkAlarmOnLoad;
-    }
-
-    if (avatarModule) {
-        initAvatarSettings =
-            avatarModule.initAvatarSettings || initAvatarSettings;
-        initAvatarStyler = avatarModule.initAvatarStyler || initAvatarStyler;
-        loadAvatarProfiles =
-            avatarModule.loadAvatarProfiles || loadAvatarProfiles;
-        loadFrameProfiles =
-            avatarModule.loadFrameProfiles || loadFrameProfiles;
-    }
-
-    if (ttsModule) {
-        initTTSSettings = ttsModule.initTTSSettings || initTTSSettings;
-        getStoredTTSSettings =
-            ttsModule.getStoredTTSSettings || getStoredTTSSettings;
-        applyTTSSettingsToUI =
-            ttsModule.applyTTSSettingsToUI || applyTTSSettingsToUI;
-        updateTTSStatus = ttsModule.updateTTSStatus || updateTTSStatus;
-        synthesizeTTS = ttsModule.synthesizeTTS || synthesizeTTS;
-        stopTTSPlayback = ttsModule.stopTTSPlayback || stopTTSPlayback;
-        playImmediateBlob = ttsModule.playImmediateBlob || playImmediateBlob;
-        toggleBubblePlayback =
-            ttsModule.toggleBubblePlayback || toggleBubblePlayback;
-        clearBubblePlayback =
-            ttsModule.clearBubblePlayback || clearBubblePlayback;
-    }
-
-    initThemeSettings({
-        colorInputs,
-        colorPickers,
-        themeSelect,
-        newThemeNameInput,
-        saveThemeBtn,
-        deleteThemeBtn,
-    });
-
-    initSyncSettings({
-        importSettingsInput,
-        exportBtnPanel,
-        savePathBtn,
-        loadPathBtn,
-        syncPathInput,
-    });
-
-    initAlarmSettings({
-        startAlarmBtn,
-        stopAlarmBtn,
-        restoreDefaultsBtn,
-        alarmHoursInput,
-        alarmMinutesInput,
-        alarmSecondsInput,
-        alarmCommandInput,
-        alarmStatus,
-        alarmRepeatInput,
-        defaultCommandText: defaultCommand,
-    });
-
-    initAvatarSettings({
-        charAvatarUrlInput,
-        userAvatarUrlInput,
-        charAvatarFrameUrlInput,
-        userAvatarFrameUrlInput,
-        unsplashAccessKeyInput,
-        avatarProfileSelect,
-        applyAvatarBtn,
-        deleteAvatarBtn,
-        newAvatarProfileNameInput,
-        saveAvatarBtn,
-        frameProfileSelect,
-        applyFrameBtn,
-        deleteFrameBtn,
-        newFrameProfileNameInput,
-        saveFrameBtn,
-        adjustCharFrameBtn,
-        adjustUserFrameBtn,
-        frameAdjustPanel,
-        frameAdjustTitle,
-        frameSizeSlider,
-        frameSizeValue,
-        frameOffsetXSlider,
-        frameOffsetXValue,
-        frameOffsetYSlider,
-        frameOffsetYValue,
-        frameResetBtn,
-        frameCloseBtn,
-        unsplashAccessKey,
-        setUnsplashAccessKey,
-        reprocessUnsplashPlaceholders,
-    });
-
-    initTTSSettings({
-        ttsKeyInput,
-        ttsModelInput,
-        ttsVoiceInput,
-        ttsEndpointInput,
-        ttsEndpointLabel,
-        ttsSpeedRange,
-        ttsSpeedValue,
-        ttsUploadName,
-        ttsUploadText,
-        ttsUploadFile,
-        ttsUploadFileBtn,
-        ttsUploadBtn,
-        ttsRefreshVoicesBtn,
-        ttsSaveBtn,
-        ttsTestText,
-        ttsTestBtn,
-        ttsCheckBtn,
-        ttsStatus,
-        ttsVoiceDeleteBtn,
-        ttsSubtabs,
-        ttsPanes,
+    const settingsReadyPromise = setupSettingsModules().catch((error) => {
+        console.warn('胡萝卜插件：设置模块异步初始化失败', error);
+        return {
+            applyInitialSettings: () => {},
+            scheduleAlarmCheck: () => {},
+        };
     });
     function updateFormatDisplay() {
         const e = get('cip-input-panel').querySelector(
@@ -1942,20 +2009,24 @@
         initWebWorker();
         initAvatarStyler();
         initUnsplashImageReplacement();
-        // 载入并应用TTS设置
-        applyTTSSettingsToUI(getStoredTTSSettings());
-        loadThemes();
-        loadAvatarProfiles();
-        loadFrameProfiles(); // 加载头像框配置
         renderCategories();
         loadButtonPosition();
-        const savedFilename = getSavedSyncFilename();
-        if (savedFilename) {
-            syncPathInput.value = savedFilename;
-        }
         switchStickerCategory(Object.keys(stickerData)[0] || '');
         switchTab('text');
-        setTimeout(checkAlarmOnLoad, 500);
+        settingsReadyPromise.then(
+            ({ applyInitialSettings, scheduleAlarmCheck }) => {
+                try {
+                    applyInitialSettings();
+                } catch (error) {
+                    console.warn('胡萝卜插件：应用设置初始化失败', error);
+                }
+                try {
+                    scheduleAlarmCheck();
+                } catch (error) {
+                    console.warn('胡萝卜插件：定时任务初始化失败', error);
+                }
+            },
+        );
     }
     init();
 })();
