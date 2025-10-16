@@ -204,6 +204,12 @@ export function applyRegexReplacements(element, options = {}) {
     return false;
 }
 
+export default {
+    applyRegexReplacements,
+    getRegexEnabled,
+    setRegexEnabled,
+};
+
 export function restoreRegexOriginal(element) {
     return restoreOriginal(element);
 }
