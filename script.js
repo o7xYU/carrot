@@ -1,4 +1,28 @@
 // script.js (v2.8 - 新增撤回、时间轴、系统信息正则)
+import { initThemeSettings, loadThemes } from './setting/theme.js';
+import {
+    initAvatarSettings,
+    initAvatarStyler,
+    loadAvatarProfiles,
+    loadFrameProfiles,
+} from './setting/avatar.js';
+import {
+    initAlarmSettings,
+    startAlarm,
+    stopAlarm,
+    checkAlarmOnLoad,
+    updateAlarmStatus,
+    setTimerWorker,
+} from './setting/alarm.js';
+import { initSyncSettings, getSavedSyncFilename } from './setting/sync.js';
+import {
+    initTTSSettings,
+    getStoredTTSSettings,
+    applyTTSSettingsToUI,
+    updateTTSStatus,
+    toggleBubblePlayback,
+} from './setting/tts/index.js';
+
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -550,6 +574,95 @@
     const frameResetBtn = get('cip-frame-reset-btn');
     const frameCloseBtn = get('cip-frame-close-btn');
 
+    alarmCommandInput.value = defaultCommand;
+
+    initThemeSettings({
+        colorInputs,
+        colorPickers,
+        themeSelect,
+        newThemeNameInput,
+        saveThemeBtn,
+        deleteThemeBtn,
+    });
+
+    initAvatarSettings({
+        charAvatarUrlInput,
+        userAvatarUrlInput,
+        charAvatarFrameUrlInput,
+        userAvatarFrameUrlInput,
+        unsplashAccessKeyInput,
+        avatarProfileSelect,
+        applyAvatarBtn,
+        deleteAvatarBtn,
+        newAvatarProfileNameInput,
+        saveAvatarBtn,
+        frameProfileSelect,
+        applyFrameBtn,
+        deleteFrameBtn,
+        newFrameProfileNameInput,
+        saveFrameBtn,
+        adjustCharFrameBtn,
+        adjustUserFrameBtn,
+        frameAdjustPanel,
+        frameAdjustTitle,
+        frameSizeSlider,
+        frameSizeValue,
+        frameOffsetXSlider,
+        frameOffsetXValue,
+        frameOffsetYSlider,
+        frameOffsetYValue,
+        frameResetBtn,
+        frameCloseBtn,
+        unsplashAccessKey,
+        setUnsplashAccessKey,
+        reprocessUnsplashPlaceholders,
+    });
+
+    initAlarmSettings({
+        startAlarmBtn,
+        stopAlarmBtn,
+        restoreDefaultsBtn,
+        alarmHoursInput,
+        alarmMinutesInput,
+        alarmSecondsInput,
+        alarmCommandInput,
+        alarmStatus,
+        alarmRepeatInput,
+        defaultCommandText: defaultCommand,
+    });
+
+    initSyncSettings({
+        importSettingsInput,
+        exportBtnPanel,
+        savePathBtn,
+        loadPathBtn,
+        syncPathInput,
+    });
+
+    initTTSSettings({
+        ttsKeyInput,
+        ttsModelInput,
+        ttsVoiceInput,
+        ttsEndpointInput,
+        ttsEndpointLabel,
+        ttsSpeedRange,
+        ttsSpeedValue,
+        ttsUploadName,
+        ttsUploadText,
+        ttsUploadFile,
+        ttsUploadFileBtn,
+        ttsUploadBtn,
+        ttsRefreshVoicesBtn,
+        ttsSaveBtn,
+        ttsTestText,
+        ttsTestBtn,
+        ttsCheckBtn,
+        ttsStatus,
+        ttsVoiceDeleteBtn,
+        ttsSubtabs,
+        ttsPanes,
+    });
+
     function updateRegexToggleUI() {
         if (!regexToggleInput) return;
 
@@ -628,338 +741,7 @@
 现在用户暂时离线，说出你想对用户说的话。
 `;
     alarmCommandInput.value = defaultCommand;
-    if (unsplashAccessKeyInput) {
-        unsplashAccessKeyInput.value = unsplashAccessKey;
-        unsplashAccessKeyInput.addEventListener('input', (event) => {
-            setUnsplashAccessKey(event.target.value || '');
-        });
-        unsplashAccessKeyInput.addEventListener('change', () => {
-            if (unsplashAccessKey) {
-                reprocessUnsplashPlaceholders();
-            }
-        });
-    }
     // --- 4. 核心逻辑与事件监听 (已修改) ---
-    // --- 新增: 头像管理核心逻辑 ---
-    let avatarStyleTag = null; // 全局变量，用于存储我们的style标签
-    let avatarProfiles = {}; // 头像配置
-    let frameProfiles = {}; // 头像框配置（独立管理）
-    let currentAdjustingFrame = null; // 当前正在调整的头像框 ('char' 或 'user')
-    let frameAdjustments = {
-        char: { size: 120, offsetX: 0, offsetY: 0 },
-        user: { size: 120, offsetX: 0, offsetY: 0 }
-    };
-    // [新] 初始化头像样式注入器
-    function initAvatarStyler() {
-        console.log("CIP: Initializing avatar styler...");
-        avatarStyleTag = document.getElementById('cip-avatar-styler');
-        if (!avatarStyleTag) {
-            avatarStyleTag = document.createElement('style');
-            avatarStyleTag.id = 'cip-avatar-styler';
-            document.head.appendChild(avatarStyleTag);
-            console.log("CIP: Avatar styler tag created and injected.");
-        }
-    }
-    // [已修改] 应用头像的核心函数
-    function applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl) {
-        console.log("CIP: Attempting to apply avatars. Char:", charUrl, "User:", userUrl);
-        if (!avatarStyleTag) {
-            console.error("CIP Error: Avatar styler tag not found! Was initAvatarStyler() called?");
-            return;
-        }
-
-        let cssRules = '';
-        // 基础定位，确保伪元素可覆盖，允许头像框超出显示
-        cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
-
-        if (charUrl) {
-            const safeCharUrl = charUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
-        }
-        if (userUrl) {
-            const safeUserUrl = userUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
-        }
-
-        // 头像框覆盖层（透明 PNG）- 使用可调整的参数
-        if (charFrameUrl) {
-            const safeCharFrameUrl = charFrameUrl.replace(/'/g, "\\'");
-            const charAdj = frameAdjustments.char;
-            const charTransformX = -50 + charAdj.offsetX;
-            const charTransformY = -50 + charAdj.offsetY;
-            cssRules += `.custom-B_C_avar::after { content: ""; position: absolute; top: 50%; left: 50%; width: ${charAdj.size}%; height: ${charAdj.size}%; transform: translate(${charTransformX}%, ${charTransformY}%); background-image: url('${safeCharFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain; pointer-events: none; z-index: 1; }\n`;
-        }
-        if (userFrameUrl) {
-            const safeUserFrameUrl = userFrameUrl.replace(/'/g, "\\'");
-            const userAdj = frameAdjustments.user;
-            const userTransformX = -50 + userAdj.offsetX;
-            const userTransformY = -50 + userAdj.offsetY;
-            cssRules += `.custom-B_U_avar::after { content: ""; position: absolute; top: 50%; left: 50%; width: ${userAdj.size}%; height: ${userAdj.size}%; transform: translate(${userTransformX}%, ${userTransformY}%); background-image: url('${safeUserFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain; pointer-events: none; z-index: 1; }\n`;
-        }
-
-        console.log("CIP: Applying CSS rules:", cssRules);
-        avatarStyleTag.textContent = cssRules;
-    }
-
-    function populateAvatarSelect() {
-        const savedSelection = avatarProfileSelect.value;
-        avatarProfileSelect.innerHTML = '<option value="">选择配置...</option>';
-        for (const profileName in avatarProfiles) {
-            const option = document.createElement('option');
-            option.value = profileName;
-            option.textContent = profileName;
-            avatarProfileSelect.appendChild(option);
-        }
-        avatarProfileSelect.value = avatarProfiles[savedSelection] ? savedSelection : '';
-    }
-
-    function saveAvatarProfile() {
-        const name = newAvatarProfileNameInput.value.trim();
-        const charUrl = charAvatarUrlInput.value.trim();
-        const userUrl = userAvatarUrlInput.value.trim();
-
-        if (!name) {
-            alert('请输入配置名称！');
-            return;
-        }
-        if (!charUrl && !userUrl) {
-            alert('请至少输入一个头像链接！');
-            return;
-        }
-
-        avatarProfiles[name] = {
-            char: charUrl,
-            user: userUrl
-        };
-        localStorage.setItem('cip_avatar_profiles_v1', JSON.stringify(avatarProfiles));
-        newAvatarProfileNameInput.value = '';
-        populateAvatarSelect();
-        avatarProfileSelect.value = name;
-        alert('头像配置已保存！');
-    }
-
-    function deleteAvatarProfile() {
-        const selected = avatarProfileSelect.value;
-        if (!selected) {
-            alert('请先选择一个要删除的配置。');
-            return;
-        }
-        if (confirm(`确定要删除 "${selected}" 这个头像配置吗？`)) {
-            delete avatarProfiles[selected];
-            localStorage.setItem('cip_avatar_profiles_v1', JSON.stringify(avatarProfiles));
-            populateAvatarSelect();
-            charAvatarUrlInput.value = '';
-            userAvatarUrlInput.value = '';
-            charAvatarFrameUrlInput.value = '';
-            userAvatarFrameUrlInput.value = '';
-        }
-    }
-
-    function loadAvatarProfiles() {
-        const savedProfiles = localStorage.getItem('cip_avatar_profiles_v1');
-        if (savedProfiles) {
-            avatarProfiles = JSON.parse(savedProfiles);
-        }
-        populateAvatarSelect();
-
-        const lastProfileName = localStorage.getItem('cip_last_avatar_profile_v1');
-        if (lastProfileName && avatarProfiles[lastProfileName]) {
-            console.log("CIP: Loading last used avatar profile:", lastProfileName);
-            avatarProfileSelect.value = lastProfileName;
-            avatarProfileSelect.dispatchEvent(new Event('change'));
-        }
-    }
-
-    // --- 新增: 头像框配置管理函数 ---
-    function populateFrameSelect() {
-        const savedSelection = frameProfileSelect.value;
-        frameProfileSelect.innerHTML = '<option value="">选择头像框配置...</option>';
-        for (const profileName in frameProfiles) {
-            const option = document.createElement('option');
-            option.value = profileName;
-            option.textContent = profileName;
-            frameProfileSelect.appendChild(option);
-        }
-        frameProfileSelect.value = frameProfiles[savedSelection] ? savedSelection : '';
-    }
-
-    function saveFrameProfile() {
-        const name = newFrameProfileNameInput.value.trim();
-        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-
-        if (!name) {
-            alert('请输入头像框配置名称！');
-            return;
-        }
-        if (!charFrameUrl && !userFrameUrl) {
-            alert('请至少输入一个头像框链接！');
-            return;
-        }
-
-        frameProfiles[name] = {
-            charFrame: charFrameUrl,
-            userFrame: userFrameUrl,
-            charFrameAdj: { ...frameAdjustments.char },
-            userFrameAdj: { ...frameAdjustments.user }
-        };
-        localStorage.setItem('cip_frame_profiles_v1', JSON.stringify(frameProfiles));
-        newFrameProfileNameInput.value = '';
-        populateFrameSelect();
-        frameProfileSelect.value = name;
-        alert('头像框配置已保存！');
-    }
-
-    function deleteFrameProfile() {
-        const selected = frameProfileSelect.value;
-        if (!selected) {
-            alert('请先选择一个要删除的头像框配置。');
-            return;
-        }
-        if (confirm(`确定要删除 "${selected}" 这个头像框配置吗？`)) {
-            delete frameProfiles[selected];
-            localStorage.setItem('cip_frame_profiles_v1', JSON.stringify(frameProfiles));
-            populateFrameSelect();
-            charAvatarFrameUrlInput.value = '';
-            userAvatarFrameUrlInput.value = '';
-            frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
-            frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
-            // 重新应用
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, '', '');
-        }
-    }
-
-    function loadFrameProfiles() {
-        const savedProfiles = localStorage.getItem('cip_frame_profiles_v1');
-        if (savedProfiles) {
-            frameProfiles = JSON.parse(savedProfiles);
-        }
-        populateFrameSelect();
-
-        const lastFrameProfileName = localStorage.getItem('cip_last_frame_profile_v1');
-        if (lastFrameProfileName && frameProfiles[lastFrameProfileName]) {
-            console.log("CIP: Loading last used frame profile:", lastFrameProfileName);
-            frameProfileSelect.value = lastFrameProfileName;
-            frameProfileSelect.dispatchEvent(new Event('change'));
-        }
-    }
-
-    // --- 新增: 导出/导入核心逻辑 (已修改) ---
-    function exportSettings(customFilename = '') {
-        try {
-            const settingsToExport = {};
-            const keysToExport = [
-                'cip_sticker_data',
-                'cip_theme_data_v1',
-                'cip_last_active_theme_v1',
-                'cip_avatar_profiles_v1',
-                'cip_last_avatar_profile_v1',
-                'cip_frame_profiles_v1', // 头像框配置
-                'cip_last_frame_profile_v1', // 最后使用的头像框配置
-                'cip_custom_command_v1',
-                'cip_sync_filename_v1', // 同时导出文件名设置
-                'cip_tts_settings_v1' // 语音设置
-            ];
-
-            keysToExport.forEach(key => {
-                const value = localStorage.getItem(key);
-                if (value !== null) {
-                    settingsToExport[key] = value;
-                }
-            });
-
-            if (Object.keys(settingsToExport).length === 0) {
-                alert('没有可导出的设置。');
-                return;
-            }
-
-            const jsonString = JSON.stringify(settingsToExport, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-
-            if (customFilename) {
-                a.download = customFilename;
-            } else {
-                const date = new Date();
-                const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                a.download = `carrot-input-panel-settings-${dateString}.json`;
-            }
-
-            document.body.appendChild(a);
-            a.click();
-
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error('导出设置时发生错误:', error);
-            alert('导出失败，请查看控制台获取更多信息。');
-        }
-    }
-
-    function importSettings(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            return;
-        }
-
-        if (file.type !== 'application/json') {
-            alert('请选择一个有效的 .json 配置文件。');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedSettings = JSON.parse(e.target.result);
-
-                let settingsApplied = false;
-                for (const key in importedSettings) {
-                     if (!Object.prototype.hasOwnProperty.call(importedSettings, key)) continue;
-                     if (key === 'cip_button_position_v4') continue; // ← 导入时忽略浮标位置
-                     localStorage.setItem(key, importedSettings[key]);
-                     settingsApplied = true;
-                }
-
-
-                if (settingsApplied) {
-                    alert('设置已成功导入！页面将自动刷新以应用所有更改。');
-                    setTimeout(() => window.location.reload(), 500);
-                } else {
-                    alert('导入的文件不包含任何有效的设置。');
-                }
-
-            } catch (error) {
-                console.error('导入设置时发生错误:', error);
-                alert('导入失败，文件格式可能不正确。请查看控制台获取更多信息。');
-            } finally {
-                event.target.value = '';
-            }
-        };
-        reader.onerror = function() {
-            alert('读取文件时发生错误。');
-            event.target.value = '';
-        };
-
-        reader.readAsText(file);
-    }
-
-    function saveToPath() {
-        const filename = syncPathInput.value.trim();
-        if (!filename) {
-            alert('请输入一个有效的文件名。');
-            return;
-        }
-
-        localStorage.setItem('cip_sync_filename_v1', filename);
-        exportSettings(filename);
-    }
-
     let currentTab = 'text',
         currentTextSubType = 'plain',
         stickerData = {},
@@ -990,184 +772,7 @@
         bunny: '在这里鞭策BUNNY吧...',
     };
 
-    // --- 主题管理核心逻辑 (无变化) ---
-    let themes = {};
-    const defaultTheme = {
-        '--cip-accent-color': '#ff7f50',
-        '--cip-accent-hover-color': '#e56a40',
-        '--cip-insert-text-color': 'white',
-        '--cip-panel-bg-color': 'rgba(255, 255, 255, 0.25)',
-        '--cip-tabs-bg-color': 'transparent',
-        '--cip-text-color': '#333333',
-        '--cip-input-bg-color': 'rgba(255, 255, 255, 0.5)',
-    };
-
-    function hexToRgba(hex, alpha = 0.3) {
-        if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return null;
-        let c = hex.substring(1).split('');
-        if (c.length === 3) {
-            c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-        }
-        c = '0x' + c.join('');
-        const r = (c >> 16) & 255;
-        const g = (c >> 8) & 255;
-        const b = c & 255;
-        return `rgba(${r},${g},${b},${alpha})`;
-    }
-
-    function colorToHex(colorStr) {
-        if (colorStr.startsWith('#')) return colorStr;
-        const ctx = document.createElement('canvas').getContext('2d');
-        if (!ctx) return '#000000';
-        if (colorStr === 'transparent') {
-            return '#ffffff';
-        }
-        if (colorStr.startsWith('rgba')) {
-            const parts = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-            if (parts) {
-                const r = parseInt(parts[1], 10).toString(16).padStart(2, '0');
-                const g = parseInt(parts[2], 10).toString(16).padStart(2, '0');
-                const b = parseInt(parts[3], 10).toString(16).padStart(2, '0');
-                return `#${r}${g}${b}`;
-            }
-        }
-        ctx.fillStyle = colorStr;
-        return ctx.fillStyle;
-    }
-
-    function applyTheme(theme) {
-        const themeToApply = theme || defaultTheme;
-        for (const [key, value] of Object.entries(themeToApply)) {
-            document.documentElement.style.setProperty(key, value);
-        }
-        const accentColor = themeToApply['--cip-accent-color'];
-        const activeTabBg = hexToRgba(accentColor);
-        if (activeTabBg) {
-            document.documentElement.style.setProperty(
-                '--cip-active-bg-color',
-                activeTabBg,
-            );
-        } else {
-            document.documentElement.style.setProperty(
-                '--cip-active-bg-color',
-                'rgba(128, 128, 128, 0.3)',
-            );
-        }
-        updateColorInputs(themeToApply);
-    }
-
-    function updateColorInputs(theme) {
-        colorInputs.forEach((input) => {
-            const varName = input.dataset.var;
-            const colorValue = theme[varName] || '';
-            input.value = colorValue;
-            const picker = document.querySelector(
-                `.cip-color-picker[data-target="${input.id}"]`,
-            );
-            if (picker) {
-                picker.value = colorToHex(colorValue);
-            }
-        });
-    }
-
-    function getColorsFromInputs() {
-        const currentColors = {};
-        colorInputs.forEach((input) => {
-            currentColors[input.dataset.var] = input.value;
-        });
-        return currentColors;
-    }
-
-    function populateThemeSelect() {
-        const savedSelection = themeSelect.value;
-        themeSelect.innerHTML = '<option value="default">默认主题</option>';
-        for (const themeName in themes) {
-            const option = document.createElement('option');
-            option.value = themeName;
-            option.textContent = themeName;
-            themeSelect.appendChild(option);
-        }
-        themeSelect.value = themes[savedSelection] ? savedSelection : 'default';
-    }
-
-    function saveCurrentTheme() {
-        const name = newThemeNameInput.value.trim();
-        if (!name) {
-            alert('请输入配色方案名称！');
-            return;
-        }
-        if (name === 'default') {
-            alert('不能使用 "default" 作为名称。');
-            return;
-        }
-        themes[name] = getColorsFromInputs();
-        localStorage.setItem('cip_theme_data_v1', JSON.stringify(themes));
-        newThemeNameInput.value = '';
-        populateThemeSelect();
-        themeSelect.value = name;
-        alert('配色方案已保存！');
-    }
-
-    function deleteSelectedTheme() {
-        const selected = themeSelect.value;
-        if (selected === 'default') {
-            alert('不能删除默认主题。');
-            return;
-        }
-        if (confirm(`确定要删除 "${selected}" 这个配色方案吗？`)) {
-            delete themes[selected];
-            localStorage.setItem('cip_theme_data_v1', JSON.stringify(themes));
-            populateThemeSelect();
-            applyTheme(defaultTheme);
-        }
-    }
-
-    function loadThemes() {
-        const savedThemes = localStorage.getItem('cip_theme_data_v1');
-        if (savedThemes) {
-            themes = JSON.parse(savedThemes);
-        }
-        const lastThemeName =
-            localStorage.getItem('cip_last_active_theme_v1') || 'default';
-        populateThemeSelect();
-        const themeToApply = themes[lastThemeName] || defaultTheme;
-        applyTheme(themeToApply);
-        themeSelect.value = themes[lastThemeName] ? lastThemeName : 'default';
-    }
-
     // --- 新增: 定时指令核心逻辑 (Worker模式) ---
-    function formatTime(ms) {
-        if (ms <= 0) return '00:00:00';
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600)
-            .toString()
-            .padStart(2, '0');
-        const minutes = Math.floor((totalSeconds % 3600) / 60)
-            .toString()
-            .padStart(2, '0');
-        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    }
-
-    function updateAlarmStatus(data) {
-        if (data && data.remaining > 0) {
-            let statusText = `运行中: 剩余 ${formatTime(data.remaining)}`;
-            if (data.repeat > 1) {
-                statusText += ` (第 ${data.executed + 1} / ${data.repeat} 次)`;
-            }
-            alarmStatus.textContent = statusText;
-        } else {
-            const storedData = JSON.parse(
-                localStorage.getItem('cip_alarm_data_v1'),
-            );
-            if (storedData) {
-                alarmStatus.textContent = '状态: 时间到！';
-            } else {
-                alarmStatus.textContent = '状态: 未设置';
-            }
-        }
-    }
-
     function executeCommand(command) {
         const wrappedCommand = `<details><summary>⏰ 定时指令已执行</summary>\n<data>\n${command}\n</data>\n</details>`;
         try {
@@ -1227,249 +832,6 @@
         }
     }
 
-    function startAlarm(isContinuation = false) {
-        if (!timerWorker) {
-            alert('错误：后台计时器未初始化，请刷新页面重试。');
-            return;
-        }
-
-        const hours = parseInt(alarmHoursInput.value, 10) || 0;
-        const minutes = parseInt(alarmMinutesInput.value, 10) || 0;
-        const seconds = parseInt(alarmSecondsInput.value, 10) || 0;
-        const command = alarmCommandInput.value.trim();
-        const repeat = parseInt(alarmRepeatInput.value, 10) || 1;
-        const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-
-        localStorage.setItem('cip_custom_command_v1', command);
-
-        if (totalMs <= 0) {
-            alert('请输入有效的定时时间！');
-            return;
-        }
-        if (!command) {
-            alert('请输入要执行的指令！');
-            return;
-        }
-
-        const endTime = Date.now() + totalMs;
-        let alarmData;
-
-        if (isContinuation) {
-            alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
-            alarmData.endTime = endTime;
-            alarmData.executed = (alarmData.executed || 0) + 1;
-        } else {
-            alarmData = {
-                endTime: endTime,
-                command: command,
-                duration: totalMs,
-                repeat: repeat,
-                executed: 0,
-            };
-        }
-
-        localStorage.setItem('cip_alarm_data_v1', JSON.stringify(alarmData));
-        timerWorker.postMessage({ type: 'start', data: alarmData });
-    }
-
-    function stopAlarm() {
-        if (timerWorker) {
-            timerWorker.postMessage({ type: 'stop' });
-        }
-        localStorage.removeItem('cip_alarm_data_v1');
-        updateAlarmStatus(null);
-    }
-
-    function checkAlarmOnLoad() {
-        const alarmData = JSON.parse(localStorage.getItem('cip_alarm_data_v1'));
-        if (alarmData && alarmData.endTime && alarmData.endTime > Date.now()) {
-            if (timerWorker) {
-                timerWorker.postMessage({ type: 'start', data: alarmData });
-            }
-        } else if (alarmData) {
-            localStorage.removeItem('cip_alarm_data_v1');
-        }
-
-        const duration = alarmData ? alarmData.duration || 0 : 0;
-        alarmHoursInput.value = Math.floor(duration / 3600000);
-        alarmMinutesInput.value = Math.floor((duration % 3600000) / 60000);
-        alarmSecondsInput.value = Math.floor((duration % 60000) / 1000);
-        alarmCommandInput.value = alarmData
-            ? alarmData.command
-            : localStorage.getItem('cip_custom_command_v1') || defaultCommand;
-        alarmRepeatInput.value = alarmData ? alarmData.repeat || 1 : 1;
-        updateAlarmStatus(null);
-    }
-    applyAvatarBtn.addEventListener('click', () => {
-        const charUrl = charAvatarUrlInput.value.trim();
-        const userUrl = userAvatarUrlInput.value.trim();
-        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-    });
-
-    avatarProfileSelect.addEventListener('change', (e) => {
-        const profileName = e.target.value;
-        if (profileName && avatarProfiles[profileName]) {
-            const profile = avatarProfiles[profileName];
-            charAvatarUrlInput.value = profile.char || '';
-            userAvatarUrlInput.value = profile.user || '';
-            // 应用头像（保持当前头像框）
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars(profile.char, profile.user, charFrameUrl, userFrameUrl);
-            localStorage.setItem('cip_last_avatar_profile_v1', profileName);
-        } else if (!profileName) {
-            charAvatarUrlInput.value = '';
-            userAvatarUrlInput.value = '';
-            // 应用空头像（保持当前头像框）
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars('', '', charFrameUrl, userFrameUrl);
-            localStorage.removeItem('cip_last_avatar_profile_v1');
-        }
-    });
-
-    saveAvatarBtn.addEventListener('click', saveAvatarProfile);
-    deleteAvatarBtn.addEventListener('click', deleteAvatarProfile);
-
-    // --- 新增: 头像框配置事件监听 ---
-    frameProfileSelect.addEventListener('change', (e) => {
-        const profileName = e.target.value;
-        if (profileName && frameProfiles[profileName]) {
-            const profile = frameProfiles[profileName];
-            charAvatarFrameUrlInput.value = profile.charFrame || '';
-            userAvatarFrameUrlInput.value = profile.userFrame || '';
-            // 加载调整参数
-            if (profile.charFrameAdj) {
-                frameAdjustments.char = { ...profile.charFrameAdj };
-            }
-            if (profile.userFrameAdj) {
-                frameAdjustments.user = { ...profile.userFrameAdj };
-            }
-            // 应用头像框（保持当前头像）
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, profile.charFrame, profile.userFrame);
-            localStorage.setItem('cip_last_frame_profile_v1', profileName);
-        } else if (!profileName) {
-            charAvatarFrameUrlInput.value = '';
-            userAvatarFrameUrlInput.value = '';
-            // 重置调整参数
-            frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
-            frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
-            // 应用空头像框（保持当前头像）
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, '', '');
-            localStorage.removeItem('cip_last_frame_profile_v1');
-        }
-    });
-
-    applyFrameBtn.addEventListener('click', () => {
-        const charUrl = charAvatarUrlInput.value.trim();
-        const userUrl = userAvatarUrlInput.value.trim();
-        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-    });
-
-    saveFrameBtn.addEventListener('click', saveFrameProfile);
-    deleteFrameBtn.addEventListener('click', deleteFrameProfile);
-
-    // --- 新增: 头像框调整事件监听 ---
-    adjustCharFrameBtn.addEventListener('click', () => {
-        currentAdjustingFrame = 'char';
-        frameAdjustTitle.textContent = '调整角色头像框';
-        frameSizeSlider.value = frameAdjustments.char.size;
-        frameSizeValue.textContent = frameAdjustments.char.size;
-        frameOffsetXSlider.value = frameAdjustments.char.offsetX;
-        frameOffsetXValue.textContent = frameAdjustments.char.offsetX;
-        frameOffsetYSlider.value = frameAdjustments.char.offsetY;
-        frameOffsetYValue.textContent = frameAdjustments.char.offsetY;
-        frameAdjustPanel.classList.remove('hidden');
-    });
-
-    adjustUserFrameBtn.addEventListener('click', () => {
-        currentAdjustingFrame = 'user';
-        frameAdjustTitle.textContent = '调整你的头像框';
-        frameSizeSlider.value = frameAdjustments.user.size;
-        frameSizeValue.textContent = frameAdjustments.user.size;
-        frameOffsetXSlider.value = frameAdjustments.user.offsetX;
-        frameOffsetXValue.textContent = frameAdjustments.user.offsetX;
-        frameOffsetYSlider.value = frameAdjustments.user.offsetY;
-        frameOffsetYValue.textContent = frameAdjustments.user.offsetY;
-        frameAdjustPanel.classList.remove('hidden');
-    });
-
-    frameSizeSlider.addEventListener('input', (e) => {
-        frameSizeValue.textContent = e.target.value;
-        if (currentAdjustingFrame) {
-            frameAdjustments[currentAdjustingFrame].size = parseInt(e.target.value);
-            // 实时预览
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-        }
-    });
-
-    frameOffsetXSlider.addEventListener('input', (e) => {
-        frameOffsetXValue.textContent = e.target.value;
-        if (currentAdjustingFrame) {
-            frameAdjustments[currentAdjustingFrame].offsetX = parseInt(e.target.value);
-            // 实时预览
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-        }
-    });
-
-    frameOffsetYSlider.addEventListener('input', (e) => {
-        frameOffsetYValue.textContent = e.target.value;
-        if (currentAdjustingFrame) {
-            frameAdjustments[currentAdjustingFrame].offsetY = parseInt(e.target.value);
-            // 实时预览
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-        }
-    });
-
-    frameResetBtn.addEventListener('click', () => {
-        if (currentAdjustingFrame) {
-            frameAdjustments[currentAdjustingFrame] = { size: 120, offsetX: 0, offsetY: 0 };
-            frameSizeSlider.value = 120;
-            frameSizeValue.textContent = 120;
-            frameOffsetXSlider.value = 0;
-            frameOffsetXValue.textContent = 0;
-            frameOffsetYSlider.value = 0;
-            frameOffsetYValue.textContent = 0;
-            // 实时预览
-            const charUrl = charAvatarUrlInput.value.trim();
-            const userUrl = userAvatarUrlInput.value.trim();
-            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
-            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
-            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
-        }
-    });
-
-    frameCloseBtn.addEventListener('click', () => {
-        frameAdjustPanel.classList.add('hidden');
-    });
-
-    // --- 新增: 导入/同步事件监听 ---
-    importSettingsInput.addEventListener('change', importSettings);
-    exportBtnPanel.addEventListener('click', () => exportSettings());
-    savePathBtn.addEventListener('click', saveToPath);
-    loadPathBtn.addEventListener('click', () => {
-        importSettingsInput.click();
-    });
 
 
     function updateFormatDisplay() {
@@ -1805,183 +1167,7 @@
     }
 
     // --- 新增: 语音合成与自动读取逻辑 ---
-    function getDefaultTTSEndpoint() {
-        return 'https://api.siliconflow.cn/v1';
-    }
-
-    function getTTSSettings() {
-        let settings = null;
-        try {
-            settings = JSON.parse(localStorage.getItem('cip_tts_settings_v1')) || null;
-        } catch (e) {
-            settings = null;
-        }
-        if (!settings) {
-            settings = {
-                key: '',
-                endpoint: getDefaultTTSEndpoint(),
-                model: '',
-                voice: ''
-            };
-        }
-        if (!settings.endpoint) settings.endpoint = getDefaultTTSEndpoint();
-        return settings;
-    }
-
-    function applyTTSSettingsToUI(settings) {
-        // provider 已移除
-        ttsKeyInput.value = settings.key || '';
-        ttsEndpointInput.value = settings.endpoint || getDefaultTTSEndpoint();
-        if (settings.model && (!ttsModelInput.options.length || !ttsModelInput.querySelector(`option[value="${settings.model}"]`))) {
-            const opt = new Option(settings.model, settings.model, true, true);
-            ttsModelInput.innerHTML = '';
-            ttsModelInput.add(opt);
-        }
-        if (settings.voice && (!ttsVoiceInput.options.length || !ttsVoiceInput.querySelector(`option[value="${settings.voice}"]`))) {
-            const opt = new Option(settings.voice, settings.voice, true, true);
-            ttsVoiceInput.innerHTML = '';
-            ttsVoiceInput.add(opt);
-        }
-    }
-
-    function readTTSSettingsFromUI() {
-        return {
-            key: (ttsKeyInput.value || '').trim(),
-            endpoint: (ttsEndpointInput.value || '').trim() || getDefaultTTSEndpoint(),
-            model: (ttsModelInput.value || '').trim(),
-            voice: (ttsVoiceInput.value || '').trim()
-        };
-    }
-
-    function saveTTSSettings(settings) {
-        try {
-            localStorage.setItem('cip_tts_settings_v1', JSON.stringify(settings));
-        } catch (e) {
-            console.error('保存语音设置失败', e);
-        }
-    }
-
-    function updateTTSStatus(text, isError = false) {
-        if (!ttsStatus) return;
-        ttsStatus.textContent = text;
-        ttsStatus.style.color = isError ? '#e74c3c' : 'inherit';
-    }
-
-    async function fetchSiliconFlowTTS(text, settings) {
-        // 确保追加 /audio/speech 路径
-        const base = settings.endpoint || 'https://api.siliconflow.cn/v1';
-        const endpoint = base.endsWith('/audio/speech') ? base : `${base.replace(/\/$/, '')}/audio/speech`;
-        if (!settings.key) throw new Error('未配置硅基流动API Key');
-        const body = {
-            model: settings.model || 'FunAudioLLM/CosyVoice2-0.5B',
-            voice: settings.voice || 'FunAudioLLM/CosyVoice2-0.5B:alex',
-            input: text,
-            format: 'mp3',
-            speed: parseFloat(ttsSpeedRange?.value || '1') || 1
-        };
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${settings.key}`,
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mpeg,application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        const ct = res.headers.get('content-type') || '';
-        if (!res.ok) {
-            let errText = `HTTP ${res.status}`;
-            try { errText = await res.text(); } catch (e) {}
-            throw new Error(errText);
-        }
-        if (ct.includes('audio')) {
-            return await res.blob();
-        }
-        const j = await res.json();
-        if (j && j.audio) {
-            // 有些API可能返回base64
-            const b64 = j.audio;
-            const bin = atob(b64);
-            const u8 = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-            return new Blob([u8], { type: 'audio/mpeg' });
-        }
-        throw new Error('未返回音频');
-    }
-
-    // MiniMax 相关逻辑已移除
-
-    async function synthesizeTTS(text, playOnReady = true) {
-        const settings = getTTSSettings();
-        if (!text || !text.trim()) throw new Error('文本为空');
-        if (!settings.key) throw new Error('未配置API Key');
-        updateTTSStatus('合成中...');
-        let blob = null;
-        settings.endpoint = getDefaultTTSEndpoint();
-        blob = await fetchSiliconFlowTTS(text, settings);
-        updateTTSStatus('合成完成');
-        if (playOnReady && blob) enqueueAudioBlob(blob);
-        return blob;
-    }
-
-    const ttsQueue = [];
-    let ttsIsPlaying = false;
-    let ttsCurrentAudio = null;
-    let ttsCurrentBubble = null;
-
-    function enqueueAudioBlob(blob) {
-        ttsQueue.push(blob);
-        if (!ttsIsPlaying) playNextAudio();
-    }
-
-    function playNextAudio() {
-        if (!ttsQueue.length) { ttsIsPlaying = false; return; }
-        const blob = ttsQueue.shift();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        ttsCurrentAudio = audio;
-        ttsIsPlaying = true;
-        audio.onended = () => {
-            URL.revokeObjectURL(url);
-            ttsIsPlaying = false;
-            ttsCurrentAudio = null;
-            playNextAudio();
-        };
-        audio.onerror = () => {
-            URL.revokeObjectURL(url);
-            ttsIsPlaying = false;
-            ttsCurrentAudio = null;
-            playNextAudio();
-        };
-        audio.play().catch(() => {
-            // 可能需要用户交互后才能播放
-            updateTTSStatus('自动播放被浏览器阻止，请与页面交互后重试', true);
-        });
-    }
-
-    function stopTTSPlayback() {
-        try {
-            if (ttsCurrentAudio) {
-                ttsCurrentAudio.pause();
-                ttsCurrentAudio.src = '';
-            }
-        } catch (e) {}
-        ttsCurrentAudio = null;
-        ttsIsPlaying = false;
-        ttsQueue.length = 0;
-    }
-
-    function playImmediateBlob(blob) {
-        stopTTSPlayback();
-        if (blob) {
-            ttsQueue.push(blob);
-            playNextAudio();
-        }
-    }
-
-    // 自动读取功能已移除
-
-    function observeChatContainer(chatContainer) {
+    function observeChatContainer(chatContainer) {    function observeChatContainer(chatContainer) {
         if (!chatContainer) return;
 
         const processExisting = () => {
@@ -2054,28 +1240,13 @@
                     try {
                         let target = ev.target;
                         if (!target) return;
-                        // 只读自定义气泡区域
                         if (!target.classList?.contains('custom-char_bubble')) {
                             target = target.closest?.('.custom-char_bubble');
                         }
                         if (!target) return;
-                        // 二次点击同一气泡则停止
-                        if (ttsCurrentBubble && ttsCurrentBubble === target) {
-                            stopTTSPlayback();
-                            ttsCurrentBubble = null;
-                            return;
-                        }
-                        ttsCurrentBubble = target;
                         const text = target.textContent || target.innerText || '';
                         if (!text.trim()) return;
-                        const toRead = text.trim();
-                        // 只读一次：直接合成并立即播放，停止其他
-                        try {
-                            const blob = await synthesizeTTS(toRead, false);
-                            playImmediateBlob(blob);
-                        } catch (e) {
-                            throw e;
-                        }
+                        await toggleBubblePlayback(target, text);
                     } catch (e) {
                         updateTTSStatus(`气泡朗读失败: ${e.message || e}`, true);
                     }
@@ -2409,309 +1580,6 @@
         settingsPanelEl?.classList.add('hidden');
     });
 
-    colorInputs.forEach((input) => {
-        input.addEventListener('input', (e) => {
-            const textInput = e.currentTarget;
-            const property = textInput.dataset.var;
-            const value = textInput.value.trim();
-            document.documentElement.style.setProperty(property, value);
-
-            const picker = document.querySelector(
-                `.cip-color-picker[data-target="${textInput.id}"]`,
-            );
-            if (picker) {
-                picker.value = colorToHex(value);
-            }
-
-            if (property === '--cip-accent-color') {
-                const activeTabBg = hexToRgba(colorToHex(value));
-                if (activeTabBg) {
-                    document.documentElement.style.setProperty(
-                        '--cip-active-bg-color',
-                        activeTabBg,
-                    );
-                }
-            }
-        });
-    });
-
-    colorPickers.forEach((picker) => {
-        picker.addEventListener('input', (e) => {
-            const colorPicker = e.currentTarget;
-            const targetInputId = colorPicker.dataset.target;
-            const textInput = get(targetInputId);
-            if (textInput) {
-                textInput.value = colorPicker.value;
-                textInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
-    });
-
-    themeSelect.addEventListener('change', (e) => {
-        const themeName = e.target.value;
-        const theme =
-            themeName === 'default' ? defaultTheme : themes[themeName];
-        applyTheme(theme);
-        localStorage.setItem('cip_last_active_theme_v1', themeName);
-    });
-
-    saveThemeBtn.addEventListener('click', saveCurrentTheme);
-    deleteThemeBtn.addEventListener('click', deleteSelectedTheme);
-
-    // --- 定时指令事件监听 ---
-    startAlarmBtn.addEventListener('click', () => startAlarm(false));
-    stopAlarmBtn.addEventListener('click', () => stopAlarm());
-    restoreDefaultsBtn.addEventListener('click', () => {
-        if (confirm('确定要将指令恢复为默认设置吗？')) {
-            alarmCommandInput.value = defaultCommand;
-            localStorage.removeItem('cip_custom_command_v1');
-        }
-    });
-
-    // 语音设置（简化）：固定端点
-    if (ttsEndpointInput) try { ttsEndpointInput.value = getDefaultTTSEndpoint(); } catch(e) {}
-
-    async function fetchSiliconModelsAndVoice(settings) {
-        // 尝试从 /models 拉取可用模型；筛选含 tts/speech/audio 的模型，否则回退默认
-        let model = 'gpt-4o-mini-tts';
-        let voice = 'alloy';
-        try {
-            const res = await fetch('https://api.siliconflow.cn/v1/models', {
-                headers: { 'Authorization': `Bearer ${settings.key}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const list = Array.isArray(data?.data) ? data.data : [];
-                const picked = list.map(x => x?.id || x?.name || '').find(id => /tts|speech|audio/i.test(id));
-                if (picked) model = picked;
-            }
-        } catch (e) {
-            // 忽略，使用默认
-        }
-        return { model, voice };
-    }
-
-    // MiniMax models/voices 拉取已移除
-    if (ttsSaveBtn) {
-        ttsSaveBtn.addEventListener('click', () => {
-            const settings = readTTSSettingsFromUI();
-            saveTTSSettings(settings);
-            updateTTSStatus('设置已保存');
-        });
-    }
-    // 语音子标签切换
-    if (ttsSubtabs && ttsPanes) {
-        ttsSubtabs.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const target = btn.dataset.subtab;
-                ttsSubtabs.forEach(b => b.classList.toggle('active', b === btn));
-                ttsPanes.forEach(p => p.classList.toggle('active', p.id === `cip-tts-pane-${target}`));
-            });
-        });
-    }
-    if (ttsTestBtn) {
-        ttsTestBtn.addEventListener('click', async () => {
-            const text = (ttsTestText.value || '').trim();
-            if (!text) { updateTTSStatus('请输入要测试的文字', true); return; }
-            try {
-                // 确保使用当前下拉选择的模型与音色
-                const current = readTTSSettingsFromUI();
-                saveTTSSettings(current);
-                await synthesizeTTS(text, true);
-                updateTTSStatus('测试语音已播放');
-            } catch (e) {
-                updateTTSStatus(`测试失败: ${e.message || e}`, true);
-            }
-        });
-    }
-    // 速度滑块数值显示
-    if (ttsSpeedRange && ttsSpeedValue) {
-        const updateSpeedLabel = () => {
-            const v = parseFloat(ttsSpeedRange.value || '1') || 1;
-            ttsSpeedValue.textContent = `${v.toFixed(2)}x`;
-        };
-        ttsSpeedRange.addEventListener('input', updateSpeedLabel);
-        updateSpeedLabel();
-    }
-
-    // 模型变更时刷新音色（仅硅基流动）
-    if (ttsModelInput) {
-        ttsModelInput.addEventListener('change', async () => {
-            const settings = readTTSSettingsFromUI();
-            const modelId = ttsModelInput.value || 'FunAudioLLM/CosyVoice2-0.5B';
-            if (!ttsVoiceInput) return;
-            ttsVoiceInput.innerHTML = '';
-            if (/^FunAudioLLM\/CosyVoice2-0\.5B$/i.test(modelId)) {
-                const preset = ['alex','benjamin','charles','david','anna','bella','claire','diana'].map(v => ({value: `${modelId}:${v}`, label: v}));
-                const g1 = document.createElement('optgroup'); g1.label = '预设音色 (CosyVoice)';
-                preset.forEach(({value,label}) => g1.appendChild(new Option(label, value)));
-                ttsVoiceInput.appendChild(g1);
-            }
-            if (/^fnlp\/MOSS-TTSD-v0\.5$/i.test(modelId)) {
-                const mossPreset = ['alex','anna','bella','benjamin','charles','claire','david','diana'].map(v => ({value: `${modelId}:${v}`, label: v}));
-                const g2 = document.createElement('optgroup'); g2.label = '预设音色 (MOSS)';
-                mossPreset.forEach(({value,label}) => g2.appendChild(new Option(label, value)));
-                ttsVoiceInput.appendChild(g2);
-            }
-            try {
-                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/list', {
-                    method: 'GET', headers: { 'Authorization': `Bearer ${settings.key}`, 'Content-Type': 'application/json' }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const arr = data?.result || data?.results || [];
-                    const custom = (Array.isArray(arr) ? arr : []).map(v => ({
-                        value: v?.uri || v?.id || v?.voice_id,
-                        label: (v?.name || v?.customName || v?.custom_name || '自定义音色') + ' (自定义)'
-                    })).filter(v => v.value);
-                    if (custom.length) {
-                        const g2 = document.createElement('optgroup'); g2.label = '自定义音色';
-                        custom.forEach(({value,label}) => g2.appendChild(new Option(label, value)));
-                        ttsVoiceInput.appendChild(g2);
-                    }
-                }
-            } catch {}
-            if (ttsVoiceInput.options.length) ttsVoiceInput.selectedIndex = 0;
-            saveTTSSettings(readTTSSettingsFromUI());
-        });
-    }
-
-    // 上传音色按钮（硅基流动）
-    if (ttsUploadBtn) {
-        ttsUploadBtn.addEventListener('click', async () => {
-            try {
-                if (!ttsKeyInput.value) throw new Error('请先填写硅基流动 API Key');
-                const name = (ttsUploadName.value || '').trim();
-                const text = (ttsUploadText.value || '').trim();
-                const file = ttsUploadFile.files && ttsUploadFile.files[0];
-                if (!name || !/^[a-zA-Z0-9_-]{1,64}$/.test(name)) throw new Error('音色名称仅允许字母数字-_，最长64');
-                if (!text) throw new Error('请填写参考文本');
-                if (!file) throw new Error('请选择参考音频文件');
-                const reader = new FileReader();
-                const p = new Promise((resolve, reject) => {
-                    reader.onload = async () => {
-                        try {
-                            const base64Audio = reader.result;
-                            const res = await fetch('https://api.siliconflow.cn/v1/uploads/audio/voice', {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${ttsKeyInput.value.trim()}`, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', customName: name, text, audio: base64Audio })
-                            });
-                            if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-                            resolve(await res.json());
-                        } catch (e) { reject(e); }
-                    };
-                    reader.onerror = () => reject(new Error('读取音频失败'));
-                });
-                reader.readAsDataURL(file);
-                const result = await p;
-                updateTTSStatus(`上传成功，URI: ${result?.uri || '未知'}`);
-                // 刷新音色
-                ttsModelInput.dispatchEvent(new Event('change'));
-            } catch (e) {
-                updateTTSStatus(`上传失败: ${e.message || e}`, true);
-            }
-        });
-    }
-    if (ttsUploadFileBtn && ttsUploadFile) {
-        ttsUploadFileBtn.addEventListener('click', () => ttsUploadFile.click());
-    }
-
-    // 删除音色（仅对自定义音色尝试调用删除接口，不保证平台支持）
-    if (ttsVoiceDeleteBtn && ttsVoiceInput) {
-        ttsVoiceDeleteBtn.addEventListener('click', async () => {
-            try {
-                const val = ttsVoiceInput.value || '';
-                if (!val) { updateTTSStatus('请先选择要删除的音色', true); return; }
-                // 仅允许删除自定义音色（通常不含冒号模型前缀或来源于自定义组）
-                const isCustom = Array.from(ttsVoiceInput.querySelectorAll('optgroup[label="自定义音色"] option')).some(o => o.value === val);
-                if (!isCustom) { updateTTSStatus('只能删除自定义音色', true); return; }
-                if (!ttsKeyInput.value) { updateTTSStatus('请先填写API Key', true); return; }
-                // 官方文档: POST /v1/audio/voice/deletions { uri }
-                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/deletions', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${ttsKeyInput.value.trim()}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uri: val })
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-                updateTTSStatus('音色删除成功');
-                // 刷新音色
-                ttsModelInput.dispatchEvent(new Event('change'));
-            } catch (e) {
-                updateTTSStatus(`删除失败: ${e.message || e}`, true);
-            }
-        });
-    }
-
-    if (ttsRefreshVoicesBtn) {
-        ttsRefreshVoicesBtn.addEventListener('click', async () => {
-            ttsModelInput.dispatchEvent(new Event('change'));
-            updateTTSStatus('音色已刷新');
-        });
-    }
-
-    if (ttsCheckBtn) {
-        ttsCheckBtn.addEventListener('click', async () => {
-            const settings = readTTSSettingsFromUI();
-            try {
-                updateTTSStatus('连接中...');
-                // 模型固定为 CosyVoice2-0.5B，音色= 预设8个 + 自定义
-                const models = ['FunAudioLLM/CosyVoice2-0.5B','fnlp/MOSS-TTSD-v0.5'];
-                ttsModelInput.innerHTML = '';
-                models.forEach(m => ttsModelInput.appendChild(new Option(m, m)));
-                ttsModelInput.value = models[0];
-
-                // 预设音色组（CosyVoice）
-                ttsVoiceInput.innerHTML = '';
-                const cosyModel = 'FunAudioLLM/CosyVoice2-0.5B';
-                const preset = ['alex','benjamin','charles','david','anna','bella','claire','diana'].map(v => ({value: `${cosyModel}:${v}`, label: v}));
-                const group1 = document.createElement('optgroup');
-                group1.label = '预设音色 (CosyVoice)';
-                preset.forEach(({value,label}) => group1.appendChild(new Option(label, value)));
-                ttsVoiceInput.appendChild(group1);
-
-                // MOSS 预设音色
-                const mossModel = 'fnlp/MOSS-TTSD-v0.5';
-                const mossPreset = ['alex','anna','bella','benjamin','charles','claire','david','diana'].map(v => ({value: `${mossModel}:${v}`, label: v}));
-                const group2 = document.createElement('optgroup');
-                group2.label = '预设音色 (MOSS)';
-                mossPreset.forEach(({value,label}) => group2.appendChild(new Option(label, value)));
-                ttsVoiceInput.appendChild(group2);
-
-                // 自定义音色组
-                const custom = await (async() => {
-                    try {
-                        const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/list', {
-                            method: 'GET',
-                            headers: { 'Authorization': `Bearer ${settings.key}`, 'Content-Type': 'application/json' }
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            const arr = data?.result || data?.results || [];
-                            return (Array.isArray(arr) ? arr : []).map(v => ({
-                                value: v?.uri || v?.id || v?.voice_id,
-                                label: (v?.name || v?.customName || v?.custom_name || '自定义音色') + ' (自定义)'
-                            })).filter(v => v.value);
-                        }
-                    } catch {}
-                    return [];
-                })();
-                if (custom.length) {
-                    const group2 = document.createElement('optgroup');
-                    group2.label = '自定义音色';
-                    custom.forEach(({value,label}) => group2.appendChild(new Option(label, value)));
-                    ttsVoiceInput.appendChild(group2);
-                }
-                if (ttsVoiceInput.options.length) ttsVoiceInput.selectedIndex = 0;
-                // 保存更新后的设置
-                saveTTSSettings(readTTSSettingsFromUI());
-                updateTTSStatus('连接成功，已自动填充模型与音色');
-            } catch (e) {
-                updateTTSStatus(`连接失败: ${e.message || e}`, true);
-            }
-        });
-    }
-
     // --- 5. 交互处理逻辑 (无变化) ---
     function showPanel() {
         if (inputPanel.classList.contains('active')) return;
@@ -2917,6 +1785,7 @@
             timerWorker = new Worker(
                 '/scripts/extensions/third-party/carrot/timer-worker.js',
             );
+            setTimerWorker(timerWorker);
             timerWorker.onmessage = function (e) {
                 const { type, ...data } = e.data;
                 switch (type) {
@@ -2981,13 +1850,13 @@
         initAvatarStyler();
         initUnsplashImageReplacement();
         // 载入并应用TTS设置
-        applyTTSSettingsToUI(getTTSSettings());
+        applyTTSSettingsToUI(getStoredTTSSettings());
         loadThemes();
         loadAvatarProfiles();
         loadFrameProfiles(); // 加载头像框配置
         renderCategories();
         loadButtonPosition();
-        const savedFilename = localStorage.getItem('cip_sync_filename_v1');
+        const savedFilename = getSavedSyncFilename();
         if (savedFilename) {
             syncPathInput.value = savedFilename;
         }
