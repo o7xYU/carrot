@@ -3,6 +3,8 @@ const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
 const defaultDocument = typeof document !== 'undefined' ? document : null;
+const TEXT_NODE_FILTER =
+    typeof NodeFilter !== 'undefined' ? NodeFilter.SHOW_TEXT : 4;
 
 const REGEX_RULES = [
     {
@@ -88,6 +90,127 @@ const REGEX_RULES = [
     },
 ];
 
+function clonePattern(pattern) {
+    if (!(pattern instanceof RegExp)) return null;
+    return new RegExp(pattern.source, pattern.flags);
+}
+
+function isInsideRegexNode(node) {
+    let current = node;
+    while (current) {
+        if (current.nodeType === 1 && current.dataset?.cipRegexNode === '1') {
+            return true;
+        }
+        current = current.parentNode;
+    }
+    return false;
+}
+
+function collectTextNodes(root, documentRef) {
+    const doc = documentRef || defaultDocument;
+    if (!root || !doc?.createTreeWalker) return [];
+
+    const nodes = [];
+    const walker = doc.createTreeWalker(root, TEXT_NODE_FILTER);
+    while (walker.nextNode()) {
+        const current = walker.currentNode;
+        if (!current || !current.nodeValue) continue;
+        if (isInsideRegexNode(current.parentNode)) continue;
+        nodes.push(current);
+    }
+    return nodes;
+}
+
+function markRegexNode(node, ruleId) {
+    if (!node) return;
+    if (node.nodeType === 11) {
+        const elements = node.children || [];
+        for (const child of elements) {
+            markRegexNode(child, ruleId);
+        }
+        return;
+    }
+
+    if (node.nodeType !== 1) return;
+    node.dataset.cipRegexNode = '1';
+    node.dataset.cipRegexRule = ruleId || '';
+}
+
+function replaceMatchesInTextNode({
+    textNode,
+    rule,
+    documentRef,
+    ensureOriginalStored,
+}) {
+    if (!textNode?.parentNode) return false;
+    const text = textNode.nodeValue;
+    if (!text) return false;
+
+    const doc = documentRef || defaultDocument;
+    if (!doc) return false;
+
+    const pattern = clonePattern(rule.pattern);
+    if (!pattern) return false;
+
+    let match;
+    let lastIndex = 0;
+    let replaced = false;
+    const fragment = doc.createDocumentFragment();
+
+    pattern.lastIndex = 0;
+
+    while ((match = pattern.exec(text)) !== null) {
+        const matchText = match[0];
+        if (!matchText) {
+            if (pattern.lastIndex === match.index) {
+                pattern.lastIndex++;
+            }
+            continue;
+        }
+
+        const startIndex = match.index;
+        if (startIndex > lastIndex) {
+            fragment.appendChild(
+                doc.createTextNode(text.slice(lastIndex, startIndex)),
+            );
+        }
+
+        const replacementNode = rule.createNode({
+            documentRef: doc,
+            groups: match.slice(1),
+        });
+
+        if (replacementNode) {
+            markRegexNode(replacementNode, rule.id);
+            fragment.appendChild(replacementNode);
+            replaced = true;
+        } else {
+            fragment.appendChild(doc.createTextNode(matchText));
+        }
+
+        lastIndex = startIndex + matchText.length;
+
+        if (pattern.lastIndex === match.index) {
+            pattern.lastIndex++;
+        }
+    }
+
+    if (!replaced) {
+        return false;
+    }
+
+    if (lastIndex < text.length) {
+        fragment.appendChild(doc.createTextNode(text.slice(lastIndex)));
+    }
+
+    if (typeof ensureOriginalStored === 'function') {
+        ensureOriginalStored();
+    }
+
+    textNode.parentNode.replaceChild(fragment, textNode);
+    return true;
+}
+
 function clearAppliedFlag(element) {
     if (!element?.dataset) return;
     delete element.dataset.cipRegexApplied;
@@ -136,7 +259,6 @@ export function applyRegexReplacements(element, options = {}) {
 
     const {
         enabled = true,
-        replacePlaceholderWithNode,
         documentRef = defaultDocument,
     } = options;
 
@@ -144,46 +266,32 @@ export function applyRegexReplacements(element, options = {}) {
         return restoreOriginal(element);
     }
 
-    if (typeof replacePlaceholderWithNode !== 'function' || !documentRef) {
+    if (!documentRef) {
         return false;
-    }
-
-    const rawText = element.textContent || element.innerText || '';
-    if (!rawText) {
-        return element?.dataset?.cipRegexApplied
-            ? originalContentMap.has(element)
-            : false;
     }
 
     let replacedAny = false;
     let storedOriginal = false;
 
+    const ensureOriginalStored = () => {
+        if (storedOriginal) return;
+        originalContentMap.set(element, element.innerHTML);
+        storedOriginal = true;
+    };
+
     for (const rule of REGEX_RULES) {
-        const pattern = new RegExp(rule.pattern.source, rule.pattern.flags);
-        let match;
-        while ((match = pattern.exec(rawText)) !== null) {
-            if (!storedOriginal) {
-                originalContentMap.set(element, element.innerHTML);
-                storedOriginal = true;
-            }
+        const textNodes = collectTextNodes(element, documentRef);
+        if (!textNodes.length) break;
 
-            const node = rule.createNode({
+        for (const textNode of textNodes) {
+            const replaced = replaceMatchesInTextNode({
+                textNode,
+                rule,
                 documentRef,
-                groups: match.slice(1),
+                ensureOriginalStored,
             });
-            if (!node) continue;
-
-            const replaced = replacePlaceholderWithNode(
-                element,
-                match[0],
-                node,
-            );
             if (replaced) {
                 replacedAny = true;
-            }
-
-            if (pattern.lastIndex === match.index) {
-                pattern.lastIndex++;
             }
         }
     }
