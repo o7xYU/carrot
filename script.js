@@ -2,14 +2,110 @@
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
+    const scriptBaseUrl = (() => {
+        if (typeof window !== 'undefined' && window.__carrotScriptBase) {
+            return window.__carrotScriptBase;
+        }
+        let detectedBase = '';
+        const currentScript = document.currentScript;
+        if (currentScript?.src) {
+            detectedBase = new URL('.', currentScript.src).href;
+        } else {
+            const scripts = Array.from(document.getElementsByTagName('script'));
+            const matchedScript = scripts.find((script) =>
+                script.src?.includes('/carrot/script.js'),
+            );
+            if (matchedScript?.src) {
+                detectedBase = new URL('.', matchedScript.src).href;
+            }
+        }
+        if (!detectedBase) {
+            try {
+                const guessed = new URL(
+                    '/scripts/extensions/third-party/carrot/',
+                    window.location.origin,
+                );
+                detectedBase = guessed.href;
+            } catch (error) {
+                detectedBase = '';
+            }
+        }
+        if (detectedBase && typeof window !== 'undefined') {
+            window.__carrotScriptBase = detectedBase;
+        }
+        return detectedBase;
+    })();
+
+    function buildModuleSpecifiers(path) {
+        const candidates = [];
+        const normalized = path.startsWith('./') ? path.slice(2) : path;
+
+        if (/^(?:https?:|data:|blob:|chrome-extension:)/i.test(path)) {
+            candidates.push(path);
+            return candidates;
+        }
+
+        if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+            try {
+                candidates.push(chrome.runtime.getURL(normalized));
+            } catch (error) {
+                console.warn('胡萝卜插件：解析扩展模块路径失败', error);
+            }
+        }
+
+        if (scriptBaseUrl) {
+            try {
+                candidates.push(new URL(normalized, scriptBaseUrl).href);
+            } catch (error) {
+                console.warn('胡萝卜插件：解析模块基础路径失败', error);
+            }
+        }
+
+        if (path.startsWith('./') || path.startsWith('../')) {
+            try {
+                candidates.push(new URL(path, window.location.href).href);
+            } catch (error) {
+                // Ignore relative resolution errors against the document.
+            }
+        } else if (path.startsWith('/')) {
+            try {
+                candidates.push(new URL(path, window.location.origin).href);
+            } catch (error) {
+                // Ignore absolute resolution errors.
+            }
+        } else {
+            candidates.push(path);
+        }
+
+        return [...new Set(candidates)];
+    }
+
+    async function loadModule(path) {
+        const candidates = buildModuleSpecifiers(path);
+        let lastError = null;
+        for (const specifier of candidates) {
+            try {
+                return await import(specifier);
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        if (lastError) {
+            console.warn(`胡萝卜插件：加载模块失败 (${path})`, lastError);
+        } else {
+            console.warn(`胡萝卜插件：未找到可用的模块路径 (${path})`);
+        }
+        return null;
+    }
+
     let applyRegexReplacements = () => false;
     let getRegexEnabled = () => true;
     let setRegexEnabled = () => {};
     let regexModuleReady = false;
     let regexEnabled = true;
 
-    try {
-        const regexModule = await import('./regex.js');
+    const regexModule = await loadModule('./regex.js');
+    if (regexModule) {
         applyRegexReplacements =
             typeof regexModule.applyRegexReplacements === 'function'
                 ? regexModule.applyRegexReplacements
@@ -33,30 +129,6 @@
                 regexEnabled = true;
                 console.warn('胡萝卜插件：读取正则开关状态失败', error);
             }
-        }
-    } catch (error) {
-        console.warn('胡萝卜插件：加载正则模块失败', error);
-    }
-    async function loadModule(path) {
-        try {
-            return await import(path);
-        } catch (initialError) {
-            if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
-                try {
-                    const resolved = chrome.runtime.getURL(
-                        path.startsWith('./') ? path.slice(2) : path,
-                    );
-                    return await import(resolved);
-                } catch (resolvedError) {
-                    console.warn(
-                        `胡萝卜插件：加载模块失败 (${path})`,
-                        resolvedError,
-                    );
-                    return null;
-                }
-            }
-            console.warn(`胡萝卜插件：加载模块失败 (${path})`, initialError);
-            return null;
         }
     }
 
