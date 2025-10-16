@@ -4,7 +4,6 @@ import {
     DEFAULT_TTS_VOICE,
     DEFAULT_TTS_SPEED,
 } from '../tts/constants.js';
-import { SILICON_FLOW_TTS_API_DOC } from '../tts/apiDocs.js';
 
 const voiceState = {
     elements: {},
@@ -43,25 +42,21 @@ function getTTSSettings() {
     if (!settings) {
         settings = {
             key: '',
-            endpoint: getDefaultEndpoint(),
             model: '',
             voice: '',
         };
     }
-    if (!settings.endpoint) settings.endpoint = getDefaultEndpoint();
+    settings.endpoint = getDefaultEndpoint();
     return settings;
 }
 
 function applyTTSSettingsToUI(settings) {
     const {
         ttsKeyInput,
-        ttsEndpointInput,
         ttsModelInput,
         ttsVoiceInput,
     } = getElements();
     if (ttsKeyInput) ttsKeyInput.value = settings.key || '';
-    if (ttsEndpointInput)
-        ttsEndpointInput.value = settings.endpoint || getDefaultEndpoint();
     if (ttsModelInput && settings.model) {
         if (
             !ttsModelInput.options.length ||
@@ -89,16 +84,14 @@ function applyTTSSettingsToUI(settings) {
 function readTTSSettingsFromUI() {
     const {
         ttsKeyInput,
-        ttsEndpointInput,
         ttsModelInput,
         ttsVoiceInput,
     } = getElements();
     return {
         key: (ttsKeyInput?.value || '').trim(),
-        endpoint:
-            (ttsEndpointInput?.value || '').trim() || getDefaultEndpoint(),
         model: (ttsModelInput?.value || '').trim(),
         voice: (ttsVoiceInput?.value || '').trim(),
+        endpoint: getDefaultEndpoint(),
     };
 }
 
@@ -121,7 +114,7 @@ function updateTTSStatus(text, isError = false) {
 }
 
 async function fetchSiliconFlowTTS(text, settings) {
-    const base = settings.endpoint || getDefaultEndpoint();
+    const base = getDefaultEndpoint();
     const endpoint = base.endsWith('/audio/speech')
         ? base
         : `${base.replace(/\/$/, '')}/audio/speech`;
@@ -588,13 +581,7 @@ export function initVoiceSettings(elements, dependencies = {}) {
     voiceState.elements = elements || {};
     voiceState.dependencies = { ...voiceState.dependencies, ...dependencies };
 
-    const { ttsEndpointInput, ttsEndpointLabel, ttsModelInput } = getElements();
-    if (ttsEndpointInput && !ttsEndpointInput.value) {
-        ttsEndpointInput.value = getDefaultEndpoint();
-    }
-    if (ttsEndpointLabel) {
-        ttsEndpointLabel.title = SILICON_FLOW_TTS_API_DOC;
-    }
+    const { ttsModelInput } = getElements();
 
     applyTTSSettingsToUI(getTTSSettings());
 
