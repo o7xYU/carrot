@@ -1148,6 +1148,76 @@
         // 自动朗读已移除
     }
 
+    function observeChatContainer(chatContainer) {
+        if (!chatContainer) return;
+
+        const processExisting = () => {
+            chatContainer.querySelectorAll('.mes_text').forEach((el) => {
+                processMessageElement(el);
+                try {
+                    el.classList.add('cip-bubble-tts');
+                } catch (error) {
+                    console.warn('胡萝卜插件：气泡标记失败', error);
+                }
+            });
+        };
+
+        processExisting();
+
+        const observer = new MutationObserver((mutations) => {
+            const pending = new Set();
+
+            const queueElement = (element) => {
+                if (!element) return;
+                if (!element.classList?.contains('mes_text')) {
+                    element = element.closest?.('.mes_text');
+                }
+                if (element) {
+                    try {
+                        element.classList.add('cip-bubble-tts');
+                    } catch (error) {
+                        console.warn('胡萝卜插件：气泡标记失败', error);
+                    }
+                    pending.add(element);
+                }
+            };
+
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'characterData') {
+                    const parent = mutation.target?.parentElement;
+                    queueElement(parent);
+                    return;
+                }
+
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType !== Node.ELEMENT_NODE) {
+                            queueElement(node.parentElement);
+                            return;
+                        }
+                        if (node.classList?.contains('mes_text')) {
+                            queueElement(node);
+                        } else {
+                            node
+                                .querySelectorAll?.('.mes_text')
+                                .forEach((el) => queueElement(el));
+                        }
+                    });
+
+                    queueElement(mutation.target);
+                }
+            });
+
+            pending.forEach((element) => processMessageElement(element));
+        });
+
+        observer.observe(chatContainer, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
+    }
+
     // --- 新增: 语音合成与自动读取逻辑 ---
     // 语音逻辑已迁移至 setting/voice 模块
 
