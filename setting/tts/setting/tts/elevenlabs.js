@@ -1,114 +1,118 @@
-import {
-    DEFAULT_ELEVENLABS_BASE_URL,
-    DEFAULT_ELEVENLABS_MODEL_ID,
-} from './constants.js';
+// ===== ElevenLabs TTS Provider for 胡萝卜插件 =====
 
-function clamp(value, min, max) {
-    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-    return Math.min(max, Math.max(min, value));
-}
-
-function sanitizeNumber(value, min, max, precision = null) {
-    if (typeof value === 'string' && value.trim() !== '') {
-        const parsed = Number(value);
-        if (!Number.isNaN(parsed)) value = parsed;
-    }
-    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-    let next = clamp(value, min, max);
-    if (precision != null) {
-        const factor = 10 ** precision;
-        next = Math.round(next * factor) / factor;
-    }
-    return next;
-}
-
-export async function requestElevenLabsTTS(fetchImpl, text, options = {}) {
-    if (!fetchImpl) throw new Error('浏览器不支持 fetch');
-    const payloadText = (text || '').trim();
-    if (!payloadText) throw new Error('语音内容不能为空');
-
-    const apiKey = (options.apiKey || '').trim();
-    if (!apiKey) throw new Error('未提供 ElevenLabs API Key');
-    const voiceId = (options.voiceId || '').trim();
-    if (!voiceId) throw new Error('未提供 ElevenLabs Voice ID');
-
-    const baseUrl = (options.baseUrl || DEFAULT_ELEVENLABS_BASE_URL).replace(/\/$/, '');
-    const endpoint = `${baseUrl}/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
-
-    const body = {
-        text: payloadText,
-    };
-
-    const modelId = (options.modelId || '').trim();
-    if (modelId) {
-        body.model_id = modelId;
-    } else {
-        body.model_id = DEFAULT_ELEVENLABS_MODEL_ID;
+// tts/providers/elevenlabs.js
+export default class ElevenLabsProvider {
+    constructor() {
+        this.name = 'elevenlabs';
+        this.displayName = 'ElevenLabs';
+        this.apiEndpoint = 'https://api.elevenlabs.io/v1'; // 固定端点
+        
+        // 默认设置
+        this.defaultSettings = {
+            stability: 0.75,
+            similarity_boost: 0.75,
+            style_exaggeration: 0.0,
+            speaker_boost: true,
+            speed: 1.0,
+        };
     }
 
-    const latency = sanitizeNumber(options.optimizeStreamingLatency, 0, 4);
-    if (typeof latency === 'number') {
-        body.optimize_streaming_latency = Math.round(latency);
+    // 统一接口：合成语音
+    async synthesize(text, settings) {
+        const apiKey = settings.key;
+        const voiceId = settings.voice || 'EXAVITQu4vr4xnSDxMaL';
+        const modelId = settings.model || 'eleven_multilingual_v2';
+        
+        // 确保 stability 值是允许的值之一
+        let stability = parseFloat(settings.stability) || 0.5;
+        
+        // 将 stability 映射到允许的值
+        if (stability <= 0.25) {
+            stability = 0.0;  // Creative
+        } else if (stability <= 0.75) {
+            stability = 0.5;  // Natural
+        } else {
+            stability = 1.0;  // Robust
+        }
+        
+        // 确保 similarity_boost 在有效范围内
+        const similarity_boost = Math.max(0, Math.min(1, parseFloat(settings.similarity) || 0.75));
+        
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'audio/mpeg',
+                'Content-Type': 'application/json',
+                'xi-api-key': apiKey
+            },
+            body: JSON.stringify({
+                text: text,
+                model_id: modelId,
+                voice_settings: {
+                    stability: stability,
+                    similarity_boost: similarity_boost
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`ElevenLabs API错误 (${response.status}): ${error}`);
+        }
+
+        return await response.blob();
     }
 
-    const stability = sanitizeNumber(options.stability, 0, 1, 2);
-    const similarity = sanitizeNumber(options.similarityBoost, 0, 1, 2);
-    const style = sanitizeNumber(options.style, 0, 100, 0);
-    const speakerBoost =
-        typeof options.useSpeakerBoost === 'boolean'
-            ? options.useSpeakerBoost
-            : undefined;
-
-    const voiceSettings = {};
-    if (typeof stability === 'number') voiceSettings.stability = stability;
-    if (typeof similarity === 'number')
-        voiceSettings.similarity_boost = similarity;
-    if (typeof style === 'number') voiceSettings.style = style;
-    if (typeof speakerBoost === 'boolean')
-        voiceSettings.use_speaker_boost = speakerBoost;
-    if (Object.keys(voiceSettings).length) {
-        body.voice_settings = voiceSettings;
+    // 统一接口：获取模型列表（从ST复制）
+    async getModels(settings) {
+        return [
+            { id: 'eleven_v3', name: 'Eleven v3' },
+            { id: 'eleven_ttv_v3', name: 'Eleven ttv v3' },
+            { id: 'eleven_multilingual_v2', name: 'Multilingual v2' },
+            { id: 'eleven_flash_v2_5', name: 'Eleven Flash v2.5' },
+            { id: 'eleven_turbo_v2_5', name: 'Turbo v2.5 (推荐)' },
+            { id: 'eleven_multilingual_ttv_v2', name: 'Multilingual ttv v2' },
+            { id: 'eleven_monolingual_v1', name: 'English v1 (Old)' },
+            { id: 'eleven_multilingual_v1', name: 'Multilingual v1 (Old)' },
+            { id: 'eleven_turbo_v2', name: 'Turbo v2 (Old)' }
+        ];
     }
 
-    const res = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'audio/mpeg',
-            'xi-api-key': apiKey,
-        },
-        body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-        throw new Error(`ElevenLabs 请求失败 (HTTP ${res.status}): ${await res.text()}`);
+    // 统一接口：获取音色列表
+    async getVoices(settings) {
+        if (!settings.key) {
+            throw new Error('请先填写ElevenLabs API Key');
+        }
+        
+        const response = await fetch(`${this.apiEndpoint}/voices`, {
+            headers: {
+                'xi-api-key': settings.key,
+            },
+        });
+        
+        if (!response.ok) {
+            throw new Error(`获取音色列表失败: ${response.status} - ${await response.text()}`);
+        }
+        
+        const data = await response.json();
+        
+        // 转换为统一格式
+        return data.voices.map(voice => ({
+            id: voice.voice_id,
+            name: voice.name,
+            group: voice.category === 'premade' ? '官方预设' : 
+                   voice.category === 'cloned' ? '克隆音色' : 
+                   voice.category === 'professional' ? '专业音色' : '其他'
+        }));
     }
 
-    return await res.blob();
-}
-
-export async function verifyElevenLabsConfig(fetchImpl, options = {}) {
-    if (!fetchImpl) throw new Error('浏览器不支持 fetch');
-    const apiKey = (options.apiKey || '').trim();
-    if (!apiKey) throw new Error('未提供 ElevenLabs API Key');
-    const voiceId = (options.voiceId || '').trim();
-    if (!voiceId) throw new Error('未提供 ElevenLabs Voice ID');
-    const baseUrl = (options.baseUrl || DEFAULT_ELEVENLABS_BASE_URL).replace(/\/$/, '');
-    const endpoint = `${baseUrl}/v1/voices/${encodeURIComponent(voiceId)}`;
-
-    const res = await fetchImpl(endpoint, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            'xi-api-key': apiKey,
-        },
-    });
-
-    if (!res.ok) {
-        throw new Error(
-            `ElevenLabs 校验失败 (HTTP ${res.status}): ${await res.text()}`,
-        );
+    // 不支持通过API上传音色
+    async uploadVoice(data, settings) {
+        throw new Error('ElevenLabs的音色克隆需要在官网进行');
     }
 
-    return await res.json();
+    // 不支持通过API删除音色
+    async deleteVoice(voiceId, settings) {
+        throw new Error('请在ElevenLabs官网管理音色');
+    }
 }

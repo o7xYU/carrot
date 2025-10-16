@@ -338,9 +338,6 @@
                             <label for="cip-tts-key">API</label>
                             <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
 
-                            <label for="cip-tts-endpoint">API端点</label>
-                            <input type="text" id="cip-tts-endpoint" placeholder="自动设置，无需填写">
-
                             <label for="cip-tts-model">模型</label>
                             <select id="cip-tts-model"></select>
 
@@ -506,8 +503,6 @@
     const ttsKeyInput = get('cip-tts-key');
     const ttsModelInput = get('cip-tts-model');
     const ttsVoiceInput = get('cip-tts-voice');
-    const ttsEndpointInput = get('cip-tts-endpoint');
-    const ttsEndpointLabel = document.querySelector('label[for="cip-tts-endpoint"]');
     const ttsSpeedRange = get('cip-tts-speed-range');
     const ttsSpeedValue = get('cip-tts-speed-value');
     const ttsUploadName = get('cip-tts-upload-name');
@@ -708,8 +703,6 @@
         voiceApi = initVoiceSettings(
             {
                 ttsKeyInput,
-                ttsEndpointInput,
-                ttsEndpointLabel,
                 ttsModelInput,
                 ttsVoiceInput,
                 ttsSpeedRange,
