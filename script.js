@@ -328,26 +328,63 @@
                 <section id="cip-settings-voice" class="cip-settings-section">
                     <div class="cip-tts-subtabs">
                         <button class="cip-tts-subtab active" data-subtab="settings">语音设置</button>
-                        <span class="cip-tts-divider">｜</span>
-                        <button class="cip-tts-subtab" data-subtab="upload">上传音色</button>
+                        <span class="cip-tts-divider" data-tts-vendor="silicon_flow">｜</span>
+                        <button class="cip-tts-subtab" data-subtab="upload" data-tts-vendor="silicon_flow">上传音色</button>
                     </div>
                     <hr class="cip-tts-separator">
 
                     <div id="cip-tts-pane-settings" class="cip-tts-pane active">
                         <div class="cip-tts-grid">
-                            <label for="cip-tts-key">API</label>
-                            <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
+                            <label for="cip-tts-vendor">厂商</label>
+                            <select id="cip-tts-vendor">
+                                <option value="silicon_flow">硅基流动</option>
+                                <option value="elevenlabs">ElevenLabs</option>
+                            </select>
 
-                            <label for="cip-tts-endpoint">API端点</label>
-                            <input type="text" id="cip-tts-endpoint" placeholder="自动设置，无需填写">
+                            <div class="cip-tts-vendor-group" data-tts-vendor="silicon_flow">
+                                <label for="cip-tts-key">API</label>
+                                <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
 
-                            <label for="cip-tts-model">模型</label>
-                            <select id="cip-tts-model"></select>
+                                <label for="cip-tts-endpoint">API端点</label>
+                                <input type="text" id="cip-tts-endpoint" placeholder="自动设置，无需填写">
 
-                            <label for="cip-tts-voice">音色</label>
-                            <div class="cip-tts-voice-row">
-                                <select id="cip-tts-voice"></select>
-                                <button id="cip-tts-voice-delete" title="删除音色">×</button>
+                                <label for="cip-tts-model">模型</label>
+                                <select id="cip-tts-model"></select>
+
+                                <label for="cip-tts-voice">音色</label>
+                                <div class="cip-tts-voice-row">
+                                    <select id="cip-tts-voice"></select>
+                                    <button id="cip-tts-voice-delete" title="删除音色">×</button>
+                                </div>
+                            </div>
+
+                            <div class="cip-tts-vendor-group" data-tts-vendor="elevenlabs" hidden>
+                                <label for="cip-tts-eleven-api-key">API Key</label>
+                                <input type="password" id="cip-tts-eleven-api-key" placeholder="填写 ElevenLabs API Key">
+
+                                <label for="cip-tts-eleven-voice-id">Voice ID</label>
+                                <input type="text" id="cip-tts-eleven-voice-id" placeholder="目标 Voice ID">
+
+                                <label for="cip-tts-eleven-model-id">Model ID</label>
+                                <input type="text" id="cip-tts-eleven-model-id" placeholder="默认 eleven_multilingual_v2">
+
+                                <label for="cip-tts-eleven-latency">流式延迟等级</label>
+                                <input type="number" id="cip-tts-eleven-latency" min="0" max="4" step="1" placeholder="0-4，可选">
+
+                                <label for="cip-tts-eleven-stability">Stability</label>
+                                <input type="number" id="cip-tts-eleven-stability" min="0" max="1" step="0.05" placeholder="0-1，可选">
+
+                                <label for="cip-tts-eleven-similarity">Similarity Boost</label>
+                                <input type="number" id="cip-tts-eleven-similarity" min="0" max="1" step="0.05" placeholder="0-1，可选">
+
+                                <label for="cip-tts-eleven-style">Style</label>
+                                <input type="number" id="cip-tts-eleven-style" min="0" max="100" step="1" placeholder="0-100，可选">
+
+                                <label for="cip-tts-eleven-speaker-boost">Speaker Boost</label>
+                                <div class="cip-tts-checkbox-row">
+                                    <input type="checkbox" id="cip-tts-eleven-speaker-boost">
+                                    <span>启用 Speaker Boost</span>
+                                </div>
                             </div>
                         </div>
                         <div class="cip-tts-test">
@@ -366,7 +403,7 @@
                         </div>
                     </div>
 
-                    <div id="cip-tts-pane-upload" class="cip-tts-pane">
+                    <div id="cip-tts-pane-upload" class="cip-tts-pane" data-tts-vendor="silicon_flow">
                         <div class="cip-tts-upload-grid">
                             <label for="cip-tts-upload-name">音色名称</label>
                             <input type="text" id="cip-tts-upload-name" placeholder="仅字母/数字">
@@ -503,11 +540,23 @@
     const restoreDefaultsBtn = get('cip-restore-defaults-btn');
     // --- 新增: 语音设置元素引用 ---
     // provider/MiniMax 已移除
+    const ttsVendorSelect = get('cip-tts-vendor');
+    const ttsVendorGroups = Array.from(
+        document.querySelectorAll('.cip-tts-vendor-group'),
+    );
     const ttsKeyInput = get('cip-tts-key');
     const ttsModelInput = get('cip-tts-model');
     const ttsVoiceInput = get('cip-tts-voice');
     const ttsEndpointInput = get('cip-tts-endpoint');
     const ttsEndpointLabel = document.querySelector('label[for="cip-tts-endpoint"]');
+    const ttsElevenApiKeyInput = get('cip-tts-eleven-api-key');
+    const ttsElevenVoiceIdInput = get('cip-tts-eleven-voice-id');
+    const ttsElevenModelIdInput = get('cip-tts-eleven-model-id');
+    const ttsElevenLatencyInput = get('cip-tts-eleven-latency');
+    const ttsElevenStabilityInput = get('cip-tts-eleven-stability');
+    const ttsElevenSimilarityInput = get('cip-tts-eleven-similarity');
+    const ttsElevenStyleInput = get('cip-tts-eleven-style');
+    const ttsElevenSpeakerBoostInput = get('cip-tts-eleven-speaker-boost');
     const ttsSpeedRange = get('cip-tts-speed-range');
     const ttsSpeedValue = get('cip-tts-speed-value');
     const ttsUploadName = get('cip-tts-upload-name');
@@ -707,11 +756,21 @@
 
         voiceApi = initVoiceSettings(
             {
+                ttsVendorSelect,
+                ttsVendorGroups,
                 ttsKeyInput,
                 ttsEndpointInput,
                 ttsEndpointLabel,
                 ttsModelInput,
                 ttsVoiceInput,
+                ttsElevenApiKeyInput,
+                ttsElevenVoiceIdInput,
+                ttsElevenModelIdInput,
+                ttsElevenLatencyInput,
+                ttsElevenStabilityInput,
+                ttsElevenSimilarityInput,
+                ttsElevenStyleInput,
+                ttsElevenSpeakerBoostInput,
                 ttsSpeedRange,
                 ttsSpeedValue,
                 ttsUploadName,
