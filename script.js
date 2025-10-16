@@ -1,30 +1,73 @@
 // script.js (v2.8 - 新增撤回、时间轴、系统信息正则)
-import { initThemeSettings, loadThemes } from './setting/theme.js';
-import {
-    initAvatarSettings,
-    initAvatarStyler,
-    loadAvatarProfiles,
-    loadFrameProfiles,
-} from './setting/avatar.js';
-import {
-    initAlarmSettings,
-    startAlarm,
-    stopAlarm,
-    checkAlarmOnLoad,
-    updateAlarmStatus,
-    setTimerWorker,
-} from './setting/alarm.js';
-import { initSyncSettings, getSavedSyncFilename } from './setting/sync.js';
-import {
-    initTTSSettings,
-    getStoredTTSSettings,
-    applyTTSSettingsToUI,
-    updateTTSStatus,
-    toggleBubblePlayback,
-} from './setting/tts/index.js';
 
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
+
+    const noop = () => {};
+    const noopObj = () => ({});
+    const noopStr = () => '';
+    const resolveModulePath = (path) => {
+        const cleanedPath = path.replace(/^\.\//, '');
+        if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+            return chrome.runtime.getURL(cleanedPath);
+        }
+        if (typeof browser !== 'undefined' && browser.runtime?.getURL) {
+            return browser.runtime.getURL(cleanedPath);
+        }
+        return path;
+    };
+    const loadModule = async (path, label) => {
+        try {
+            return await import(path);
+        } catch (error) {
+            console.error(`胡萝卜插件：加载${label}模块失败`, error);
+            return {};
+        }
+    };
+
+    const [
+        themeModule,
+        avatarModule,
+        alarmModule,
+        syncModule,
+        ttsModule,
+    ] = await Promise.all([
+        loadModule(resolveModulePath('./setting/theme.js'), '主题设置'),
+        loadModule(resolveModulePath('./setting/avatar.js'), '头像设置'),
+        loadModule(resolveModulePath('./setting/alarm.js'), '闹钟设置'),
+        loadModule(resolveModulePath('./setting/sync.js'), '同步设置'),
+        loadModule(resolveModulePath('./setting/tts/index.js'), '语音设置'),
+    ]);
+
+    const {
+        initThemeSettings = noop,
+        loadThemes = noop,
+    } = themeModule;
+    const {
+        initAvatarSettings = noop,
+        initAvatarStyler = noop,
+        loadAvatarProfiles = noop,
+        loadFrameProfiles = noop,
+    } = avatarModule;
+    const {
+        initAlarmSettings = noop,
+        startAlarm = noop,
+        stopAlarm = noop,
+        checkAlarmOnLoad = noop,
+        updateAlarmStatus = noop,
+        setTimerWorker = noop,
+    } = alarmModule;
+    const {
+        initSyncSettings = noop,
+        getSavedSyncFilename = noopStr,
+    } = syncModule;
+    const {
+        initTTSSettings = noop,
+        getStoredTTSSettings = noopObj,
+        applyTTSSettingsToUI = noop,
+        updateTTSStatus = noop,
+        toggleBubblePlayback = noop,
+    } = ttsModule;
 
     let applyRegexReplacements = () => false;
     let getRegexEnabled = () => true;
@@ -33,7 +76,7 @@ import {
     let regexEnabled = true;
 
     try {
-        const regexModule = await import('./regex.js');
+        const regexModule = await import(resolveModulePath('./regex.js'));
         applyRegexReplacements =
             typeof regexModule.applyRegexReplacements === 'function'
                 ? regexModule.applyRegexReplacements
