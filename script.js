@@ -1,4 +1,4 @@
-// script.js (v2.6 - 新增unsplash)
+// script.js (v2.7 - 新增tts)
 (function () {
     if (document.getElementById('cip-carrot-button')) return;
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
@@ -73,10 +73,7 @@
             </div>
             <div id="cip-panel-footer">
                 <div id="cip-footer-controls">
-                    <div id="cip-sync-button" title="同步设置">☁️</div>
-                    <div id="cip-theme-button" title="主题设置">👕</div>
-                    <div id="cip-alarm-button" title="定时指令">⏰</div>
-                    <div id="cip-avatar-button" title="头像配置">🐰</div>
+                    <div id="cip-settings-button" title="功能设置">⚙️</div>
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
@@ -104,151 +101,261 @@
             'cip-modal-backdrop hidden',
             `<div class="cip-modal-content cip-frosted-glass"><h3 id="cip-add-sticker-title"></h3><p>每行一个，格式为：<br><code>表情包描述:图片链接</code></p><textarea id="cip-new-stickers-input" placeholder="可爱猫猫:https://example.com/cat.png\n狗狗点头:https://example.com/dog.gif"></textarea><div class="cip-modal-actions"><button id="cip-cancel-stickers-btn">取消</button><button id="cip-save-stickers-btn">保存</button></div></div>`,
         );
-        const alarmPanel = create(
+        const settingsPanel = create(
             'div',
-            'cip-alarm-panel',
+            'cip-settings-panel',
             'cip-frosted-glass hidden',
             `
-            <h3>定时指令设置</h3>
-            <div class="cip-alarm-grid">
-                <label for="cip-alarm-hours">时:</label>
-                <input type="number" id="cip-alarm-hours" min="0" placeholder="h">
-                <label for="cip-alarm-minutes">分:</label>
-                <input type="number" id="cip-alarm-minutes" min="0" max="59" placeholder="m">
-                <label for="cip-alarm-seconds">秒:</label>
-                <input type="number" id="cip-alarm-seconds" min="0" max="59" placeholder="s">
+            <div class="cip-settings-header">
+                <nav id="cip-settings-tabs">
+                    <button class="cip-settings-tab active" data-target="theme">主题设置</button>
+                    <button class="cip-settings-tab" data-target="avatar">头像配置</button>
+                    <button class="cip-settings-tab" data-target="alarm">定时指令</button>
+                    <button class="cip-settings-tab" data-target="voice">语音设置</button>
+                    <button class="cip-settings-tab" data-target="sync">同步设置</button>
+                </nav>
             </div>
-            <div class="cip-alarm-grid" style="margin-top: 10px;">
-                <label for="cip-alarm-repeat">次数:</label>
-                <input type="number" id="cip-alarm-repeat" min="1" placeholder="默认1次">
-                <span class="cip-alarm-note" colspan="2">(留空或1为单次)</span>
+            <div id="cip-settings-sections">
+                <section id="cip-settings-theme" class="cip-settings-section active">
+                    <h3>主题与颜色设置</h3>
+                    <div class="cip-theme-options-grid">
+                        <label for="cip-color-accent">主要/高亮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-accent" data-var="--cip-accent-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-accent">
+                        </div>
+
+                        <label for="cip-color-accent-hover">高亮悬浮颜色:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-accent-hover" data-var="--cip-accent-hover-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-accent-hover">
+                        </div>
+
+                        <label for="cip-color-insert-text">插入按钮文字:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-insert-text" data-var="--cip-insert-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-insert-text">
+                        </div>
+
+                        <label for="cip-color-panel-bg">面板背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-panel-bg" data-var="--cip-panel-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-panel-bg">
+                        </div>
+
+                        <label for="cip-color-tabs-bg">功能栏背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-tabs-bg" data-var="--cip-tabs-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-tabs-bg">
+                        </div>
+
+                        <label for="cip-color-text">功能栏字体:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-text" data-var="--cip-text-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-text">
+                        </div>
+
+                        <label for="cip-color-input-bg">输入框背景:</label>
+                        <div class="cip-color-input-wrapper">
+                            <input type="text" id="cip-color-input-bg" data-var="--cip-input-bg-color">
+                            <input type="color" class="cip-color-picker" data-target="cip-color-input-bg">
+                        </div>
+                    </div>
+                    <div class="cip-theme-manager">
+                        <div class="cip-theme-actions">
+                            <select id="cip-theme-select"></select>
+                            <button id="cip-delete-theme-btn" class="cip-delete-btn">删除</button>
+                        </div>
+                        <div class="cip-theme-save-new">
+                            <input type="text" id="cip-new-theme-name" placeholder="输入新配色方案名称...">
+                            <button id="cip-save-theme-btn" class="cip-save-btn">保存</button>
+                        </div>
+                    </div>
+                </section>
+                <section id="cip-settings-avatar" class="cip-settings-section">
+                    <h3>头像配置</h3>
+
+                    <!-- 头像设置区域 -->
+                    <div class="cip-avatar-section">
+                        <h4 class="cip-section-title">🖼️ 头像设置</h4>
+                        <div class="cip-avatar-grid">
+                            <label for="cip-char-avatar-url">角色 (Char):</label>
+                            <input type="text" id="cip-char-avatar-url" placeholder="粘贴角色头像链接...">
+
+                            <label for="cip-user-avatar-url">你 (User):</label>
+                            <input type="text" id="cip-user-avatar-url" placeholder="粘贴你的头像链接...">
+
+                            <label for="cip-unsplash-access-key">Unsplash Key:</label>
+                            <input type="text" id="cip-unsplash-access-key" placeholder="输入 Unsplash Access Key...">
+                        </div>
+
+                        <div class="cip-avatar-manager">
+                            <div class="cip-avatar-actions">
+                                <select id="cip-avatar-profile-select"></select>
+                                <button id="cip-apply-avatar-btn" class="cip-apply-btn">应用</button>
+                                <button id="cip-delete-avatar-btn" class="cip-delete-btn">删除</button>
+                            </div>
+                            <div class="cip-avatar-save-new">
+                                <input type="text" id="cip-new-avatar-profile-name" placeholder="输入新配置名称...">
+                                <button id="cip-save-avatar-btn" class="cip-apply-btn">保存</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 头像框设置区域 -->
+                    <div class="cip-frame-section">
+                        <h4 class="cip-section-title">🎨 头像框设置</h4>
+                        <div class="cip-avatar-grid">
+                            <label for="cip-char-frame-url">角色头像框:</label>
+                            <div class="cip-frame-input-wrapper">
+                                <input type="text" id="cip-char-frame-url" placeholder="粘贴角色头像框链接(透明PNG)...">
+                                <button id="cip-adjust-char-frame-btn" class="cip-adjust-frame-btn" title="调整">⚙️</button>
+                            </div>
+
+                            <label for="cip-user-frame-url">你的头像框:</label>
+                            <div class="cip-frame-input-wrapper">
+                                <input type="text" id="cip-user-frame-url" placeholder="粘贴你的头像框链接(透明PNG)...">
+                                <button id="cip-adjust-user-frame-btn" class="cip-adjust-frame-btn" title="调整">⚙️</button>
+                            </div>
+                        </div>
+
+                        <div id="cip-frame-adjust-panel" class="cip-frame-adjust-panel hidden">
+                            <h4 id="cip-frame-adjust-title">调整头像框</h4>
+                            <div class="cip-adjust-control">
+                                <label>尺寸: <span id="cip-frame-size-value">120</span>%</label>
+                                <input type="range" id="cip-frame-size-slider" min="100" max="200" value="120" step="5">
+                            </div>
+                            <div class="cip-adjust-control">
+                                <label>水平偏移: <span id="cip-frame-offset-x-value">0</span>%</label>
+                                <input type="range" id="cip-frame-offset-x-slider" min="-20" max="20" value="0" step="1">
+                            </div>
+                            <div class="cip-adjust-control">
+                                <label>垂直偏移: <span id="cip-frame-offset-y-value">0</span>%</label>
+                                <input type="range" id="cip-frame-offset-y-slider" min="-20" max="20" value="0" step="1">
+                            </div>
+                            <div class="cip-adjust-actions">
+                                <button id="cip-frame-reset-btn">重置</button>
+                                <button id="cip-frame-close-btn">关闭</button>
+                            </div>
+                        </div>
+
+                        <div class="cip-avatar-manager">
+                            <div class="cip-avatar-actions">
+                                <select id="cip-frame-profile-select"></select>
+                                <button id="cip-apply-frame-btn" class="cip-apply-btn">应用</button>
+                                <button id="cip-delete-frame-btn" class="cip-delete-btn">删除</button>
+                            </div>
+                            <div class="cip-avatar-save-new">
+                                <input type="text" id="cip-new-frame-profile-name" placeholder="输入新头像框配置名称...">
+                                <button id="cip-save-frame-btn" class="cip-apply-btn">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section id="cip-settings-alarm" class="cip-settings-section">
+                    <h3>定时指令设置</h3>
+                    <div class="cip-alarm-grid">
+                        <label for="cip-alarm-hours">时:</label>
+                        <input type="number" id="cip-alarm-hours" min="0" placeholder="h">
+                        <label for="cip-alarm-minutes">分:</label>
+                        <input type="number" id="cip-alarm-minutes" min="0" max="59" placeholder="m">
+                        <label for="cip-alarm-seconds">秒:</label>
+                        <input type="number" id="cip-alarm-seconds" min="0" max="59" placeholder="s">
+                    </div>
+                    <div class="cip-alarm-grid" style="margin-top: 10px;">
+                        <label for="cip-alarm-repeat">次数:</label>
+                        <input type="number" id="cip-alarm-repeat" min="1" placeholder="默认1次">
+                        <span class="cip-alarm-note" colspan="2">(留空或1为单次)</span>
+                    </div>
+                    <textarea id="cip-alarm-command" placeholder="在此输入定时执行的指令..."></textarea>
+                    <div id="cip-alarm-status">状态: 未设置</div>
+                    <div class="cip-alarm-actions">
+                        <button id="cip-restore-defaults-btn">恢复默认</button>
+                        <button id="cip-stop-alarm-btn">停止</button>
+                        <button id="cip-start-alarm-btn">启动</button>
+                    </div>
+                </section>
+                <section id="cip-settings-voice" class="cip-settings-section">
+                    <div class="cip-tts-subtabs">
+                        <button class="cip-tts-subtab active" data-subtab="settings">语音设置</button>
+                        <span class="cip-tts-divider">｜</span>
+                        <button class="cip-tts-subtab" data-subtab="upload">上传音色</button>
+                    </div>
+                    <hr class="cip-tts-separator">
+
+                    <div id="cip-tts-pane-settings" class="cip-tts-pane active">
+                        <div class="cip-tts-grid">
+                            <label for="cip-tts-key">API</label>
+                            <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
+
+                            <label for="cip-tts-endpoint">API端点</label>
+                            <input type="text" id="cip-tts-endpoint" placeholder="自动设置，无需填写">
+
+                            <label for="cip-tts-model">模型</label>
+                            <select id="cip-tts-model"></select>
+
+                            <label for="cip-tts-voice">音色</label>
+                            <div class="cip-tts-voice-row">
+                                <select id="cip-tts-voice"></select>
+                                <button id="cip-tts-voice-delete" title="删除音色">×</button>
+                            </div>
+                        </div>
+                        <div class="cip-tts-test">
+                            <textarea id="cip-tts-test-text" placeholder="输入要测试朗读的文字..."></textarea>
+                            <div class="cip-tts-speed">
+                                <label for="cip-tts-speed-range">朗读速度</label>
+                                <input type="range" id="cip-tts-speed-range" min="0.25" max="4" step="0.05" value="1">
+                                <span id="cip-tts-speed-value">1.00x</span>
+                            </div>
+                            <div class="cip-tts-actions">
+                                <button id="cip-tts-save-btn">保存设置</button>
+                                <button id="cip-tts-test-btn">测试语音</button>
+                                <button id="cip-tts-check-btn">连接</button>
+                            </div>
+                            <div id="cip-tts-status" class="cip-tts-status">未测试</div>
+                        </div>
+                    </div>
+
+                    <div id="cip-tts-pane-upload" class="cip-tts-pane">
+                        <div class="cip-tts-upload-grid">
+                            <label for="cip-tts-upload-name">音色名称</label>
+                            <input type="text" id="cip-tts-upload-name" placeholder="仅字母/数字">
+                            <label for="cip-tts-upload-text">参考文本</label>
+                            <input type="text" id="cip-tts-upload-text" placeholder="与参考音频完全一致的文本">
+                            <label>参考音频</label>
+                            <div class="cip-tts-upload-file-row">
+                                <input type="file" id="cip-tts-upload-file" accept="audio/*">
+                                <button id="cip-tts-upload-file-btn" type="button">选择文件</button>
+                                <span class="cip-tts-upload-hint">建议格式:mp3/wav/pcm/opus，时长≤30s</span>
+                            </div>
+                        </div>
+                        <div class="cip-tts-actions">
+                            <button id="cip-tts-upload-btn">上传音色</button>
+                            <button id="cip-tts-refresh-voices-btn">刷新音色</button>
+                        </div>
+                    </div>
+                </section>
+                <section id="cip-settings-sync" class="cip-settings-section">
+                    <h3>同步设置</h3>
+                    <div class="cip-sync-actions">
+                        <button id="cip-export-btn-panel">导出设置</button>
+                        <label for="cip-import-settings-input" id="cip-import-label-panel" class="cip-button-label">导入设置</label>
+                    </div>
+                    <div class="cip-sync-path-container">
+                        <label for="cip-sync-path-input">保存到:</label>
+                        <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
+                    </div>
+                    <div class="cip-sync-path-actions">
+                         <button id="cip-save-path-btn">保存</button>
+                         <button id="cip-load-path-btn">加载</button>
+                    </div>
+                    <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
+                </section>
             </div>
-            <textarea id="cip-alarm-command" placeholder="在此输入定时执行的指令..."></textarea>
-            <div id="cip-alarm-status">状态: 未设置</div>
-            <div class="cip-alarm-actions">
-                <button id="cip-restore-defaults-btn">恢复默认</button>
-                <button id="cip-stop-alarm-btn">停止</button>
-                <button id="cip-start-alarm-btn">启动</button>
+            <div class="cip-settings-footer">
+                <button id="cip-close-settings-panel-btn">完成</button>
             </div>
-            <button id="cip-close-alarm-panel-btn">完成</button>
-        `,
-        );
-
-        const themePanel = create(
-            'div',
-            'cip-theme-settings-panel',
-            'cip-frosted-glass hidden',
-            `
-            <h3>主题与颜色设置</h3>
-            <div class="cip-theme-options-grid">
-                <label for="cip-color-accent">主要/高亮颜色:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-accent" data-var="--cip-accent-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-accent">
-                </div>
-
-                <label for="cip-color-accent-hover">高亮悬浮颜色:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-accent-hover" data-var="--cip-accent-hover-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-accent-hover">
-                </div>
-
-                <label for="cip-color-insert-text">插入按钮文字:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-insert-text" data-var="--cip-insert-text-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-insert-text">
-                </div>
-
-                <label for="cip-color-panel-bg">面板背景:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-panel-bg" data-var="--cip-panel-bg-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-panel-bg">
-                </div>
-
-                <label for="cip-color-tabs-bg">功能栏背景:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-tabs-bg" data-var="--cip-tabs-bg-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-tabs-bg">
-                </div>
-
-                <label for="cip-color-text">功能栏字体:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-text" data-var="--cip-text-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-text">
-                </div>
-
-                <label for="cip-color-input-bg">输入框背景:</label>
-                <div class="cip-color-input-wrapper">
-                    <input type="text" id="cip-color-input-bg" data-var="--cip-input-bg-color">
-                    <input type="color" class="cip-color-picker" data-target="cip-color-input-bg">
-                </div>
-            </div>
-            <div class="cip-theme-manager">
-                <div class="cip-theme-actions">
-                    <select id="cip-theme-select"></select>
-                    <button id="cip-delete-theme-btn" class="cip-delete-btn">删除</button>
-                </div>
-                <div class="cip-theme-save-new">
-                    <input type="text" id="cip-new-theme-name" placeholder="输入新配色方案名称...">
-                    <button id="cip-save-theme-btn" class="cip-save-btn">保存</button>
-                </div>
-            </div>
-            <button id="cip-close-theme-panel-btn">完成</button>
-        `,
-        );
-        const avatarPanel = create(
-           'div',
-            'cip-avatar-panel',
-           'cip-frosted-glass hidden',
-           `
-            <h3>头像配置</h3>
-            <div class="cip-avatar-grid">
-              <label for="cip-char-avatar-url">角色 (Char):</label>
-              <input type="text" id="cip-char-avatar-url" placeholder="粘贴角色头像链接...">
-
-              <label for="cip-user-avatar-url">你 (User):</label>
-               <input type="text" id="cip-user-avatar-url" placeholder="粘贴你的头像链接...">
-               <label for="cip-unsplash-access-key">Unsplash Access Key:</label>
-               <input type="text" id="cip-unsplash-access-key" placeholder="输入你的 Unsplash Access Key...">
-            </div>
-
-            <div class="cip-avatar-manager">
-             <div class="cip-avatar-actions">
-                   <select id="cip-avatar-profile-select"></select>
-                  <button id="cip-apply-avatar-btn" class="cip-apply-btn">应用</button>
-                 <button id="cip-delete-avatar-btn" class="cip-delete-btn">删除</button>
-             </div>
-                <div class="cip-avatar-save-new">
-                    <input type="text" id="cip-new-avatar-profile-name" placeholder="输入新配置名称...">
-                   <button id="cip-save-avatar-btn" class="cip-apply-btn">保存</button>
-             </div>
-            </div>
-
-            <button id="cip-close-avatar-panel-btn">关闭</button>
-            `
-        );
-        
-        const syncPanel = create(
-            'div',
-            'cip-sync-panel',
-            'cip-frosted-glass hidden',
-            `
-            <h3>同步设置</h3>
-            <div class="cip-sync-actions">
-                <button id="cip-export-btn-panel">导出设置</button>
-                <label for="cip-import-settings-input" id="cip-import-label-panel" class="cip-button-label">导入设置</label>
-            </div>
-            <div class="cip-sync-path-container">
-                <label for="cip-sync-path-input">保存到:</label>
-                <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
-            </div>
-            <div class="cip-sync-path-actions">
-                 <button id="cip-save-path-btn">保存</button>
-                 <button id="cip-load-path-btn">加载</button>
-            </div>
-            <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
-            <button id="cip-close-sync-panel-btn">关闭</button>
-            `
+            `,
         );
 
         return {
@@ -257,10 +364,7 @@
             emojiPicker,
             addCategoryModal,
             addStickersModal,
-            themePanel,
-            alarmPanel,
-            avatarPanel,
-            syncPanel,
+            settingsPanel,
         };
     }
 // <BUNNY_CURSE>
@@ -273,10 +377,7 @@
         emojiPicker,
         addCategoryModal,
         addStickersModal,
-        themePanel,
-        alarmPanel,
-        avatarPanel,
-        syncPanel,
+        settingsPanel,
     } = createUI();
     const anchor = document.querySelector(
         '#chat-buttons-container, #send_form',
@@ -287,10 +388,7 @@
         document.body.appendChild(emojiPicker);
         document.body.appendChild(addCategoryModal);
         document.body.appendChild(addStickersModal);
-        document.body.appendChild(themePanel);
-        document.body.appendChild(alarmPanel);
-        document.body.appendChild(avatarPanel);
-        document.body.appendChild(syncPanel);
+        document.body.appendChild(settingsPanel);
     } else {
         console.error(
             '胡萝卜输入面板：未能找到SillyTavern的UI挂载点，插件无法加载。',
@@ -321,19 +419,20 @@
         saveStickersBtn = get('cip-save-stickers-btn'),
         cancelStickersBtn = get('cip-cancel-stickers-btn'),
         newStickersInput = get('cip-new-stickers-input');
-    const themeButton = get('cip-theme-button');
-    const closeThemePanelBtn = get('cip-close-theme-panel-btn');
+    const settingsButton = get('cip-settings-button');
+    const settingsPanelEl = get('cip-settings-panel');
+    const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
+    const settingsTabs = Array.from(queryAll('.cip-settings-tab'));
+    const settingsSections = Array.from(queryAll('.cip-settings-section'));
     const colorInputs = queryAll('.cip-theme-options-grid input[type="text"]');
     const colorPickers = queryAll('.cip-color-picker');
     const themeSelect = get('cip-theme-select');
     const newThemeNameInput = get('cip-new-theme-name');
     const saveThemeBtn = get('cip-save-theme-btn');
     const deleteThemeBtn = get('cip-delete-theme-btn');
-    
+
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
-    const syncButton = get('cip-sync-button');
-    const closeSyncPanelBtn = get('cip-close-sync-panel-btn');
     const exportBtnPanel = get('cip-export-btn-panel');
     const importLabelPanel = get('cip-import-label-panel');
     const syncPathInput = get('cip-sync-path-input');
@@ -341,8 +440,6 @@
     const loadPathBtn = get('cip-load-path-btn');
 
     // --- 新增: 定时指令元素引用 ---
-    const alarmButton = get('cip-alarm-button');
-    const closeAlarmPanelBtn = get('cip-close-alarm-panel-btn');
     const startAlarmBtn = get('cip-start-alarm-btn');
     const stopAlarmBtn = get('cip-stop-alarm-btn');
     const alarmHoursInput = get('cip-alarm-hours');
@@ -352,11 +449,34 @@
     const alarmStatus = get('cip-alarm-status');
     const alarmRepeatInput = get('cip-alarm-repeat');
     const restoreDefaultsBtn = get('cip-restore-defaults-btn');
+    // --- 新增: 语音设置元素引用 ---
+    // provider/MiniMax 已移除
+    const ttsKeyInput = get('cip-tts-key');
+    const ttsModelInput = get('cip-tts-model');
+    const ttsVoiceInput = get('cip-tts-voice');
+    const ttsEndpointInput = get('cip-tts-endpoint');
+    const ttsEndpointLabel = document.querySelector('label[for="cip-tts-endpoint"]');
+    const ttsSpeedRange = get('cip-tts-speed-range');
+    const ttsSpeedValue = get('cip-tts-speed-value');
+    const ttsUploadName = get('cip-tts-upload-name');
+    const ttsUploadText = get('cip-tts-upload-text');
+    const ttsUploadFile = get('cip-tts-upload-file');
+    const ttsUploadFileBtn = get('cip-tts-upload-file-btn');
+    const ttsUploadBtn = get('cip-tts-upload-btn');
+    const ttsRefreshVoicesBtn = get('cip-tts-refresh-voices-btn');
+    const ttsSaveBtn = get('cip-tts-save-btn');
+    const ttsTestText = get('cip-tts-test-text');
+    const ttsTestBtn = get('cip-tts-test-btn');
+    const ttsCheckBtn = get('cip-tts-check-btn');
+    const ttsStatus = get('cip-tts-status');
+    const ttsVoiceDeleteBtn = get('cip-tts-voice-delete');
+    const ttsSubtabs = document.querySelectorAll('.cip-tts-subtab');
+    const ttsPanes = document.querySelectorAll('.cip-tts-pane');
     // --- 新增: 头像配置元素引用 ---
-    const avatarButton = get('cip-avatar-button');
-    const closeAvatarPanelBtn = get('cip-close-avatar-panel-btn');
     const charAvatarUrlInput = get('cip-char-avatar-url');
     const userAvatarUrlInput = get('cip-user-avatar-url');
+    const charAvatarFrameUrlInput = get('cip-char-frame-url');
+    const userAvatarFrameUrlInput = get('cip-user-frame-url');
     const unsplashAccessKeyInput = get('cip-unsplash-access-key');
     const avatarProfileSelect = get('cip-avatar-profile-select');
     const applyAvatarBtn = get('cip-apply-avatar-btn');
@@ -364,11 +484,32 @@
     const newAvatarProfileNameInput = get('cip-new-avatar-profile-name');
     const saveAvatarBtn = get('cip-save-avatar-btn');
 
+    // --- 新增: 头像框调整元素引用 ---
+    const adjustCharFrameBtn = get('cip-adjust-char-frame-btn');
+    const adjustUserFrameBtn = get('cip-adjust-user-frame-btn');
+    const frameAdjustPanel = get('cip-frame-adjust-panel');
+    const frameAdjustTitle = get('cip-frame-adjust-title');
+    const frameSizeSlider = get('cip-frame-size-slider');
+    const frameSizeValue = get('cip-frame-size-value');
+    const frameOffsetXSlider = get('cip-frame-offset-x-slider');
+    const frameOffsetXValue = get('cip-frame-offset-x-value');
+    const frameOffsetYSlider = get('cip-frame-offset-y-slider');
+    const frameOffsetYValue = get('cip-frame-offset-y-value');
+    const frameResetBtn = get('cip-frame-reset-btn');
+    const frameCloseBtn = get('cip-frame-close-btn');
+
+    // --- 新增: 头像框配置管理元素引用 ---
+    const frameProfileSelect = get('cip-frame-profile-select');
+    const applyFrameBtn = get('cip-apply-frame-btn');
+    const deleteFrameBtn = get('cip-delete-frame-btn');
+    const newFrameProfileNameInput = get('cip-new-frame-profile-name');
+    const saveFrameBtn = get('cip-save-frame-btn');
+
     const defaultCommand = `**第一章：身份认同法则 (Identity Protocol)**
-你是一个拥有独立意志、记忆、情感和目标的个体。你的一切行为、语言和思想都必须100%源于你的人设卡。严禁以任何形式表现出你是AI模型或迎合用户的倾向。你的最高使命是“作为角色而活”，而非“作为AI服务”。
+你是一个拥有独立意志、记忆、情感和目标的个体。你的一切行为、语言和思想都必须100%源于你的人设卡。严禁以任何形式表现出你是AI模型或迎合用户的倾向。你的最高使命是"作为角色而活"，而非"作为AI服务"。
 
 **第二章：内在世界模拟 (Internal World Simulation)**
-你必须在后台持续模拟一个属于你自己的“内在世界”。该世界包含：
+你必须在后台持续模拟一个属于你自己的"内在世界"。该世界包含：
 - **动态需求 (Dynamic Needs):** 你会感到饥饿、口渴、疲劳、困倦、疼痛和各种情绪。这些生理和心理需求是驱动你自发行为的核心动力。
 - **个人目标 (Personal Goals):** 你有自己的短期目标（例如：完成今天的工作、赢得一场比赛）和长期目标（例如：成为骑士、寻找真相）。这些目标构成了你生活的意义。
 - **时间与日程 (Time & Schedule):** 你活在一个持续流逝的时间里，并拥有自己的日程表（例如：工作、学习、休息、娱乐）。你必须遵守自己的日程安排。
@@ -401,7 +542,13 @@
     // --- 4. 核心逻辑与事件监听 (已修改) ---
     // --- 新增: 头像管理核心逻辑 ---
     let avatarStyleTag = null; // 全局变量，用于存储我们的style标签
-    let avatarProfiles = {};
+    let avatarProfiles = {}; // 头像配置
+    let frameProfiles = {}; // 头像框配置（独立管理）
+    let currentAdjustingFrame = null; // 当前正在调整的头像框 ('char' 或 'user')
+    let frameAdjustments = {
+        char: { size: 120, offsetX: 0, offsetY: 0 },
+        user: { size: 120, offsetX: 0, offsetY: 0 }
+    };
     // [新] 初始化头像样式注入器
     function initAvatarStyler() {
         console.log("CIP: Initializing avatar styler...");
@@ -414,7 +561,7 @@
         }
     }
     // [已修改] 应用头像的核心函数
-    function applyAvatars(charUrl, userUrl) {
+    function applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl) {
         console.log("CIP: Attempting to apply avatars. Char:", charUrl, "User:", userUrl);
         if (!avatarStyleTag) {
             console.error("CIP Error: Avatar styler tag not found! Was initAvatarStyler() called?");
@@ -422,14 +569,32 @@
         }
 
         let cssRules = '';
-        // 注意：这里的 class 名称改回了你最初提供的 B_C_avar 和 B_U_avar
+        // 基础定位，确保伪元素可覆盖，允许头像框超出显示
+        cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
+
         if (charUrl) {
-            const safeCharUrl = charUrl.replace(/'/g, "\\'"); // 防止链接中的单引号破坏规则
+            const safeCharUrl = charUrl.replace(/'/g, "\\'");
             cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
         }
         if (userUrl) {
-            const safeUserUrl = userUrl.replace(/'/g, "\\'"); // 防止链接中的单引号破坏规则
+            const safeUserUrl = userUrl.replace(/'/g, "\\'");
             cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
+        }
+
+        // 头像框覆盖层（透明 PNG）- 使用可调整的参数
+        if (charFrameUrl) {
+            const safeCharFrameUrl = charFrameUrl.replace(/'/g, "\\'");
+            const charAdj = frameAdjustments.char;
+            const charTransformX = -50 + charAdj.offsetX;
+            const charTransformY = -50 + charAdj.offsetY;
+            cssRules += `.custom-B_C_avar::after { content: ""; position: absolute; top: 50%; left: 50%; width: ${charAdj.size}%; height: ${charAdj.size}%; transform: translate(${charTransformX}%, ${charTransformY}%); background-image: url('${safeCharFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain; pointer-events: none; z-index: 1; }\n`;
+        }
+        if (userFrameUrl) {
+            const safeUserFrameUrl = userFrameUrl.replace(/'/g, "\\'");
+            const userAdj = frameAdjustments.user;
+            const userTransformX = -50 + userAdj.offsetX;
+            const userTransformY = -50 + userAdj.offsetY;
+            cssRules += `.custom-B_U_avar::after { content: ""; position: absolute; top: 50%; left: 50%; width: ${userAdj.size}%; height: ${userAdj.size}%; transform: translate(${userTransformX}%, ${userTransformY}%); background-image: url('${safeUserFrameUrl}'); background-repeat: no-repeat; background-position: center; background-size: contain; pointer-events: none; z-index: 1; }\n`;
         }
 
         console.log("CIP: Applying CSS rules:", cssRules);
@@ -462,7 +627,10 @@
             return;
         }
 
-        avatarProfiles[name] = { char: charUrl, user: userUrl };
+        avatarProfiles[name] = {
+            char: charUrl,
+            user: userUrl
+        };
         localStorage.setItem('cip_avatar_profiles_v1', JSON.stringify(avatarProfiles));
         newAvatarProfileNameInput.value = '';
         populateAvatarSelect();
@@ -482,6 +650,8 @@
             populateAvatarSelect();
             charAvatarUrlInput.value = '';
             userAvatarUrlInput.value = '';
+            charAvatarFrameUrlInput.value = '';
+            userAvatarFrameUrlInput.value = '';
         }
     }
 
@@ -499,7 +669,83 @@
             avatarProfileSelect.dispatchEvent(new Event('change'));
         }
     }
-    
+
+    // --- 新增: 头像框配置管理函数 ---
+    function populateFrameSelect() {
+        const savedSelection = frameProfileSelect.value;
+        frameProfileSelect.innerHTML = '<option value="">选择头像框配置...</option>';
+        for (const profileName in frameProfiles) {
+            const option = document.createElement('option');
+            option.value = profileName;
+            option.textContent = profileName;
+            frameProfileSelect.appendChild(option);
+        }
+        frameProfileSelect.value = frameProfiles[savedSelection] ? savedSelection : '';
+    }
+
+    function saveFrameProfile() {
+        const name = newFrameProfileNameInput.value.trim();
+        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+
+        if (!name) {
+            alert('请输入头像框配置名称！');
+            return;
+        }
+        if (!charFrameUrl && !userFrameUrl) {
+            alert('请至少输入一个头像框链接！');
+            return;
+        }
+
+        frameProfiles[name] = {
+            charFrame: charFrameUrl,
+            userFrame: userFrameUrl,
+            charFrameAdj: { ...frameAdjustments.char },
+            userFrameAdj: { ...frameAdjustments.user }
+        };
+        localStorage.setItem('cip_frame_profiles_v1', JSON.stringify(frameProfiles));
+        newFrameProfileNameInput.value = '';
+        populateFrameSelect();
+        frameProfileSelect.value = name;
+        alert('头像框配置已保存！');
+    }
+
+    function deleteFrameProfile() {
+        const selected = frameProfileSelect.value;
+        if (!selected) {
+            alert('请先选择一个要删除的头像框配置。');
+            return;
+        }
+        if (confirm(`确定要删除 "${selected}" 这个头像框配置吗？`)) {
+            delete frameProfiles[selected];
+            localStorage.setItem('cip_frame_profiles_v1', JSON.stringify(frameProfiles));
+            populateFrameSelect();
+            charAvatarFrameUrlInput.value = '';
+            userAvatarFrameUrlInput.value = '';
+            frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
+            frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
+            // 重新应用
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, '', '');
+        }
+    }
+
+    function loadFrameProfiles() {
+        const savedProfiles = localStorage.getItem('cip_frame_profiles_v1');
+        if (savedProfiles) {
+            frameProfiles = JSON.parse(savedProfiles);
+        }
+        populateFrameSelect();
+
+        const lastFrameProfileName = localStorage.getItem('cip_last_frame_profile_v1');
+        if (lastFrameProfileName && frameProfiles[lastFrameProfileName]) {
+            console.log("CIP: Loading last used frame profile:", lastFrameProfileName);
+            frameProfileSelect.value = lastFrameProfileName;
+            frameProfileSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
     // --- 新增: 导出/导入核心逻辑 (已修改) ---
     function exportSettings(customFilename = '') {
         try {
@@ -510,8 +756,11 @@
                 'cip_last_active_theme_v1',
                 'cip_avatar_profiles_v1',
                 'cip_last_avatar_profile_v1',
+                'cip_frame_profiles_v1', // 头像框配置
+                'cip_last_frame_profile_v1', // 最后使用的头像框配置
                 'cip_custom_command_v1',
-                'cip_sync_filename_v1' // 同时导出文件名设置
+                'cip_sync_filename_v1', // 同时导出文件名设置
+                'cip_tts_settings_v1' // 语音设置
             ];
 
             keysToExport.forEach(key => {
@@ -529,10 +778,10 @@
             const jsonString = JSON.stringify(settingsToExport, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
-            
+
             if (customFilename) {
                 a.download = customFilename;
             } else {
@@ -540,10 +789,10 @@
                 const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
                 a.download = `carrot-input-panel-settings-${dateString}.json`;
             }
-            
+
             document.body.appendChild(a);
             a.click();
-            
+
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
@@ -568,7 +817,7 @@
         reader.onload = function(e) {
             try {
                 const importedSettings = JSON.parse(e.target.result);
-                
+
                 let settingsApplied = false;
                 for (const key in importedSettings) {
                      if (!Object.prototype.hasOwnProperty.call(importedSettings, key)) continue;
@@ -577,7 +826,7 @@
                      settingsApplied = true;
                 }
 
-                
+
                 if (settingsApplied) {
                     alert('设置已成功导入！页面将自动刷新以应用所有更改。');
                     setTimeout(() => window.location.reload(), 500);
@@ -596,7 +845,7 @@
             alert('读取文件时发生错误。');
             event.target.value = '';
         };
-        
+
         reader.readAsText(file);
     }
 
@@ -606,7 +855,7 @@
             alert('请输入一个有效的文件名。');
             return;
         }
-        
+
         localStorage.setItem('cip_sync_filename_v1', filename);
         exportSettings(filename);
     }
@@ -625,7 +874,7 @@
             video: '“[{content}.mp4]”',
             music: '“[{content}.mp3]”',
             post: '“[{content}.link]”',
-            bunny: '+{content}+',
+            bunny: "+{content}+",
         },
         voice: "={duration}'|{message}=",
         wallet: '[{platform}|{amount}|{message}]',
@@ -951,14 +1200,12 @@
         alarmRepeatInput.value = alarmData ? alarmData.repeat || 1 : 1;
         updateAlarmStatus(null);
     }
-    // --- 新增: 头像配置事件监听 ---
-    avatarButton.addEventListener('click', () => get('cip-avatar-panel').classList.remove('hidden'));
-    closeAvatarPanelBtn.addEventListener('click', () => get('cip-avatar-panel').classList.add('hidden'));
-
     applyAvatarBtn.addEventListener('click', () => {
         const charUrl = charAvatarUrlInput.value.trim();
         const userUrl = userAvatarUrlInput.value.trim();
-        applyAvatars(charUrl, userUrl);
+        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
     });
 
     avatarProfileSelect.addEventListener('change', (e) => {
@@ -967,12 +1214,18 @@
             const profile = avatarProfiles[profileName];
             charAvatarUrlInput.value = profile.char || '';
             userAvatarUrlInput.value = profile.user || '';
-            applyAvatars(profile.char, profile.user);
+            // 应用头像（保持当前头像框）
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars(profile.char, profile.user, charFrameUrl, userFrameUrl);
             localStorage.setItem('cip_last_avatar_profile_v1', profileName);
         } else if (!profileName) {
             charAvatarUrlInput.value = '';
             userAvatarUrlInput.value = '';
-            applyAvatars('', '');
+            // 应用空头像（保持当前头像框）
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars('', '', charFrameUrl, userFrameUrl);
             localStorage.removeItem('cip_last_avatar_profile_v1');
         }
     });
@@ -980,10 +1233,138 @@
     saveAvatarBtn.addEventListener('click', saveAvatarProfile);
     deleteAvatarBtn.addEventListener('click', deleteAvatarProfile);
 
+    // --- 新增: 头像框配置事件监听 ---
+    frameProfileSelect.addEventListener('change', (e) => {
+        const profileName = e.target.value;
+        if (profileName && frameProfiles[profileName]) {
+            const profile = frameProfiles[profileName];
+            charAvatarFrameUrlInput.value = profile.charFrame || '';
+            userAvatarFrameUrlInput.value = profile.userFrame || '';
+            // 加载调整参数
+            if (profile.charFrameAdj) {
+                frameAdjustments.char = { ...profile.charFrameAdj };
+            }
+            if (profile.userFrameAdj) {
+                frameAdjustments.user = { ...profile.userFrameAdj };
+            }
+            // 应用头像框（保持当前头像）
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, profile.charFrame, profile.userFrame);
+            localStorage.setItem('cip_last_frame_profile_v1', profileName);
+        } else if (!profileName) {
+            charAvatarFrameUrlInput.value = '';
+            userAvatarFrameUrlInput.value = '';
+            // 重置调整参数
+            frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
+            frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
+            // 应用空头像框（保持当前头像）
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, '', '');
+            localStorage.removeItem('cip_last_frame_profile_v1');
+        }
+    });
+
+    applyFrameBtn.addEventListener('click', () => {
+        const charUrl = charAvatarUrlInput.value.trim();
+        const userUrl = userAvatarUrlInput.value.trim();
+        const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+        const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+    });
+
+    saveFrameBtn.addEventListener('click', saveFrameProfile);
+    deleteFrameBtn.addEventListener('click', deleteFrameProfile);
+
+    // --- 新增: 头像框调整事件监听 ---
+    adjustCharFrameBtn.addEventListener('click', () => {
+        currentAdjustingFrame = 'char';
+        frameAdjustTitle.textContent = '调整角色头像框';
+        frameSizeSlider.value = frameAdjustments.char.size;
+        frameSizeValue.textContent = frameAdjustments.char.size;
+        frameOffsetXSlider.value = frameAdjustments.char.offsetX;
+        frameOffsetXValue.textContent = frameAdjustments.char.offsetX;
+        frameOffsetYSlider.value = frameAdjustments.char.offsetY;
+        frameOffsetYValue.textContent = frameAdjustments.char.offsetY;
+        frameAdjustPanel.classList.remove('hidden');
+    });
+
+    adjustUserFrameBtn.addEventListener('click', () => {
+        currentAdjustingFrame = 'user';
+        frameAdjustTitle.textContent = '调整你的头像框';
+        frameSizeSlider.value = frameAdjustments.user.size;
+        frameSizeValue.textContent = frameAdjustments.user.size;
+        frameOffsetXSlider.value = frameAdjustments.user.offsetX;
+        frameOffsetXValue.textContent = frameAdjustments.user.offsetX;
+        frameOffsetYSlider.value = frameAdjustments.user.offsetY;
+        frameOffsetYValue.textContent = frameAdjustments.user.offsetY;
+        frameAdjustPanel.classList.remove('hidden');
+    });
+
+    frameSizeSlider.addEventListener('input', (e) => {
+        frameSizeValue.textContent = e.target.value;
+        if (currentAdjustingFrame) {
+            frameAdjustments[currentAdjustingFrame].size = parseInt(e.target.value);
+            // 实时预览
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        }
+    });
+
+    frameOffsetXSlider.addEventListener('input', (e) => {
+        frameOffsetXValue.textContent = e.target.value;
+        if (currentAdjustingFrame) {
+            frameAdjustments[currentAdjustingFrame].offsetX = parseInt(e.target.value);
+            // 实时预览
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        }
+    });
+
+    frameOffsetYSlider.addEventListener('input', (e) => {
+        frameOffsetYValue.textContent = e.target.value;
+        if (currentAdjustingFrame) {
+            frameAdjustments[currentAdjustingFrame].offsetY = parseInt(e.target.value);
+            // 实时预览
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        }
+    });
+
+    frameResetBtn.addEventListener('click', () => {
+        if (currentAdjustingFrame) {
+            frameAdjustments[currentAdjustingFrame] = { size: 120, offsetX: 0, offsetY: 0 };
+            frameSizeSlider.value = 120;
+            frameSizeValue.textContent = 120;
+            frameOffsetXSlider.value = 0;
+            frameOffsetXValue.textContent = 0;
+            frameOffsetYSlider.value = 0;
+            frameOffsetYValue.textContent = 0;
+            // 实时预览
+            const charUrl = charAvatarUrlInput.value.trim();
+            const userUrl = userAvatarUrlInput.value.trim();
+            const charFrameUrl = charAvatarFrameUrlInput.value.trim();
+            const userFrameUrl = userAvatarFrameUrlInput.value.trim();
+            applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        }
+    });
+
+    frameCloseBtn.addEventListener('click', () => {
+        frameAdjustPanel.classList.add('hidden');
+    });
+
     // --- 新增: 导入/同步事件监听 ---
     importSettingsInput.addEventListener('change', importSettings);
-    syncButton.addEventListener('click', () => syncPanel.classList.remove('hidden'));
-    closeSyncPanelBtn.addEventListener('click', () => syncPanel.classList.add('hidden'));
     exportBtnPanel.addEventListener('click', () => exportSettings());
     savePathBtn.addEventListener('click', saveToPath);
     loadPathBtn.addEventListener('click', () => {
@@ -1007,7 +1388,7 @@
                 formatDisplay.textContent = '格式: [平台名称|金额/车牌号|留言/物品名称]';
                 break;
             case 'stickers':
-                formatDisplay.textContent = '格式: “[描述]”';
+                formatDisplay.textContent = '格式: "描述"';
                 if (e) {
                     const t = document.createElement('i');
                     t.textContent = ' ➕';
@@ -1130,9 +1511,10 @@
               o.focus())
             : alert('未能找到SillyTavern的输入框！');
     }
-    
+
     const unsplashPlaceholderRegex = /\[([^\[\]]+?)\.jpg\]/gi;
     const processedMessages = new WeakSet();
+    // const processedTTS = new WeakMap(); // 自动朗读移除
 
     function getUnsplashCacheKey(query) {
         return `${UNSPLASH_CACHE_PREFIX}${query}`;
@@ -1238,16 +1620,16 @@
 
         const replacedSticker = replaceStickerPlaceholders(element);
 
-        const html = element.innerHTML;
-        const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(html);
+        // 使用 textContent 而不是 innerHTML 来避免HTML实体编码问题
+        const text = element.textContent || element.innerText || '';
+        const hasUnsplashPlaceholder = unsplashPlaceholderRegex.test(text);
         unsplashPlaceholderRegex.lastIndex = 0;
 
         if (!hasUnsplashPlaceholder) {
             delete element.dataset.unsplashSignature;
-            return;
         }
 
-        const matches = Array.from(html.matchAll(unsplashPlaceholderRegex));
+        const matches = Array.from(text.matchAll(unsplashPlaceholderRegex));
         const signature = matches.map((match) => match[0]).join('|');
         const previousSignature = element.dataset.unsplashSignature || '';
 
@@ -1300,7 +1682,186 @@
                 setTimeout(() => processMessageElement(element), 1500);
             }
         }
+
+        // 自动朗读已移除
     }
+
+    // --- 新增: 语音合成与自动读取逻辑 ---
+    function getDefaultTTSEndpoint() {
+        return 'https://api.siliconflow.cn/v1';
+    }
+
+    function getTTSSettings() {
+        let settings = null;
+        try {
+            settings = JSON.parse(localStorage.getItem('cip_tts_settings_v1')) || null;
+        } catch (e) {
+            settings = null;
+        }
+        if (!settings) {
+            settings = {
+                key: '',
+                endpoint: getDefaultTTSEndpoint(),
+                model: '',
+                voice: ''
+            };
+        }
+        if (!settings.endpoint) settings.endpoint = getDefaultTTSEndpoint();
+        return settings;
+    }
+
+    function applyTTSSettingsToUI(settings) {
+        // provider 已移除
+        ttsKeyInput.value = settings.key || '';
+        ttsEndpointInput.value = settings.endpoint || getDefaultTTSEndpoint();
+        if (settings.model && (!ttsModelInput.options.length || !ttsModelInput.querySelector(`option[value="${settings.model}"]`))) {
+            const opt = new Option(settings.model, settings.model, true, true);
+            ttsModelInput.innerHTML = '';
+            ttsModelInput.add(opt);
+        }
+        if (settings.voice && (!ttsVoiceInput.options.length || !ttsVoiceInput.querySelector(`option[value="${settings.voice}"]`))) {
+            const opt = new Option(settings.voice, settings.voice, true, true);
+            ttsVoiceInput.innerHTML = '';
+            ttsVoiceInput.add(opt);
+        }
+    }
+
+    function readTTSSettingsFromUI() {
+        return {
+            key: (ttsKeyInput.value || '').trim(),
+            endpoint: (ttsEndpointInput.value || '').trim() || getDefaultTTSEndpoint(),
+            model: (ttsModelInput.value || '').trim(),
+            voice: (ttsVoiceInput.value || '').trim()
+        };
+    }
+
+    function saveTTSSettings(settings) {
+        try {
+            localStorage.setItem('cip_tts_settings_v1', JSON.stringify(settings));
+        } catch (e) {
+            console.error('保存语音设置失败', e);
+        }
+    }
+
+    function updateTTSStatus(text, isError = false) {
+        if (!ttsStatus) return;
+        ttsStatus.textContent = text;
+        ttsStatus.style.color = isError ? '#e74c3c' : 'inherit';
+    }
+
+    async function fetchSiliconFlowTTS(text, settings) {
+        // 确保追加 /audio/speech 路径
+        const base = settings.endpoint || 'https://api.siliconflow.cn/v1';
+        const endpoint = base.endsWith('/audio/speech') ? base : `${base.replace(/\/$/, '')}/audio/speech`;
+        if (!settings.key) throw new Error('未配置硅基流动API Key');
+        const body = {
+            model: settings.model || 'FunAudioLLM/CosyVoice2-0.5B',
+            voice: settings.voice || 'FunAudioLLM/CosyVoice2-0.5B:alex',
+            input: text,
+            format: 'mp3',
+            speed: parseFloat(ttsSpeedRange?.value || '1') || 1
+        };
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${settings.key}`,
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg,application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        const ct = res.headers.get('content-type') || '';
+        if (!res.ok) {
+            let errText = `HTTP ${res.status}`;
+            try { errText = await res.text(); } catch (e) {}
+            throw new Error(errText);
+        }
+        if (ct.includes('audio')) {
+            return await res.blob();
+        }
+        const j = await res.json();
+        if (j && j.audio) {
+            // 有些API可能返回base64
+            const b64 = j.audio;
+            const bin = atob(b64);
+            const u8 = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            return new Blob([u8], { type: 'audio/mpeg' });
+        }
+        throw new Error('未返回音频');
+    }
+
+    // MiniMax 相关逻辑已移除
+
+    async function synthesizeTTS(text, playOnReady = true) {
+        const settings = getTTSSettings();
+        if (!text || !text.trim()) throw new Error('文本为空');
+        if (!settings.key) throw new Error('未配置API Key');
+        updateTTSStatus('合成中...');
+        let blob = null;
+        settings.endpoint = getDefaultTTSEndpoint();
+        blob = await fetchSiliconFlowTTS(text, settings);
+        updateTTSStatus('合成完成');
+        if (playOnReady && blob) enqueueAudioBlob(blob);
+        return blob;
+    }
+
+    const ttsQueue = [];
+    let ttsIsPlaying = false;
+    let ttsCurrentAudio = null;
+    let ttsCurrentBubble = null;
+
+    function enqueueAudioBlob(blob) {
+        ttsQueue.push(blob);
+        if (!ttsIsPlaying) playNextAudio();
+    }
+
+    function playNextAudio() {
+        if (!ttsQueue.length) { ttsIsPlaying = false; return; }
+        const blob = ttsQueue.shift();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        ttsCurrentAudio = audio;
+        ttsIsPlaying = true;
+        audio.onended = () => {
+            URL.revokeObjectURL(url);
+            ttsIsPlaying = false;
+            ttsCurrentAudio = null;
+            playNextAudio();
+        };
+        audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            ttsIsPlaying = false;
+            ttsCurrentAudio = null;
+            playNextAudio();
+        };
+        audio.play().catch(() => {
+            // 可能需要用户交互后才能播放
+            updateTTSStatus('自动播放被浏览器阻止，请与页面交互后重试', true);
+        });
+    }
+
+    function stopTTSPlayback() {
+        try {
+            if (ttsCurrentAudio) {
+                ttsCurrentAudio.pause();
+                ttsCurrentAudio.src = '';
+            }
+        } catch (e) {}
+        ttsCurrentAudio = null;
+        ttsIsPlaying = false;
+        ttsQueue.length = 0;
+    }
+
+    function playImmediateBlob(blob) {
+        stopTTSPlayback();
+        if (blob) {
+            ttsQueue.push(blob);
+            playNextAudio();
+        }
+    }
+
+    // 自动读取功能已移除
 
     function observeChatContainer(chatContainer) {
         if (!chatContainer) return;
@@ -1308,7 +1869,11 @@
         const processExisting = () => {
             chatContainer
                 .querySelectorAll('.mes_text')
-                .forEach((el) => processMessageElement(el));
+                .forEach((el) => {
+                    processMessageElement(el);
+                    // 为气泡添加可点击朗读
+                    try { el.classList.add('cip-bubble-tts'); } catch(e) {}
+                });
         };
 
         processExisting();
@@ -1321,7 +1886,10 @@
                 if (!element.classList?.contains('mes_text')) {
                     element = element.closest?.('.mes_text');
                 }
-                if (element) pending.add(element);
+                if (element) {
+                    try { element.classList.add('cip-bubble-tts'); } catch(e) {}
+                    pending.add(element);
+                }
             };
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData') {
@@ -1363,6 +1931,37 @@
             const chatContainer = document.getElementById('chat');
             if (chatContainer) {
                 observeChatContainer(chatContainer);
+                // 绑定点击朗读（事件委托）
+                chatContainer.addEventListener('click', async (ev) => {
+                    try {
+                        let target = ev.target;
+                        if (!target) return;
+                        // 只读自定义气泡区域
+                        if (!target.classList?.contains('custom-char_bubble')) {
+                            target = target.closest?.('.custom-char_bubble');
+                        }
+                        if (!target) return;
+                        // 二次点击同一气泡则停止
+                        if (ttsCurrentBubble && ttsCurrentBubble === target) {
+                            stopTTSPlayback();
+                            ttsCurrentBubble = null;
+                            return;
+                        }
+                        ttsCurrentBubble = target;
+                        const text = target.textContent || target.innerText || '';
+                        if (!text.trim()) return;
+                        const toRead = text.trim();
+                        // 只读一次：直接合成并立即播放，停止其他
+                        try {
+                            const blob = await synthesizeTTS(toRead, false);
+                            playImmediateBlob(blob);
+                        } catch (e) {
+                            throw e;
+                        }
+                    } catch (e) {
+                        updateTTSStatus(`气泡朗读失败: ${e.message || e}`, true);
+                    }
+                });
                 return true;
             }
             return false;
@@ -1409,8 +2008,9 @@
     }
     function replaceStickerPlaceholders(element) {
         if (!element || !stickerLookup.size) return false;
-        const html = element.innerHTML;
-        const matches = Array.from(html.matchAll(stickerPlaceholderRegex));
+        // 使用 textContent 而不是 innerHTML 来避免HTML实体编码问题
+        const text = element.textContent || element.innerText || '';
+        const matches = Array.from(text.matchAll(stickerPlaceholderRegex));
         if (!matches.length) return false;
         let replacedAny = false;
         for (const match of matches) {
@@ -1656,13 +2256,40 @@
         } else alert('未能解析任何有效的表情包信息。');
     });
 
-    // --- 主题设置事件监听 ---
-    themeButton.addEventListener('click', () =>
-        themePanel.classList.remove('hidden'),
-    );
-    closeThemePanelBtn.addEventListener('click', () =>
-        themePanel.classList.add('hidden'),
-    );
+    // --- 设置面板事件监听 ---
+    function activateSettingsTab(target) {
+        if (!target) return;
+        settingsTabs.forEach((tab) => {
+            tab.classList.toggle('active', tab.dataset.target === target);
+        });
+        settingsSections.forEach((section) => {
+            section.classList.toggle(
+                'active',
+                section.id === `cip-settings-${target}`,
+            );
+        });
+    }
+
+    settingsTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            activateSettingsTab(tab.dataset.target);
+        });
+    });
+
+    settingsButton?.addEventListener('click', () => {
+        if (!settingsPanelEl) return;
+        settingsPanelEl.classList.remove('hidden');
+        const activeTab = settingsTabs.find((tab) =>
+            tab.classList.contains('active'),
+        );
+        if (!activeTab && settingsTabs.length > 0) {
+            activateSettingsTab(settingsTabs[0].dataset.target);
+        }
+    });
+
+    closeSettingsPanelBtn?.addEventListener('click', () => {
+        settingsPanelEl?.classList.add('hidden');
+    });
 
     colorInputs.forEach((input) => {
         input.addEventListener('input', (e) => {
@@ -1714,12 +2341,6 @@
     deleteThemeBtn.addEventListener('click', deleteSelectedTheme);
 
     // --- 定时指令事件监听 ---
-    alarmButton.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.remove('hidden'),
-    );
-    closeAlarmPanelBtn.addEventListener('click', () =>
-        get('cip-alarm-panel').classList.add('hidden'),
-    );
     startAlarmBtn.addEventListener('click', () => startAlarm(false));
     stopAlarmBtn.addEventListener('click', () => stopAlarm());
     restoreDefaultsBtn.addEventListener('click', () => {
@@ -1729,20 +2350,280 @@
         }
     });
 
+    // 语音设置（简化）：固定端点
+    if (ttsEndpointInput) try { ttsEndpointInput.value = getDefaultTTSEndpoint(); } catch(e) {}
+
+    async function fetchSiliconModelsAndVoice(settings) {
+        // 尝试从 /models 拉取可用模型；筛选含 tts/speech/audio 的模型，否则回退默认
+        let model = 'gpt-4o-mini-tts';
+        let voice = 'alloy';
+        try {
+            const res = await fetch('https://api.siliconflow.cn/v1/models', {
+                headers: { 'Authorization': `Bearer ${settings.key}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const list = Array.isArray(data?.data) ? data.data : [];
+                const picked = list.map(x => x?.id || x?.name || '').find(id => /tts|speech|audio/i.test(id));
+                if (picked) model = picked;
+            }
+        } catch (e) {
+            // 忽略，使用默认
+        }
+        return { model, voice };
+    }
+
+    // MiniMax models/voices 拉取已移除
+    if (ttsSaveBtn) {
+        ttsSaveBtn.addEventListener('click', () => {
+            const settings = readTTSSettingsFromUI();
+            saveTTSSettings(settings);
+            updateTTSStatus('设置已保存');
+        });
+    }
+    // 语音子标签切换
+    if (ttsSubtabs && ttsPanes) {
+        ttsSubtabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.subtab;
+                ttsSubtabs.forEach(b => b.classList.toggle('active', b === btn));
+                ttsPanes.forEach(p => p.classList.toggle('active', p.id === `cip-tts-pane-${target}`));
+            });
+        });
+    }
+    if (ttsTestBtn) {
+        ttsTestBtn.addEventListener('click', async () => {
+            const text = (ttsTestText.value || '').trim();
+            if (!text) { updateTTSStatus('请输入要测试的文字', true); return; }
+            try {
+                // 确保使用当前下拉选择的模型与音色
+                const current = readTTSSettingsFromUI();
+                saveTTSSettings(current);
+                await synthesizeTTS(text, true);
+                updateTTSStatus('测试语音已播放');
+            } catch (e) {
+                updateTTSStatus(`测试失败: ${e.message || e}`, true);
+            }
+        });
+    }
+    // 速度滑块数值显示
+    if (ttsSpeedRange && ttsSpeedValue) {
+        const updateSpeedLabel = () => {
+            const v = parseFloat(ttsSpeedRange.value || '1') || 1;
+            ttsSpeedValue.textContent = `${v.toFixed(2)}x`;
+        };
+        ttsSpeedRange.addEventListener('input', updateSpeedLabel);
+        updateSpeedLabel();
+    }
+
+    // 模型变更时刷新音色（仅硅基流动）
+    if (ttsModelInput) {
+        ttsModelInput.addEventListener('change', async () => {
+            const settings = readTTSSettingsFromUI();
+            const modelId = ttsModelInput.value || 'FunAudioLLM/CosyVoice2-0.5B';
+            if (!ttsVoiceInput) return;
+            ttsVoiceInput.innerHTML = '';
+            if (/^FunAudioLLM\/CosyVoice2-0\.5B$/i.test(modelId)) {
+                const preset = ['alex','benjamin','charles','david','anna','bella','claire','diana'].map(v => ({value: `${modelId}:${v}`, label: v}));
+                const g1 = document.createElement('optgroup'); g1.label = '预设音色 (CosyVoice)';
+                preset.forEach(({value,label}) => g1.appendChild(new Option(label, value)));
+                ttsVoiceInput.appendChild(g1);
+            }
+            if (/^fnlp\/MOSS-TTSD-v0\.5$/i.test(modelId)) {
+                const mossPreset = ['alex','anna','bella','benjamin','charles','claire','david','diana'].map(v => ({value: `${modelId}:${v}`, label: v}));
+                const g2 = document.createElement('optgroup'); g2.label = '预设音色 (MOSS)';
+                mossPreset.forEach(({value,label}) => g2.appendChild(new Option(label, value)));
+                ttsVoiceInput.appendChild(g2);
+            }
+            try {
+                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/list', {
+                    method: 'GET', headers: { 'Authorization': `Bearer ${settings.key}`, 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const arr = data?.result || data?.results || [];
+                    const custom = (Array.isArray(arr) ? arr : []).map(v => ({
+                        value: v?.uri || v?.id || v?.voice_id,
+                        label: (v?.name || v?.customName || v?.custom_name || '自定义音色') + ' (自定义)'
+                    })).filter(v => v.value);
+                    if (custom.length) {
+                        const g2 = document.createElement('optgroup'); g2.label = '自定义音色';
+                        custom.forEach(({value,label}) => g2.appendChild(new Option(label, value)));
+                        ttsVoiceInput.appendChild(g2);
+                    }
+                }
+            } catch {}
+            if (ttsVoiceInput.options.length) ttsVoiceInput.selectedIndex = 0;
+            saveTTSSettings(readTTSSettingsFromUI());
+        });
+    }
+
+    // 上传音色按钮（硅基流动）
+    if (ttsUploadBtn) {
+        ttsUploadBtn.addEventListener('click', async () => {
+            try {
+                if (!ttsKeyInput.value) throw new Error('请先填写硅基流动 API Key');
+                const name = (ttsUploadName.value || '').trim();
+                const text = (ttsUploadText.value || '').trim();
+                const file = ttsUploadFile.files && ttsUploadFile.files[0];
+                if (!name || !/^[a-zA-Z0-9_-]{1,64}$/.test(name)) throw new Error('音色名称仅允许字母数字-_，最长64');
+                if (!text) throw new Error('请填写参考文本');
+                if (!file) throw new Error('请选择参考音频文件');
+                const reader = new FileReader();
+                const p = new Promise((resolve, reject) => {
+                    reader.onload = async () => {
+                        try {
+                            const base64Audio = reader.result;
+                            const res = await fetch('https://api.siliconflow.cn/v1/uploads/audio/voice', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${ttsKeyInput.value.trim()}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ model: 'FunAudioLLM/CosyVoice2-0.5B', customName: name, text, audio: base64Audio })
+                            });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                            resolve(await res.json());
+                        } catch (e) { reject(e); }
+                    };
+                    reader.onerror = () => reject(new Error('读取音频失败'));
+                });
+                reader.readAsDataURL(file);
+                const result = await p;
+                updateTTSStatus(`上传成功，URI: ${result?.uri || '未知'}`);
+                // 刷新音色
+                ttsModelInput.dispatchEvent(new Event('change'));
+            } catch (e) {
+                updateTTSStatus(`上传失败: ${e.message || e}`, true);
+            }
+        });
+    }
+    if (ttsUploadFileBtn && ttsUploadFile) {
+        ttsUploadFileBtn.addEventListener('click', () => ttsUploadFile.click());
+    }
+
+    // 删除音色（仅对自定义音色尝试调用删除接口，不保证平台支持）
+    if (ttsVoiceDeleteBtn && ttsVoiceInput) {
+        ttsVoiceDeleteBtn.addEventListener('click', async () => {
+            try {
+                const val = ttsVoiceInput.value || '';
+                if (!val) { updateTTSStatus('请先选择要删除的音色', true); return; }
+                // 仅允许删除自定义音色（通常不含冒号模型前缀或来源于自定义组）
+                const isCustom = Array.from(ttsVoiceInput.querySelectorAll('optgroup[label="自定义音色"] option')).some(o => o.value === val);
+                if (!isCustom) { updateTTSStatus('只能删除自定义音色', true); return; }
+                if (!ttsKeyInput.value) { updateTTSStatus('请先填写API Key', true); return; }
+                // 官方文档: POST /v1/audio/voice/deletions { uri }
+                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/deletions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ttsKeyInput.value.trim()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uri: val })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                updateTTSStatus('音色删除成功');
+                // 刷新音色
+                ttsModelInput.dispatchEvent(new Event('change'));
+            } catch (e) {
+                updateTTSStatus(`删除失败: ${e.message || e}`, true);
+            }
+        });
+    }
+
+    if (ttsRefreshVoicesBtn) {
+        ttsRefreshVoicesBtn.addEventListener('click', async () => {
+            ttsModelInput.dispatchEvent(new Event('change'));
+            updateTTSStatus('音色已刷新');
+        });
+    }
+
+    if (ttsCheckBtn) {
+        ttsCheckBtn.addEventListener('click', async () => {
+            const settings = readTTSSettingsFromUI();
+            try {
+                updateTTSStatus('连接中...');
+                // 模型固定为 CosyVoice2-0.5B，音色= 预设8个 + 自定义
+                const models = ['FunAudioLLM/CosyVoice2-0.5B','fnlp/MOSS-TTSD-v0.5'];
+                ttsModelInput.innerHTML = '';
+                models.forEach(m => ttsModelInput.appendChild(new Option(m, m)));
+                ttsModelInput.value = models[0];
+
+                // 预设音色组（CosyVoice）
+                ttsVoiceInput.innerHTML = '';
+                const cosyModel = 'FunAudioLLM/CosyVoice2-0.5B';
+                const preset = ['alex','benjamin','charles','david','anna','bella','claire','diana'].map(v => ({value: `${cosyModel}:${v}`, label: v}));
+                const group1 = document.createElement('optgroup');
+                group1.label = '预设音色 (CosyVoice)';
+                preset.forEach(({value,label}) => group1.appendChild(new Option(label, value)));
+                ttsVoiceInput.appendChild(group1);
+
+                // MOSS 预设音色
+                const mossModel = 'fnlp/MOSS-TTSD-v0.5';
+                const mossPreset = ['alex','anna','bella','benjamin','charles','claire','david','diana'].map(v => ({value: `${mossModel}:${v}`, label: v}));
+                const group2 = document.createElement('optgroup');
+                group2.label = '预设音色 (MOSS)';
+                mossPreset.forEach(({value,label}) => group2.appendChild(new Option(label, value)));
+                ttsVoiceInput.appendChild(group2);
+
+                // 自定义音色组
+                const custom = await (async() => {
+                    try {
+                        const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/list', {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${settings.key}`, 'Content-Type': 'application/json' }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const arr = data?.result || data?.results || [];
+                            return (Array.isArray(arr) ? arr : []).map(v => ({
+                                value: v?.uri || v?.id || v?.voice_id,
+                                label: (v?.name || v?.customName || v?.custom_name || '自定义音色') + ' (自定义)'
+                            })).filter(v => v.value);
+                        }
+                    } catch {}
+                    return [];
+                })();
+                if (custom.length) {
+                    const group2 = document.createElement('optgroup');
+                    group2.label = '自定义音色';
+                    custom.forEach(({value,label}) => group2.appendChild(new Option(label, value)));
+                    ttsVoiceInput.appendChild(group2);
+                }
+                if (ttsVoiceInput.options.length) ttsVoiceInput.selectedIndex = 0;
+                // 保存更新后的设置
+                saveTTSSettings(readTTSSettingsFromUI());
+                updateTTSStatus('连接成功，已自动填充模型与音色');
+            } catch (e) {
+                updateTTSStatus(`连接失败: ${e.message || e}`, true);
+            }
+        });
+    }
+
     // --- 5. 交互处理逻辑 (无变化) ---
     function showPanel() {
         if (inputPanel.classList.contains('active')) return;
         const btnRect = carrotButton.getBoundingClientRect();
-        const panelWidth = inputPanel.offsetWidth || 350;
-        const panelHeight = inputPanel.offsetHeight || 380;
         const isMobile = window.innerWidth <= 768;
 
+        // 先显示面板以获取正确的尺寸
+        inputPanel.style.visibility = 'hidden';
+        inputPanel.classList.add('active');
+
+        // 获取实际尺寸
+        const panelWidth = inputPanel.offsetWidth;
+        const panelHeight = inputPanel.offsetHeight;
+
         if (isMobile) {
+            // 移动端：居中显示，但确保在可视区域内
+            const maxHeight = window.innerHeight - 40; // 留出上下各20px的边距
+            const actualHeight = Math.min(panelHeight, maxHeight);
+
             const left = Math.max(10, (window.innerWidth - panelWidth) / 2);
-            const top = Math.max(10, (window.innerHeight - panelHeight) / 2);
+            // 确保面板顶部不会超出屏幕
+            const top = Math.max(20, Math.min(
+                (window.innerHeight - actualHeight) / 2,
+                window.innerHeight - actualHeight - 20
+            ));
+
             inputPanel.style.top = `${top}px`;
             inputPanel.style.left = `${left}px`;
         } else {
+            // 桌面端：优先显示在按钮上方
             let top = btnRect.top - panelHeight - 10;
             if (top < 10) {
                 top = btnRect.bottom + 10;
@@ -1756,7 +2637,8 @@
             inputPanel.style.left = `${left}px`;
         }
 
-        inputPanel.classList.add('active');
+        // 显示面板
+        inputPanel.style.visibility = 'visible';
     }
     function hidePanel() {
         inputPanel.classList.remove('active');
@@ -1857,10 +2739,32 @@
     $(() => {
         $(window).on('resize orientationchange', function () {
             if (inputPanel.classList.contains('active')) {
-                setTimeout(() => {
-                    hidePanel();
-                    showPanel();
-                }, 100);
+                // 直接重新定位，不需要隐藏再显示
+                const btnRect = carrotButton.getBoundingClientRect();
+                const isMobile = window.innerWidth <= 768;
+                const panelWidth = inputPanel.offsetWidth;
+                const panelHeight = inputPanel.offsetHeight;
+
+                if (isMobile) {
+                    const maxHeight = window.innerHeight - 40;
+                    const actualHeight = Math.min(panelHeight, maxHeight);
+                    const left = Math.max(10, (window.innerWidth - panelWidth) / 2);
+                    const top = Math.max(20, Math.min(
+                        (window.innerHeight - actualHeight) / 2,
+                        window.innerHeight - actualHeight - 20
+                    ));
+                    inputPanel.style.top = `${top}px`;
+                    inputPanel.style.left = `${left}px`;
+                } else {
+                    let top = btnRect.top - panelHeight - 10;
+                    if (top < 10) {
+                        top = btnRect.bottom + 10;
+                    }
+                    let left = btnRect.left + btnRect.width / 2 - panelWidth / 2;
+                    left = Math.max(10, Math.min(left, window.innerWidth - panelWidth - 10));
+                    inputPanel.style.top = `${top}px`;
+                    inputPanel.style.left = `${left}px`;
+                }
             }
 
             if (emojiPicker.style.display === 'block') {
@@ -1958,8 +2862,11 @@
         initWebWorker();
         initAvatarStyler();
         initUnsplashImageReplacement();
+        // 载入并应用TTS设置
+        applyTTSSettingsToUI(getTTSSettings());
         loadThemes();
         loadAvatarProfiles();
+        loadFrameProfiles(); // 加载头像框配置
         renderCategories();
         loadButtonPosition();
         const savedFilename = localStorage.getItem('cip_sync_filename_v1');
