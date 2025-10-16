@@ -335,11 +335,14 @@
 
                     <div id="cip-tts-pane-settings" class="cip-tts-pane active">
                         <div class="cip-tts-grid">
+                            <label for="cip-tts-vendor">厂商</label>
+                            <select id="cip-tts-vendor">
+                                <option value="siliconflow">硅基流动</option>
+                                <option value="elevenlabs">ElevenLabs</option>
+                            </select>
+
                             <label for="cip-tts-key">API</label>
                             <input type="password" id="cip-tts-key" placeholder="填写硅基流动 API Key">
-
-                            <label for="cip-tts-endpoint">API端点</label>
-                            <input type="text" id="cip-tts-endpoint" placeholder="自动设置，无需填写">
 
                             <label for="cip-tts-model">模型</label>
                             <select id="cip-tts-model"></select>
@@ -503,11 +506,10 @@
     const restoreDefaultsBtn = get('cip-restore-defaults-btn');
     // --- 新增: 语音设置元素引用 ---
     // provider/MiniMax 已移除
+    const ttsVendorSelect = get('cip-tts-vendor');
     const ttsKeyInput = get('cip-tts-key');
     const ttsModelInput = get('cip-tts-model');
     const ttsVoiceInput = get('cip-tts-voice');
-    const ttsEndpointInput = get('cip-tts-endpoint');
-    const ttsEndpointLabel = document.querySelector('label[for="cip-tts-endpoint"]');
     const ttsSpeedRange = get('cip-tts-speed-range');
     const ttsSpeedValue = get('cip-tts-speed-value');
     const ttsUploadName = get('cip-tts-upload-name');
@@ -707,9 +709,8 @@
 
         voiceApi = initVoiceSettings(
             {
+                ttsVendorSelect,
                 ttsKeyInput,
-                ttsEndpointInput,
-                ttsEndpointLabel,
                 ttsModelInput,
                 ttsVoiceInput,
                 ttsSpeedRange,
