@@ -10,6 +10,8 @@ export function initAvatarSettings(
         deleteAvatarBtn,
         newAvatarProfileNameInput,
         saveAvatarBtn,
+        avatarSubtabs = [],
+        avatarPanes = [],
         adjustCharFrameBtn,
         adjustUserFrameBtn,
         frameAdjustPanel,
@@ -42,10 +44,29 @@ export function initAvatarSettings(
     let avatarProfiles = {};
     let frameProfiles = {};
     let currentAdjustingFrame = null;
+    const subtabList = avatarSubtabs ? Array.from(avatarSubtabs) : [];
+    const paneList = avatarPanes ? Array.from(avatarPanes) : [];
     const frameAdjustments = {
         char: { size: 120, offsetX: 0, offsetY: 0 },
         user: { size: 120, offsetX: 0, offsetY: 0 },
     };
+
+    if (subtabList.length && paneList.length) {
+        subtabList.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.subtab;
+                subtabList.forEach((b) =>
+                    b.classList.toggle('active', b === btn),
+                );
+                paneList.forEach((pane) =>
+                    pane.classList.toggle(
+                        'active',
+                        pane.id === `cip-avatar-pane-${target}`,
+                    ),
+                );
+            });
+        });
+    }
 
     function initAvatarStyler() {
         avatarStyleTag = documentRef.getElementById('cip-avatar-styler');

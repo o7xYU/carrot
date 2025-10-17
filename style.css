@@ -53,6 +53,13 @@
         transform: translate(-50%, -50%) scale(0.95);
     }
 
+    /* 调整：移动端浮标大小 */
+    #cip-carrot-button {
+        width: 44px;
+        height: 44px;
+        font-size: 24px;
+    }
+
     /* 移动端：定时设置布局优化 */
     .cip-alarm-grid {
         grid-template-columns: 1fr 1fr;
@@ -575,16 +582,21 @@ emoji-picker {
     transform: translate(-50%, -50%) scale(0.95);
 }
 .cip-settings-header {
-    margin-bottom: 15px;
+    /* 调整：缩小齿轮面板导航与内容间距 */
+    margin-bottom: 10px;
 }
 #cip-settings-tabs {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    /* 调整：压缩齿轮面板导航按钮间距 */
+    gap: 4px;
+    flex-wrap: nowrap;
     justify-content: center;
 }
 .cip-settings-tab {
-    padding: 8px 16px;
+    /* 调整：压缩齿轮面板导航按钮间距 */
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 12px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
@@ -1056,6 +1068,42 @@ emoji-picker {
     border-radius: var(--cip-border-radius);
     background: rgba(0, 0, 0, 0.03);
     margin-bottom: 15px;
+}
+
+/* 新增: 头像配置子标签样式 */
+.cip-avatar-subtabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.cip-avatar-subtab {
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: background-color var(--cip-transition-speed);
+}
+.cip-avatar-subtab.active {
+    background: var(--cip-active-bg-color);
+    border-color: var(--cip-active-bg-color);
+}
+.cip-avatar-divider {
+    color: var(--cip-text-color);
+    opacity: 0.6;
+}
+.cip-avatar-separator {
+    border: none;
+    border-top: 1px solid var(--cip-border-color);
+    margin: 6px 0 12px;
+}
+.cip-avatar-pane {
+    display: none;
+}
+.cip-avatar-pane.active {
+    display: block;
 }
 
 .cip-section-title {

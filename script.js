@@ -80,7 +80,7 @@
             if (html) el.innerHTML = html;
             return el;
         };
-        const carrotButton = create('div', 'cip-carrot-button', null, '🌺');
+        const carrotButton = create('div', 'cip-carrot-button', null, '🧀');
         carrotButton.title = '胡萝卜快捷输入';
 
         const inputPanel = create(
@@ -124,7 +124,6 @@
                         </span>
                         <span class="cip-switch-text">正则</span>
                     </label>
-                    <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                 </div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
@@ -158,16 +157,15 @@
             `
             <div class="cip-settings-header">
                 <nav id="cip-settings-tabs">
-                    <button class="cip-settings-tab active" data-target="theme">主题设置</button>
-                    <button class="cip-settings-tab" data-target="avatar">头像配置</button>
-                    <button class="cip-settings-tab" data-target="alarm">定时指令</button>
-                    <button class="cip-settings-tab" data-target="voice">语音设置</button>
-                    <button class="cip-settings-tab" data-target="sync">同步设置</button>
+                    <button class="cip-settings-tab active" data-target="theme">主题</button>
+                    <button class="cip-settings-tab" data-target="avatar">头像</button>
+                    <button class="cip-settings-tab" data-target="alarm">定时</button>
+                    <button class="cip-settings-tab" data-target="voice">语音</button>
+                    <button class="cip-settings-tab" data-target="sync">同步</button>
                 </nav>
             </div>
             <div id="cip-settings-sections">
                 <section id="cip-settings-theme" class="cip-settings-section active">
-                    <h3>主题与颜色设置</h3>
                     <div class="cip-theme-options-grid">
                         <label for="cip-color-accent">主要/高亮颜色:</label>
                         <div class="cip-color-input-wrapper">
@@ -223,10 +221,15 @@
                     </div>
                 </section>
                 <section id="cip-settings-avatar" class="cip-settings-section">
-                    <h3>头像配置</h3>
+                    <div class="cip-avatar-subtabs">
+                        <button class="cip-avatar-subtab active" data-subtab="avatar">头像</button>
+                        <span class="cip-avatar-divider">｜</span>
+                        <button class="cip-avatar-subtab" data-subtab="frame">头像框</button>
+                    </div>
+                    <hr class="cip-avatar-separator">
 
                     <!-- 头像设置区域 -->
-                    <div class="cip-avatar-section">
+                    <div id="cip-avatar-pane-avatar" class="cip-avatar-pane cip-avatar-section active">
                         <h4 class="cip-section-title">🖼️ 头像设置</h4>
                         <div class="cip-avatar-grid">
                             <label for="cip-char-avatar-url">角色 (Char):</label>
@@ -253,7 +256,7 @@
                     </div>
 
                     <!-- 头像框设置区域 -->
-                    <div class="cip-frame-section">
+                    <div id="cip-avatar-pane-frame" class="cip-avatar-pane cip-frame-section">
                         <h4 class="cip-section-title">🎨 头像框设置</h4>
                         <div class="cip-avatar-grid">
                             <label for="cip-char-frame-url">角色头像框:</label>
@@ -303,7 +306,6 @@
                     </div>
                 </section>
                 <section id="cip-settings-alarm" class="cip-settings-section">
-                    <h3>定时指令设置</h3>
                     <div class="cip-alarm-grid">
                         <label for="cip-alarm-hours">时:</label>
                         <input type="number" id="cip-alarm-hours" min="0" placeholder="h">
@@ -386,18 +388,14 @@
                     </div>
                 </section>
                 <section id="cip-settings-sync" class="cip-settings-section">
-                    <h3>同步设置</h3>
-                    <div class="cip-sync-actions">
-                        <button id="cip-export-btn-panel">导出设置</button>
-                        <label for="cip-import-settings-input" id="cip-import-label-panel" class="cip-button-label">导入设置</label>
-                    </div>
+                    <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                     <div class="cip-sync-path-container">
                         <label for="cip-sync-path-input">保存到:</label>
                         <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
                     </div>
                     <div class="cip-sync-path-actions">
-                         <button id="cip-save-path-btn">保存</button>
-                         <button id="cip-load-path-btn">加载</button>
+                        <button id="cip-save-path-btn">保存</button>
+                        <button id="cip-load-path-btn">加载</button>
                     </div>
                     <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
                 </section>
@@ -485,8 +483,6 @@
 
     // --- 新增: 导入/同步元素引用 ---
     const importSettingsInput = get('cip-import-settings-input');
-    const exportBtnPanel = get('cip-export-btn-panel');
-    const importLabelPanel = get('cip-import-label-panel');
     const syncPathInput = get('cip-sync-path-input');
     const savePathBtn = get('cip-save-path-btn');
     const loadPathBtn = get('cip-load-path-btn');
@@ -524,6 +520,8 @@
     const ttsVoiceDeleteBtn = get('cip-tts-voice-delete');
     const ttsSubtabs = document.querySelectorAll('.cip-tts-subtab');
     const ttsPanes = document.querySelectorAll('.cip-tts-pane');
+    const avatarSubtabs = document.querySelectorAll('.cip-avatar-subtab');
+    const avatarPanes = document.querySelectorAll('.cip-avatar-pane');
     // --- 新增: 头像配置元素引用 ---
     const charAvatarUrlInput = get('cip-char-avatar-url');
     const userAvatarUrlInput = get('cip-user-avatar-url');
@@ -676,6 +674,8 @@
                 deleteAvatarBtn,
                 newAvatarProfileNameInput,
                 saveAvatarBtn,
+                avatarSubtabs,
+                avatarPanes,
                 adjustCharFrameBtn,
                 adjustUserFrameBtn,
                 frameAdjustPanel,
@@ -760,9 +760,7 @@
 
         syncApi = initSyncSettings(
             {
-                exportBtnPanel,
                 importSettingsInput,
-                importLabelPanel,
                 savePathBtn,
                 loadPathBtn,
                 syncPathInput,

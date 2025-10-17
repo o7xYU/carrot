@@ -1,8 +1,6 @@
 export function initSyncSettings(
     {
-        exportBtnPanel,
         importSettingsInput,
-        importLabelPanel,
         savePathBtn,
         loadPathBtn,
         syncPathInput,
@@ -123,8 +121,6 @@ export function initSyncSettings(
     }
 
     importSettingsInput?.addEventListener('change', importSettings);
-    exportBtnPanel?.addEventListener('click', () => exportSettings());
-    importLabelPanel?.addEventListener('click', () => importSettingsInput?.click());
     savePathBtn?.addEventListener('click', saveToPath);
     loadPathBtn?.addEventListener('click', loadFromPath);
 
