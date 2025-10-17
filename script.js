@@ -80,7 +80,7 @@
             if (html) el.innerHTML = html;
             return el;
         };
-        const carrotButton = create('div', 'cip-carrot-button', null, '🌺');
+        const carrotButton = create('div', 'cip-carrot-button', null, '🧀');
         carrotButton.title = '胡萝卜快捷输入';
 
         const inputPanel = create(
@@ -225,8 +225,15 @@
                 <section id="cip-settings-avatar" class="cip-settings-section">
                     <h3>头像配置</h3>
 
+                    <div class="cip-avatar-subtabs">
+                        <button class="cip-avatar-subtab active" data-subtab="avatar">头像</button>
+                        <span class="cip-avatar-divider">｜</span>
+                        <button class="cip-avatar-subtab" data-subtab="frame">头像框</button>
+                    </div>
+                    <hr class="cip-avatar-separator">
+
                     <!-- 头像设置区域 -->
-                    <div class="cip-avatar-section">
+                    <div id="cip-avatar-pane-avatar" class="cip-avatar-pane cip-avatar-section active">
                         <h4 class="cip-section-title">🖼️ 头像设置</h4>
                         <div class="cip-avatar-grid">
                             <label for="cip-char-avatar-url">角色 (Char):</label>
@@ -253,7 +260,7 @@
                     </div>
 
                     <!-- 头像框设置区域 -->
-                    <div class="cip-frame-section">
+                    <div id="cip-avatar-pane-frame" class="cip-avatar-pane cip-frame-section">
                         <h4 class="cip-section-title">🎨 头像框设置</h4>
                         <div class="cip-avatar-grid">
                             <label for="cip-char-frame-url">角色头像框:</label>
@@ -524,6 +531,8 @@
     const ttsVoiceDeleteBtn = get('cip-tts-voice-delete');
     const ttsSubtabs = document.querySelectorAll('.cip-tts-subtab');
     const ttsPanes = document.querySelectorAll('.cip-tts-pane');
+    const avatarSubtabs = document.querySelectorAll('.cip-avatar-subtab');
+    const avatarPanes = document.querySelectorAll('.cip-avatar-pane');
     // --- 新增: 头像配置元素引用 ---
     const charAvatarUrlInput = get('cip-char-avatar-url');
     const userAvatarUrlInput = get('cip-user-avatar-url');
@@ -676,6 +685,8 @@
                 deleteAvatarBtn,
                 newAvatarProfileNameInput,
                 saveAvatarBtn,
+                avatarSubtabs,
+                avatarPanes,
                 adjustCharFrameBtn,
                 adjustUserFrameBtn,
                 frameAdjustPanel,
