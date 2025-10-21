@@ -109,6 +109,14 @@ export function initAvatarSettings(
         avatarStyleTag.textContent = cssRules;
     }
 
+    function applyFromInputs() {
+        const charUrl = charAvatarUrlInput?.value.trim() || '';
+        const userUrl = userAvatarUrlInput?.value.trim() || '';
+        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
+        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
+        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+    }
+
     function populateAvatarSelect() {
         if (!avatarProfileSelect) return;
         const savedSelection = avatarProfileSelect.value;
@@ -250,6 +258,7 @@ export function initAvatarSettings(
             const profile = avatarProfiles[lastProfileName];
             if (charAvatarUrlInput) charAvatarUrlInput.value = profile.char || '';
             if (userAvatarUrlInput) userAvatarUrlInput.value = profile.user || '';
+            applyFromInputs();
         }
     }
 
@@ -278,15 +287,14 @@ export function initAvatarSettings(
             if (profile.userFrameAdj) {
                 frameAdjustments.user = { ...profile.userFrameAdj };
             }
+            applyFromInputs();
+        } else {
+            applyFromInputs();
         }
     }
 
     applyAvatarBtn?.addEventListener('click', () => {
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     avatarProfileSelect?.addEventListener('change', (e) => {
@@ -295,16 +303,12 @@ export function initAvatarSettings(
             const profile = avatarProfiles[profileName];
             if (charAvatarUrlInput) charAvatarUrlInput.value = profile.char || '';
             if (userAvatarUrlInput) userAvatarUrlInput.value = profile.user || '';
-            const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-            const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-            applyAvatars(profile.char, profile.user, charFrameUrl, userFrameUrl);
+            applyFromInputs();
             localStorageRef.setItem('cip_last_avatar_profile_v1', profileName);
         } else if (!profileName) {
             if (charAvatarUrlInput) charAvatarUrlInput.value = '';
             if (userAvatarUrlInput) userAvatarUrlInput.value = '';
-            const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-            const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-            applyAvatars('', '', charFrameUrl, userFrameUrl);
+            applyFromInputs();
             localStorageRef.removeItem('cip_last_avatar_profile_v1');
         }
     });
@@ -326,28 +330,20 @@ export function initAvatarSettings(
             if (profile.userFrameAdj) {
                 frameAdjustments.user = { ...profile.userFrameAdj };
             }
-            const charUrl = charAvatarUrlInput?.value.trim() || '';
-            const userUrl = userAvatarUrlInput?.value.trim() || '';
-            applyAvatars(charUrl, userUrl, profile.charFrame, profile.userFrame);
+            applyFromInputs();
             localStorageRef.setItem('cip_last_frame_profile_v1', profileName);
         } else if (!profileName) {
             if (charAvatarFrameUrlInput) charAvatarFrameUrlInput.value = '';
             if (userAvatarFrameUrlInput) userAvatarFrameUrlInput.value = '';
             frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
             frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
-            const charUrl = charAvatarUrlInput?.value.trim() || '';
-            const userUrl = userAvatarUrlInput?.value.trim() || '';
-            applyAvatars(charUrl, userUrl, '', '');
+            applyFromInputs();
             localStorageRef.removeItem('cip_last_frame_profile_v1');
         }
     });
 
     applyFrameBtn?.addEventListener('click', () => {
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     saveFrameBtn?.addEventListener('click', saveFrameProfile);
@@ -392,11 +388,7 @@ export function initAvatarSettings(
         const value = parseInt(frameSizeSlider.value, 10) || 120;
         frameAdjustments[currentAdjustingFrame].size = value;
         if (frameSizeValue) frameSizeValue.textContent = value;
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     frameOffsetXSlider?.addEventListener('input', () => {
@@ -404,11 +396,7 @@ export function initAvatarSettings(
         const value = parseInt(frameOffsetXSlider.value, 10) || 0;
         frameAdjustments[currentAdjustingFrame].offsetX = value;
         if (frameOffsetXValue) frameOffsetXValue.textContent = value;
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     frameOffsetYSlider?.addEventListener('input', () => {
@@ -416,11 +404,7 @@ export function initAvatarSettings(
         const value = parseInt(frameOffsetYSlider.value, 10) || 0;
         frameAdjustments[currentAdjustingFrame].offsetY = value;
         if (frameOffsetYValue) frameOffsetYValue.textContent = value;
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     frameResetBtn?.addEventListener('click', () => {
@@ -436,11 +420,7 @@ export function initAvatarSettings(
         if (frameOffsetXValue) frameOffsetXValue.textContent = 0;
         if (frameOffsetYSlider) frameOffsetYSlider.value = 0;
         if (frameOffsetYValue) frameOffsetYValue.textContent = 0;
-        const charUrl = charAvatarUrlInput?.value.trim() || '';
-        const userUrl = userAvatarUrlInput?.value.trim() || '';
-        const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
-        const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
-        applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+        applyFromInputs();
     });
 
     frameCloseBtn?.addEventListener('click', () => {
