@@ -350,9 +350,14 @@
 }
 /* 新增：底部左侧控制按钮容器 */
 #cip-footer-controls {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+#cip-footer-controls > * {
+    flex-shrink: 0;
 }
 
 #cip-settings-button {
@@ -457,8 +462,8 @@
 
 .cip-switch-track {
     position: relative;
-    width: 40px;
-    height: 24px;
+    width: 52px;
+    height: 32px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
     transition: background-color var(--cip-transition-speed),
@@ -467,10 +472,10 @@
 
 .cip-switch-thumb {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -486,7 +491,7 @@
 
 .cip-switch.active .cip-switch-thumb,
 .cip-switch-input:checked + .cip-switch-track .cip-switch-thumb {
-    transform: translateX(19px);
+    transform: translateX(24px);
     background: var(--cip-insert-text-color, #ffffff);
 }
 
