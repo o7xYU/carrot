@@ -48,6 +48,7 @@ export function initAvatarSettings(
     let avatarProfiles = {};
     let frameProfiles = {};
     let currentAdjustingFrame = null;
+    const originalAvatarSources = new WeakMap();
     const subtabList = avatarSubtabs ? Array.from(avatarSubtabs) : [];
     const paneList = avatarPanes ? Array.from(avatarPanes) : [];
     const frameAdjustments = {
@@ -87,6 +88,110 @@ export function initAvatarSettings(
         if (!value || value === 'none') return '';
         const match = value.match(/url\((['"]?)(.*?)\1\)/i);
         return match ? match[2] : '';
+    }
+
+    function rememberOriginalAvatar(element) {
+        if (!element || element.nodeType !== 1 || originalAvatarSources.has(element))
+            return;
+
+        if (element.tagName === 'IMG') {
+            originalAvatarSources.set(element, {
+                type: 'img',
+                src: element.getAttribute('src') || '',
+                srcset: element.getAttribute('srcset') || '',
+            });
+            return;
+        }
+
+        if (element.tagName === 'SOURCE') {
+            originalAvatarSources.set(element, {
+                type: 'source',
+                srcset: element.getAttribute('srcset') || '',
+            });
+            return;
+        }
+
+        originalAvatarSources.set(element, {
+            type: 'bg',
+            backgroundImage: element.style.backgroundImage || '',
+            backgroundPriority:
+                element.style.getPropertyPriority?.('background-image') || '',
+        });
+    }
+
+    function applyAvatarToElement(element, rawUrl, sanitizedUrl) {
+        if (!element || element.nodeType !== 1) return;
+
+        rememberOriginalAvatar(element);
+        const original = originalAvatarSources.get(element) || {};
+
+        if (element.tagName === 'IMG') {
+            if (rawUrl) {
+                if (element.src !== rawUrl) element.src = rawUrl;
+                element.removeAttribute('srcset');
+            } else {
+                if (typeof original.src === 'string' && original.src) {
+                    element.src = original.src;
+                } else {
+                    element.removeAttribute('src');
+                }
+                if (typeof original.srcset === 'string' && original.srcset) {
+                    element.setAttribute('srcset', original.srcset);
+                } else {
+                    element.removeAttribute('srcset');
+                }
+            }
+            return;
+        }
+
+        if (element.tagName === 'SOURCE') {
+            if (rawUrl) {
+                element.setAttribute('srcset', rawUrl);
+            } else if (typeof original.srcset === 'string' && original.srcset) {
+                element.setAttribute('srcset', original.srcset);
+            } else {
+                element.removeAttribute('srcset');
+            }
+            return;
+        }
+
+        if (rawUrl) {
+            element.style.setProperty(
+                'background-image',
+                `url('${sanitizedUrl}')`,
+                'important',
+            );
+        } else if (original.type === 'bg') {
+            if (original.backgroundImage) {
+                element.style.setProperty(
+                    'background-image',
+                    original.backgroundImage,
+                    original.backgroundPriority || '',
+                );
+            } else {
+                element.style.removeProperty('background-image');
+            }
+        } else {
+            element.style.removeProperty('background-image');
+        }
+    }
+
+    function applyAvatarToElements(type, rawUrl) {
+        const selectors = avatarSelectorMap[type] || [];
+        if (!selectors.length) return;
+        const sanitizedUrl = rawUrl ? rawUrl.replace(/'/g, "\\'") : '';
+        const elements = new Set();
+        selectors.forEach((selector) => {
+            try {
+                const found = documentRef.querySelectorAll(selector);
+                found.forEach((el) => elements.add(el));
+            } catch (error) {
+                console.warn('Invalid avatar selector:', selector, error);
+            }
+        });
+        elements.forEach((element) =>
+            applyAvatarToElement(element, rawUrl, sanitizedUrl),
+        );
     }
 
     function readAvatarFromElement(element) {
@@ -151,17 +256,19 @@ export function initAvatarSettings(
                 return url;
             }
         }
-        return hasUsableAvatarUrl(defaultAvatars[type])
-            ? defaultAvatars[type]
-            : '';
+        defaultAvatars[type] = '';
+        return '';
     }
 
     function resolveAvatarUrl(type, explicitUrl) {
         if (hasUsableAvatarUrl(explicitUrl)) {
             return explicitUrl.trim();
         }
-        const detected = detectDefaultAvatar(type);
-        return hasUsableAvatarUrl(detected) ? detected.trim() : '';
+        if (!hasUsableAvatarUrl(defaultAvatars[type])) {
+            detectDefaultAvatar(type);
+        }
+        const fallback = defaultAvatars[type];
+        return hasUsableAvatarUrl(fallback) ? fallback.trim() : '';
     }
 
     function refreshDetectedDefaults() {
@@ -204,14 +311,8 @@ export function initAvatarSettings(
         cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
         const resolvedCharUrl = resolveAvatarUrl('char', charUrl);
         const resolvedUserUrl = resolveAvatarUrl('user', userUrl);
-        if (resolvedCharUrl) {
-            const safeCharUrl = resolvedCharUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
-        }
-        if (resolvedUserUrl) {
-            const safeUserUrl = resolvedUserUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
-        }
+        applyAvatarToElements('char', resolvedCharUrl);
+        applyAvatarToElements('user', resolvedUserUrl);
         if (charFrameUrl) {
             const safeCharFrameUrl = charFrameUrl.replace(/'/g, "\\'");
             const charAdj = frameAdjustments.char;
@@ -235,6 +336,124 @@ export function initAvatarSettings(
         const charFrameUrl = charAvatarFrameUrlInput?.value.trim() || '';
         const userFrameUrl = userAvatarFrameUrlInput?.value.trim() || '';
         applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl);
+    }
+
+    const pendingDefaultUpdates = { char: false, user: false };
+    let defaultUpdateScheduled = false;
+
+    function scheduleDefaultRefresh({ char = false, user = false } = {}) {
+        if (char) pendingDefaultUpdates.char = true;
+        if (user) pendingDefaultUpdates.user = true;
+        if (defaultUpdateScheduled) return;
+
+        const run = () => {
+            defaultUpdateScheduled = false;
+            const prevChar = defaultAvatars.char;
+            const prevUser = defaultAvatars.user;
+            if (pendingDefaultUpdates.char) detectDefaultAvatar('char');
+            if (pendingDefaultUpdates.user) detectDefaultAvatar('user');
+            pendingDefaultUpdates.char = false;
+            pendingDefaultUpdates.user = false;
+            const charChanged = prevChar !== defaultAvatars.char;
+            const userChanged = prevUser !== defaultAvatars.user;
+            if (charChanged || userChanged) {
+                applyFromInputs();
+            }
+        };
+
+        defaultUpdateScheduled = true;
+        if (windowRef?.requestAnimationFrame) {
+            windowRef.requestAnimationFrame(run);
+        } else if (windowRef?.setTimeout) {
+            windowRef.setTimeout(run, 16);
+        } else {
+            setTimeout(run, 16);
+        }
+    }
+
+    function elementMatchesSelectors(element, selectors = []) {
+        if (!element || element.nodeType !== 1 || !selectors.length) return false;
+        return selectors.some((selector) => {
+            try {
+                return element.matches?.(selector);
+            } catch (error) {
+                return false;
+            }
+        });
+    }
+
+    function nodeContainsSelectors(node, selectors = []) {
+        if (!node || node.nodeType !== 1 || !selectors.length) return false;
+        if (elementMatchesSelectors(node, selectors)) return true;
+        return selectors.some((selector) => {
+            try {
+                return node.querySelector?.(selector);
+            } catch (error) {
+                return false;
+            }
+        });
+    }
+
+    function watchDefaultAvatarSources() {
+        if (!documentRef?.body || !windowRef?.MutationObserver) return;
+        const observer = new windowRef.MutationObserver((mutations) => {
+            let shouldRefreshChar = false;
+            let shouldRefreshUser = false;
+            const charSelectors = avatarSelectorMap.char || [];
+            const userSelectors = avatarSelectorMap.user || [];
+
+            const inspectNode = (node) => {
+                if (!node || node.nodeType !== 1) return;
+                if (!shouldRefreshChar && nodeContainsSelectors(node, charSelectors)) {
+                    shouldRefreshChar = true;
+                }
+                if (!shouldRefreshUser && nodeContainsSelectors(node, userSelectors)) {
+                    shouldRefreshUser = true;
+                }
+            };
+
+            for (const mutation of mutations) {
+                if (mutation.type === 'attributes') {
+                    const target = mutation.target;
+                    if (!shouldRefreshChar && elementMatchesSelectors(target, charSelectors)) {
+                        shouldRefreshChar = true;
+                    }
+                    if (!shouldRefreshUser && elementMatchesSelectors(target, userSelectors)) {
+                        shouldRefreshUser = true;
+                    }
+                }
+
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes?.forEach?.(inspectNode);
+                    mutation.removedNodes?.forEach?.(inspectNode);
+                }
+
+                if (shouldRefreshChar && shouldRefreshUser) break;
+            }
+
+            if (shouldRefreshChar || shouldRefreshUser) {
+                scheduleDefaultRefresh({
+                    char: shouldRefreshChar,
+                    user: shouldRefreshUser,
+                });
+            }
+        });
+
+        observer.observe(documentRef.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: [
+                'style',
+                'src',
+                'srcset',
+                'data-avatar',
+                'data-src',
+                'data-avatar-url',
+                'data-bg',
+                'class',
+            ],
+        });
     }
 
     function populateAvatarSelect() {
@@ -561,6 +780,8 @@ export function initAvatarSettings(
 
     initAvatarStyler();
     refreshDetectedDefaults();
+    applyFromInputs();
+    watchDefaultAvatarSources();
     loadAvatarProfiles();
     loadFrameProfiles();
 
