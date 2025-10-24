@@ -164,6 +164,50 @@ const REGEX_RULES = [
         },
     },
     {
+        id: 'bhl-char-bubble',
+        pattern: /^"(.*?)"$/gm,
+        createNode({ documentRef, groups }) {
+            const [message = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const outer = doc.createElement('div');
+            outer.className = 'char_bubble custom-char_bubble';
+
+            const wrapper = doc.createElement('div');
+            wrapper.style.cssText = 'display: flex; margin-bottom: 18px; align-items: flex-start; position: relative; animation: message-pop 0.3s ease-out;';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_C_avar';
+            avatar.style.cssText = "width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;";
+
+            const bubble = doc.createElement('div');
+            bubble.style.cssText = 'padding: 10px 14px; border-radius: 24px !important; line-height: 1.4; border-bottom-left-radius: 24px !important; word-wrap: break-word; position: relative; transition: transform 0.2s; background: transparent !important; box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important; border: 1px solid rgba(200, 200, 200, 0.3) !important;';
+
+            const topDrop = doc.createElement('span');
+            topDrop.style.cssText = 'position: absolute; top: 5px; left: auto; right: 5px; width: 12px; height: 6px; background: white; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.9; z-index: 2; transform: rotate(45deg);';
+
+            const messageSpan = doc.createElement('span');
+            messageSpan.style.whiteSpace = 'pre-wrap';
+            messageSpan.style.wordBreak = 'break-word';
+            messageSpan.textContent = message.trim();
+
+            const bottomDrop = doc.createElement('span');
+            bottomDrop.style.cssText = 'position: absolute; top: 15px; left: auto; right: 5px; width: 4px; height: 4px; background: white; border-radius: 50%; opacity: 0.6; z-index: 2;';
+
+            bubble.appendChild(topDrop);
+            bubble.appendChild(messageSpan);
+            bubble.appendChild(bottomDrop);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+
+            outer.appendChild(wrapper);
+
+            return outer;
+        },
+    },
+    {
         id: 'bhl-system',
         pattern: /\+(.*?)\+/g,
         createNode({ documentRef, groups }) {
