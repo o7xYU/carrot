@@ -1108,11 +1108,11 @@ emoji-picker {
         font-size: 13px;
     }
     #cip-carrot-button {
-        width: 56px;
-        height: 56px;
-        font-size: 28px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+        min-width: 22px;
+        min-height: 22px;
     }
 }
 .cip-modal-content p {
