@@ -8,6 +8,7 @@
     let regexModuleReady = false;
     let regexEnabled = true;
     let isDocked = false;
+    let dockedLauncherButton = null;
 
     try {
         const regexModule = await import('./regex.js');
@@ -1589,6 +1590,26 @@
         settingsPanelEl?.classList.add('hidden');
     });
 
+    function getDockedLauncherButton() {
+        if (dockedLauncherButton) return dockedLauncherButton;
+        dockedLauncherButton = document.createElement('button');
+        dockedLauncherButton.id = 'cip-docked-launcher';
+        dockedLauncherButton.type = 'button';
+        dockedLauncherButton.className = 'cip-docked-launcher';
+        dockedLauncherButton.title = '胡萝卜快捷输入';
+        dockedLauncherButton.setAttribute('aria-pressed', 'false');
+        dockedLauncherButton.textContent = carrotButton.textContent || '🧀';
+        dockedLauncherButton.addEventListener('click', () => {
+            if (!isDocked) return;
+            if (inputPanel.classList.contains('active')) {
+                hidePanel(true);
+            } else {
+                showPanel();
+            }
+        });
+        return dockedLauncherButton;
+    }
+
     function dockPanel() {
         if (isDocked) return;
         const targetContainer = document.getElementById('nonQRFormItems');
@@ -1614,9 +1635,15 @@
             referenceNode = extensionMenuButton.nextSibling;
         }
 
+        const launcher = getDockedLauncherButton();
+        launcher.classList.add('active');
+        launcher.setAttribute('aria-pressed', 'false');
+
+        parentForInsertion.insertBefore(launcher, referenceNode);
         parentForInsertion.insertBefore(inputPanel, referenceNode);
 
-        inputPanel.classList.add('cip-docked', 'active');
+        inputPanel.classList.add('cip-docked');
+        inputPanel.classList.remove('active');
         inputPanel.style.removeProperty('top');
         inputPanel.style.removeProperty('left');
         inputPanel.style.removeProperty('visibility');
@@ -1626,13 +1653,39 @@
         carrotButton.style.display = 'none';
         isDocked = true;
         if (dockButton) {
-            dockButton.disabled = true;
-            dockButton.setAttribute('aria-disabled', 'true');
-            dockButton.title = '已停靠到底部';
+            dockButton.setAttribute('aria-pressed', 'true');
+            dockButton.title = '恢复浮标';
         }
     }
 
-    dockButton?.addEventListener('click', dockPanel);
+    function undockPanel() {
+        if (!isDocked) return;
+        hidePanel(true);
+        inputPanel.classList.remove('cip-docked');
+        inputPanel.style.removeProperty('top');
+        inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('visibility');
+        inputPanel.style.removeProperty('position');
+        inputPanel.style.removeProperty('transform');
+        inputPanel.style.removeProperty('opacity');
+        document.body.appendChild(inputPanel);
+        if (dockedLauncherButton) {
+            dockedLauncherButton.classList.remove('active');
+            dockedLauncherButton.setAttribute('aria-pressed', 'false');
+            dockedLauncherButton.remove();
+        }
+        carrotButton.style.display = '';
+        isDocked = false;
+        if (dockButton) {
+            dockButton.setAttribute('aria-pressed', 'false');
+            dockButton.title = '停靠到底部';
+        }
+    }
+
+    dockButton?.addEventListener('click', () => {
+        if (isDocked) undockPanel();
+        else dockPanel();
+    });
 
     // 主题、定时器与语音事件绑定由 setting 模块负责
 
@@ -1640,6 +1693,7 @@
     function showPanel() {
         if (isDocked) {
             inputPanel.classList.add('active');
+            dockedLauncherButton?.setAttribute('aria-pressed', 'true');
             return;
         }
         if (inputPanel.classList.contains('active')) return;
@@ -1686,9 +1740,10 @@
         // 显示面板
         inputPanel.style.visibility = 'visible';
     }
-    function hidePanel() {
-        if (isDocked) return;
+    function hidePanel(force = false) {
+        if (isDocked && !force) return;
         inputPanel.classList.remove('active');
+        dockedLauncherButton?.setAttribute('aria-pressed', 'false');
     }
 
     document.addEventListener('click', (e) => {
