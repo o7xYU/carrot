@@ -58,6 +58,14 @@ export function initAvatarSettings(
         char: TEMPLATE_CHAR_AVATAR,
         user: TEMPLATE_USER_AVATAR,
     };
+
+    function hasUsableAvatarUrl(value) {
+        if (!value) return false;
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === 'none') return false;
+        if (trimmed.includes('{{') && trimmed.includes('}}')) return false;
+        return true;
+    }
     const avatarSelectorMap = {
         char: [
             '.custom-B_C_avar',
@@ -84,34 +92,40 @@ export function initAvatarSettings(
     function readAvatarFromElement(element) {
         if (!element) return '';
         const dataset = element.dataset || {};
-        if (dataset.avatar) return dataset.avatar;
-        if (dataset.src) return dataset.src;
-        if (dataset.bg) return dataset.bg;
+        if (dataset.avatar && hasUsableAvatarUrl(dataset.avatar))
+            return dataset.avatar.trim();
+        if (dataset.src && hasUsableAvatarUrl(dataset.src))
+            return dataset.src.trim();
+        if (dataset.bg && hasUsableAvatarUrl(dataset.bg))
+            return dataset.bg.trim();
         const directAttr =
             element.getAttribute?.('data-avatar-url') ||
             element.getAttribute?.('data-src');
-        if (directAttr) return directAttr.trim();
+        if (directAttr && hasUsableAvatarUrl(directAttr))
+            return directAttr.trim();
         const srcsetAttr = element.getAttribute?.('srcset');
         if (srcsetAttr) {
             const firstEntry = srcsetAttr.split(',')[0]?.trim().split(' ')[0];
-            if (firstEntry) return firstEntry;
+            if (hasUsableAvatarUrl(firstEntry)) return firstEntry;
         }
         const inlineBg = extractUrlFromCssValue(
             element.style?.backgroundImage,
         );
-        if (inlineBg) return inlineBg;
+        if (hasUsableAvatarUrl(inlineBg)) return inlineBg;
         if (windowRef?.getComputedStyle) {
             const computedBg = extractUrlFromCssValue(
                 windowRef.getComputedStyle(element)?.backgroundImage,
             );
-            if (computedBg) return computedBg;
+            if (hasUsableAvatarUrl(computedBg)) return computedBg;
         }
         if (element.tagName === 'IMG') {
-            return element.currentSrc || element.src || '';
+            const currentSrc = element.currentSrc || element.src || '';
+            return hasUsableAvatarUrl(currentSrc) ? currentSrc : '';
         }
         const imgChild = element.querySelector?.('img');
         if (imgChild) {
-            return imgChild.currentSrc || imgChild.src || '';
+            const childSrc = imgChild.currentSrc || imgChild.src || '';
+            return hasUsableAvatarUrl(childSrc) ? childSrc : '';
         }
         const pictureSource = element.querySelector?.('source[srcset]');
         if (pictureSource) {
@@ -121,7 +135,7 @@ export function initAvatarSettings(
                     .split(',')[0]
                     ?.trim()
                     .split(' ')[0];
-                if (firstEntry) return firstEntry;
+                if (hasUsableAvatarUrl(firstEntry)) return firstEntry;
             }
         }
         return '';
@@ -132,20 +146,22 @@ export function initAvatarSettings(
         for (const selector of selectors) {
             const element = documentRef.querySelector(selector);
             const url = readAvatarFromElement(element);
-            if (url) {
+            if (hasUsableAvatarUrl(url)) {
                 defaultAvatars[type] = url;
                 return url;
             }
         }
-        return defaultAvatars[type] || '';
+        return hasUsableAvatarUrl(defaultAvatars[type])
+            ? defaultAvatars[type]
+            : '';
     }
 
     function resolveAvatarUrl(type, explicitUrl) {
-        if (explicitUrl) {
-            return explicitUrl;
+        if (hasUsableAvatarUrl(explicitUrl)) {
+            return explicitUrl.trim();
         }
         const detected = detectDefaultAvatar(type);
-        return detected || defaultAvatars[type] || '';
+        return hasUsableAvatarUrl(detected) ? detected.trim() : '';
     }
 
     function refreshDetectedDefaults() {
