@@ -7,6 +7,7 @@
     let setRegexEnabled = () => {};
     let regexModuleReady = false;
     let regexEnabled = true;
+    let isDocked = false;
 
     try {
         const regexModule = await import('./regex.js');
@@ -124,6 +125,7 @@
                         </span>
                         <span class="cip-switch-text">正则</span>
                     </label>
+                    <button id="cip-dock-button" class="cip-footer-icon" type="button" title="停靠到底部">👇</button>
                 </div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
@@ -470,6 +472,7 @@
     const settingsButton = get('cip-settings-button');
     const regexToggleInput = get('cip-regex-toggle');
     const regexToggleWrapper = get('cip-regex-toggle-wrapper');
+    const dockButton = get('cip-dock-button');
     const settingsPanelEl = get('cip-settings-panel');
     const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
     const settingsTabs = Array.from(queryAll('.cip-settings-tab'));
@@ -1586,10 +1589,59 @@
         settingsPanelEl?.classList.add('hidden');
     });
 
+    function dockPanel() {
+        if (isDocked) return;
+        const targetContainer = document.getElementById('nonQRFormItems');
+        if (!targetContainer) {
+            console.warn('胡萝卜插件：未找到nonQRFormItems容器，无法停靠。');
+            if (dockButton) {
+                dockButton.title = '未找到nonQRFormItems容器';
+            }
+            return;
+        }
+
+        const extensionMenuButton = document.getElementById(
+            'extensionsMenuButton',
+        );
+        let parentForInsertion = targetContainer;
+        let referenceNode = null;
+        if (
+            extensionMenuButton &&
+            targetContainer.contains(extensionMenuButton) &&
+            extensionMenuButton.parentElement
+        ) {
+            parentForInsertion = extensionMenuButton.parentElement;
+            referenceNode = extensionMenuButton.nextSibling;
+        }
+
+        parentForInsertion.insertBefore(inputPanel, referenceNode);
+
+        inputPanel.classList.add('cip-docked', 'active');
+        inputPanel.style.removeProperty('top');
+        inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('visibility');
+        inputPanel.style.removeProperty('position');
+        inputPanel.style.removeProperty('transform');
+        inputPanel.style.removeProperty('opacity');
+        carrotButton.style.display = 'none';
+        isDocked = true;
+        if (dockButton) {
+            dockButton.disabled = true;
+            dockButton.setAttribute('aria-disabled', 'true');
+            dockButton.title = '已停靠到底部';
+        }
+    }
+
+    dockButton?.addEventListener('click', dockPanel);
+
     // 主题、定时器与语音事件绑定由 setting 模块负责
 
     // --- 5. 交互处理逻辑 (无变化) ---
     function showPanel() {
+        if (isDocked) {
+            inputPanel.classList.add('active');
+            return;
+        }
         if (inputPanel.classList.contains('active')) return;
         const btnRect = carrotButton.getBoundingClientRect();
         const isMobile = window.innerWidth <= 768;
@@ -1635,11 +1687,13 @@
         inputPanel.style.visibility = 'visible';
     }
     function hidePanel() {
+        if (isDocked) return;
         inputPanel.classList.remove('active');
     }
 
     document.addEventListener('click', (e) => {
         if (
+            !isDocked &&
             inputPanel.classList.contains('active') &&
             !inputPanel.contains(e.target) &&
             !carrotButton.contains(e.target)
@@ -1655,6 +1709,7 @@
     });
 
     function dragHandler(e) {
+        if (isDocked) return;
         let isClick = true;
         if (e.type === 'touchstart') e.preventDefault();
         const rect = carrotButton.getBoundingClientRect();
@@ -1732,6 +1787,7 @@
 
     $(() => {
         $(window).on('resize orientationchange', function () {
+            if (isDocked) return;
             if (inputPanel.classList.contains('active')) {
                 // 直接重新定位，不需要隐藏再显示
                 const btnRect = carrotButton.getBoundingClientRect();
