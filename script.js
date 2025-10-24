@@ -1,4 +1,4 @@
-// script.js (v2.8 - 新增撤回、时间轴、系统信息正则)
+// script.js (v2.9 - 新增群聊正则、回复至底部栏)
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -7,6 +7,9 @@
     let setRegexEnabled = () => {};
     let regexModuleReady = false;
     let regexEnabled = true;
+    let isDocked = false;
+    let dockedLauncherButton = null;
+    let dockPlaceholder = null;
 
     try {
         const regexModule = await import('./regex.js');
@@ -124,10 +127,11 @@
                         </span>
                         <span class="cip-switch-text">正则</span>
                     </label>
+                    <button id="cip-dock-button" class="cip-footer-icon" type="button" title="停靠到底部">👇</button>
                 </div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
-                    <button id="cip-insert-button">插 入</button>
+                    <button id="cip-insert-button">插入</button>
                 </div>
             </div>
         `,
@@ -470,6 +474,7 @@
     const settingsButton = get('cip-settings-button');
     const regexToggleInput = get('cip-regex-toggle');
     const regexToggleWrapper = get('cip-regex-toggle-wrapper');
+    const dockButton = get('cip-dock-button');
     const settingsPanelEl = get('cip-settings-panel');
     const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
     const settingsTabs = Array.from(queryAll('.cip-settings-tab'));
@@ -1586,13 +1591,142 @@
         settingsPanelEl?.classList.add('hidden');
     });
 
+    function getDockedLauncherButton() {
+        if (dockedLauncherButton) return dockedLauncherButton;
+        dockedLauncherButton = document.createElement('button');
+        dockedLauncherButton.id = 'cip-docked-launcher';
+        dockedLauncherButton.type = 'button';
+        dockedLauncherButton.className = 'cip-docked-launcher';
+        dockedLauncherButton.title = '胡萝卜快捷输入';
+        dockedLauncherButton.setAttribute('aria-pressed', 'false');
+        dockedLauncherButton.textContent = carrotButton.textContent || '🧀';
+        dockedLauncherButton.addEventListener('click', () => {
+            if (!isDocked) return;
+            if (inputPanel.classList.contains('active')) {
+                hidePanel(true);
+            } else {
+                showPanel();
+            }
+        });
+        return dockedLauncherButton;
+    }
+
+    function ensureDockPlaceholder(parent, referenceNode) {
+        if (!dockPlaceholder) {
+            dockPlaceholder = document.createElement('span');
+            dockPlaceholder.id = 'cip-docked-panel-anchor';
+            dockPlaceholder.style.display = 'none';
+        }
+
+        if (dockPlaceholder.parentNode && dockPlaceholder.parentNode !== parent) {
+            dockPlaceholder.parentNode.removeChild(dockPlaceholder);
+        }
+
+        parent.insertBefore(dockPlaceholder, referenceNode);
+    }
+
+    function clearPanelInlinePositioning() {
+        inputPanel.style.removeProperty('top');
+        inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('bottom');
+        inputPanel.style.removeProperty('right');
+        inputPanel.style.removeProperty('visibility');
+        inputPanel.style.removeProperty('position');
+        inputPanel.style.removeProperty('transform');
+        inputPanel.style.removeProperty('opacity');
+    }
+
+    function restorePanelToDockAnchor() {
+        if (!isDocked || !dockPlaceholder?.parentNode) return;
+        if (inputPanel.parentNode === dockPlaceholder.parentNode) return;
+
+        dockPlaceholder.parentNode.insertBefore(
+            inputPanel,
+            dockPlaceholder.nextSibling,
+        );
+    }
+
+    function dockPanel() {
+        if (isDocked) return;
+        const targetContainer = document.getElementById('nonQRFormItems');
+        if (!targetContainer) {
+            console.warn('胡萝卜插件：未找到nonQRFormItems容器，无法停靠。');
+            if (dockButton) {
+                dockButton.title = '未找到nonQRFormItems容器';
+            }
+            return;
+        }
+
+        const extensionMenuButton = document.getElementById(
+            'extensionsMenuButton',
+        );
+        let parentForInsertion = targetContainer;
+        let referenceNode = null;
+        if (
+            extensionMenuButton &&
+            targetContainer.contains(extensionMenuButton) &&
+            extensionMenuButton.parentElement
+        ) {
+            parentForInsertion = extensionMenuButton.parentElement;
+            referenceNode = extensionMenuButton.nextSibling;
+        }
+
+        const launcher = getDockedLauncherButton();
+        launcher.classList.add('active');
+        launcher.setAttribute('aria-pressed', 'false');
+
+        parentForInsertion.insertBefore(launcher, referenceNode);
+        ensureDockPlaceholder(parentForInsertion, referenceNode);
+        parentForInsertion.insertBefore(inputPanel, referenceNode);
+
+        inputPanel.classList.add('cip-docked');
+        inputPanel.classList.remove('active');
+        clearPanelInlinePositioning();
+        carrotButton.style.display = 'none';
+        isDocked = true;
+        if (dockButton) {
+            dockButton.setAttribute('aria-pressed', 'true');
+            dockButton.title = '恢复浮标';
+        }
+    }
+
+    function undockPanel() {
+        if (!isDocked) return;
+        hidePanel(true);
+        inputPanel.classList.remove('cip-docked');
+        clearPanelInlinePositioning();
+        document.body.appendChild(inputPanel);
+        if (dockedLauncherButton) {
+            dockedLauncherButton.classList.remove('active');
+            dockedLauncherButton.setAttribute('aria-pressed', 'false');
+            dockedLauncherButton.remove();
+        }
+        dockPlaceholder?.remove();
+        dockPlaceholder = null;
+        carrotButton.style.display = '';
+        isDocked = false;
+        if (dockButton) {
+            dockButton.setAttribute('aria-pressed', 'false');
+            dockButton.title = '停靠到底部';
+        }
+    }
+
+    dockButton?.addEventListener('click', () => {
+        if (isDocked) undockPanel();
+        else dockPanel();
+    });
+
     // 主题、定时器与语音事件绑定由 setting 模块负责
 
     // --- 5. 交互处理逻辑 (无变化) ---
     function showPanel() {
-        if (inputPanel.classList.contains('active')) return;
-        const btnRect = carrotButton.getBoundingClientRect();
         const isMobile = window.innerWidth <= 768;
+
+        if (!isDocked && inputPanel.classList.contains('active')) return;
+
+        if (isDocked && inputPanel.parentNode !== document.body) {
+            document.body.appendChild(inputPanel);
+        }
 
         // 先显示面板以获取正确的尺寸
         inputPanel.style.visibility = 'hidden';
@@ -1601,6 +1735,38 @@
         // 获取实际尺寸
         const panelWidth = inputPanel.offsetWidth;
         const panelHeight = inputPanel.offsetHeight;
+
+        if (isDocked) {
+            dockedLauncherButton?.setAttribute('aria-pressed', 'true');
+            inputPanel.style.position = 'fixed';
+
+            if (isMobile) {
+                // 移动端：沿用浮标模式的弹出方式
+                const maxHeight = window.innerHeight - 40; // 留出上下各20px的边距
+                const actualHeight = Math.min(panelHeight, maxHeight);
+                const left = Math.max(10, (window.innerWidth - panelWidth) / 2);
+                const top = Math.max(20, Math.min(
+                    (window.innerHeight - actualHeight) / 2,
+                    window.innerHeight - actualHeight - 20,
+                ));
+
+                inputPanel.style.right = 'auto';
+                inputPanel.style.bottom = 'auto';
+                inputPanel.style.left = `${left}px`;
+                inputPanel.style.top = `${top}px`;
+            } else {
+                // 桌面端：固定在右下角
+                inputPanel.style.left = 'auto';
+                inputPanel.style.top = 'auto';
+                inputPanel.style.right = '16px';
+                inputPanel.style.bottom = '16px';
+            }
+
+            inputPanel.style.visibility = 'visible';
+            return;
+        }
+
+        const btnRect = carrotButton.getBoundingClientRect();
 
         if (isMobile) {
             // 移动端：居中显示，但确保在可视区域内
@@ -1611,7 +1777,7 @@
             // 确保面板顶部不会超出屏幕
             const top = Math.max(20, Math.min(
                 (window.innerHeight - actualHeight) / 2,
-                window.innerHeight - actualHeight - 20
+                window.innerHeight - actualHeight - 20,
             ));
 
             inputPanel.style.top = `${top}px`;
@@ -1634,12 +1800,19 @@
         // 显示面板
         inputPanel.style.visibility = 'visible';
     }
-    function hidePanel() {
+    function hidePanel(force = false) {
+        if (isDocked && !force) return;
         inputPanel.classList.remove('active');
+        dockedLauncherButton?.setAttribute('aria-pressed', 'false');
+        if (isDocked) {
+            restorePanelToDockAnchor();
+            clearPanelInlinePositioning();
+        }
     }
 
     document.addEventListener('click', (e) => {
         if (
+            !isDocked &&
             inputPanel.classList.contains('active') &&
             !inputPanel.contains(e.target) &&
             !carrotButton.contains(e.target)
@@ -1655,6 +1828,7 @@
     });
 
     function dragHandler(e) {
+        if (isDocked) return;
         let isClick = true;
         if (e.type === 'touchstart') e.preventDefault();
         const rect = carrotButton.getBoundingClientRect();
@@ -1732,6 +1906,7 @@
 
     $(() => {
         $(window).on('resize orientationchange', function () {
+            if (isDocked) return;
             if (inputPanel.classList.contains('active')) {
                 // 直接重新定位，不需要隐藏再显示
                 const btnRect = carrotButton.getBoundingClientRect();
