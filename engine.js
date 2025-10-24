@@ -1,4 +1,10 @@
-const regex_placement = {
+const globalScope = typeof globalThis !== 'undefined'
+    ? globalThis
+    : (typeof window !== 'undefined' ? window : undefined);
+
+const builtinPlacement = globalScope?.regex_placement;
+
+const regex_placement = builtinPlacement ?? {
     MD_DISPLAY: 0,
     USER_INPUT: 1,
     AI_OUTPUT: 2,
@@ -123,7 +129,7 @@ function shouldRunScript(script, placement, { isMarkdown, isPrompt, isEdit, dept
     return true;
 }
 
-function runRegexScript(script, rawString) {
+function runRegexScriptLocal(script, rawString) {
     if (!script || !rawString) {
         return rawString;
     }
@@ -172,7 +178,7 @@ function runRegexScript(script, rawString) {
     });
 }
 
-function getRegexedString(rawString, placement, scripts = [], params = {}) {
+function getRegexedStringLocal(rawString, placement, scripts = [], params = {}) {
     if (typeof rawString !== 'string' || rawString === '') {
         return typeof rawString === 'string' ? rawString : '';
     }
@@ -187,15 +193,67 @@ function getRegexedString(rawString, placement, scripts = [], params = {}) {
             continue;
         }
 
-        output = runRegexScript(script, output);
+        output = runRegexScriptLocal(script, output);
     }
 
     return output;
 }
 
+const builtinRegexFromString = typeof globalScope?.regexFromString === 'function'
+    ? globalScope.regexFromString.bind(globalScope)
+    : undefined;
+
+const builtinRunRegexScript = typeof globalScope?.runRegexScript === 'function'
+    ? globalScope.runRegexScript.bind(globalScope)
+    : undefined;
+
+const builtinGetRegexedString = typeof globalScope?.getRegexedString === 'function'
+    ? globalScope.getRegexedString.bind(globalScope)
+    : undefined;
+
+function regexFromString(regexInput) {
+    if (builtinRegexFromString) {
+        try {
+            return builtinRegexFromString(regexInput);
+        } catch (error) {
+            console.warn('regex engine: builtin regexFromString failed, falling back', error);
+        }
+    }
+
+    return parseRegexFromString(regexInput);
+}
+
+function runRegexScript(script, rawString) {
+    if (builtinRunRegexScript) {
+        try {
+            return builtinRunRegexScript(script, rawString);
+        } catch (error) {
+            console.warn('regex engine: builtin runRegexScript failed, using local version', error);
+        }
+    }
+
+    return runRegexScriptLocal(script, rawString);
+}
+
+function getRegexedString(rawString, placement, scripts = [], params = {}) {
+    if (builtinGetRegexedString && (!Array.isArray(scripts) || scripts.length === 0)) {
+        try {
+            return builtinGetRegexedString(rawString, placement, params);
+        } catch (error) {
+            console.warn('regex engine: builtin getRegexedString failed, using local version', error);
+        }
+    }
+
+    if (!Array.isArray(scripts) || !scripts.length) {
+        return typeof rawString === 'string' ? rawString : '';
+    }
+
+    return getRegexedStringLocal(rawString, placement, scripts, params);
+}
+
 export {
     regex_placement,
-    parseRegexFromString as regexFromString,
+    regexFromString,
     runRegexScript,
     getRegexedString,
 };

@@ -107,11 +107,17 @@ function clearApplied(element) {
 
 function restoreOriginal(element) {
     if (!element) return false;
-    if (!originalContentMap.has(element)) return false;
 
-    const original = originalContentMap.get(element);
-    element.innerHTML = original;
-    originalContentMap.delete(element);
+    const stored = originalContentMap.get(element);
+    if (!stored) {
+        clearApplied(element);
+        return false;
+    }
+
+    if (element.innerHTML !== stored.html) {
+        element.innerHTML = stored.html;
+    }
+
     clearApplied(element);
     return true;
 }
@@ -152,16 +158,83 @@ function ensureOriginalStored(element) {
     }
 
     const hasApplied = element.dataset?.cipRegexApplied === '1';
+    const currentHtml = element.innerHTML;
+    const currentText = element.textContent ?? '';
     const stored = originalContentMap.get(element);
 
-    if (!hasApplied && stored !== element.innerHTML) {
-        originalContentMap.set(element, element.innerHTML);
+    if (!stored) {
+        originalContentMap.set(element, { html: currentHtml, text: currentText });
         return;
     }
 
-    if (!originalContentMap.has(element)) {
-        originalContentMap.set(element, element.innerHTML);
+    if (!hasApplied && (stored.html !== currentHtml || stored.text !== currentText)) {
+        stored.html = currentHtml;
+        stored.text = currentText;
     }
+}
+
+function escapeHtml(value) {
+    const stringValue = typeof value === 'string' ? value : String(value ?? '');
+    return stringValue
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/ {2}/g, ' &nbsp;');
+}
+
+function buildSegmentsFromText(text, regexOptions) {
+    if (typeof text !== 'string' || text.length === 0) {
+        return { html: text ?? '', changed: false };
+    }
+
+    const lines = text.split(/\r?\n/);
+    const segments = [];
+    let changed = false;
+
+    lines.forEach((line) => {
+        const processedLine = getRegexedString(
+            line,
+            regexOptions.placement,
+            REGEX_SCRIPTS,
+            {
+                isMarkdown: regexOptions.isMarkdown,
+                isPrompt: regexOptions.isPrompt,
+                isEdit: regexOptions.isEdit,
+                depth: regexOptions.depth,
+            },
+        );
+
+        const lineChanged = typeof processedLine === 'string' && processedLine !== line;
+        if (lineChanged) {
+            changed = true;
+            segments.push({ content: processedLine, isHtml: true });
+        } else {
+            const escaped = escapeHtml(line);
+            segments.push({ content: escaped, isHtml: false });
+        }
+    });
+
+    let html = '';
+    segments.forEach((segment, index) => {
+        if (index > 0) {
+            const prev = segments[index - 1];
+            if (!segment.isHtml || !prev.isHtml) {
+                html += '<br>';
+            }
+        }
+
+        html += segment.content;
+    });
+
+    const endsWithNewline = /\r?\n$/.test(text);
+    const lastLine = lines[lines.length - 1];
+    if (endsWithNewline && lastLine !== '') {
+        html += '<br>';
+    }
+
+    return { html, changed };
 }
 
 function buildRegexOptions(options = {}) {
@@ -189,36 +262,38 @@ export function applyRegexReplacements(element, options = {}) {
 
     const { enabled = true } = options;
 
+    ensureOriginalStored(element);
+    const stored = originalContentMap.get(element);
+
     if (!enabled) {
         return restoreOriginal(element);
     }
 
-    ensureOriginalStored(element);
-
     const regexOptions = buildRegexOptions(options);
-    const processed = getRegexedString(
-        originalContentMap.get(element) ?? element.innerHTML,
-        regexOptions.placement,
-        REGEX_SCRIPTS,
-        {
-            isMarkdown: regexOptions.isMarkdown,
-            isPrompt: regexOptions.isPrompt,
-            isEdit: regexOptions.isEdit,
-            depth: regexOptions.depth,
-        },
-    );
+    const sourceText = stored?.text ?? element.textContent ?? '';
 
-    if (typeof processed !== 'string') {
+    try {
+        const { html, changed } = buildSegmentsFromText(sourceText, regexOptions);
+
+        if (!changed) {
+            if (element.dataset?.cipRegexApplied === '1') {
+                restoreOriginal(element);
+            }
+
+            return false;
+        }
+
+        if (element.innerHTML !== html) {
+            element.innerHTML = html;
+        }
+
+        markApplied(element);
+        return true;
+    } catch (error) {
+        console.warn('胡萝卜插件：正则替换失败，恢复原始文本', error);
+        restoreOriginal(element);
         return false;
     }
-
-    if (processed === element.innerHTML) {
-        return element.dataset?.cipRegexApplied === '1';
-    }
-
-    element.innerHTML = processed;
-    markApplied(element);
-    return true;
 }
 
 export function getRegexScripts() {
