@@ -464,8 +464,8 @@
 
 .cip-switch-track {
     position: relative;
-    width: 32px;
-    height: 26px;
+    width: 42px;
+    height: 20px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
     transition: background-color var(--cip-transition-speed),
