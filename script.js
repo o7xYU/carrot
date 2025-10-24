@@ -1646,6 +1646,8 @@
         inputPanel.classList.remove('active');
         inputPanel.style.removeProperty('top');
         inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('bottom');
+        inputPanel.style.removeProperty('right');
         inputPanel.style.removeProperty('visibility');
         inputPanel.style.removeProperty('position');
         inputPanel.style.removeProperty('transform');
@@ -1664,6 +1666,8 @@
         inputPanel.classList.remove('cip-docked');
         inputPanel.style.removeProperty('top');
         inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('bottom');
+        inputPanel.style.removeProperty('right');
         inputPanel.style.removeProperty('visibility');
         inputPanel.style.removeProperty('position');
         inputPanel.style.removeProperty('transform');
@@ -1691,14 +1695,9 @@
 
     // --- 5. 交互处理逻辑 (无变化) ---
     function showPanel() {
-        if (isDocked) {
-            inputPanel.classList.add('active');
-            dockedLauncherButton?.setAttribute('aria-pressed', 'true');
-            return;
-        }
-        if (inputPanel.classList.contains('active')) return;
-        const btnRect = carrotButton.getBoundingClientRect();
         const isMobile = window.innerWidth <= 768;
+
+        if (!isDocked && inputPanel.classList.contains('active')) return;
 
         // 先显示面板以获取正确的尺寸
         inputPanel.style.visibility = 'hidden';
@@ -1707,6 +1706,38 @@
         // 获取实际尺寸
         const panelWidth = inputPanel.offsetWidth;
         const panelHeight = inputPanel.offsetHeight;
+
+        if (isDocked) {
+            dockedLauncherButton?.setAttribute('aria-pressed', 'true');
+            inputPanel.style.position = 'fixed';
+
+            if (isMobile) {
+                // 移动端：沿用浮标模式的弹出方式
+                const maxHeight = window.innerHeight - 40; // 留出上下各20px的边距
+                const actualHeight = Math.min(panelHeight, maxHeight);
+                const left = Math.max(10, (window.innerWidth - panelWidth) / 2);
+                const top = Math.max(20, Math.min(
+                    (window.innerHeight - actualHeight) / 2,
+                    window.innerHeight - actualHeight - 20,
+                ));
+
+                inputPanel.style.right = 'auto';
+                inputPanel.style.bottom = 'auto';
+                inputPanel.style.left = `${left}px`;
+                inputPanel.style.top = `${top}px`;
+            } else {
+                // 桌面端：固定在右下角
+                inputPanel.style.left = 'auto';
+                inputPanel.style.top = 'auto';
+                inputPanel.style.right = '16px';
+                inputPanel.style.bottom = '16px';
+            }
+
+            inputPanel.style.visibility = 'visible';
+            return;
+        }
+
+        const btnRect = carrotButton.getBoundingClientRect();
 
         if (isMobile) {
             // 移动端：居中显示，但确保在可视区域内
@@ -1717,7 +1748,7 @@
             // 确保面板顶部不会超出屏幕
             const top = Math.max(20, Math.min(
                 (window.innerHeight - actualHeight) / 2,
-                window.innerHeight - actualHeight - 20
+                window.innerHeight - actualHeight - 20,
             ));
 
             inputPanel.style.top = `${top}px`;
