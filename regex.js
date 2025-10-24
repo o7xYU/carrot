@@ -2,6 +2,18 @@ const STORAGE_KEY = 'cip_regex_enabled_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
+export const REGEX_PLACEMENT = {
+    MD_DISPLAY: 0,
+    USER_INPUT: 1,
+    AI_OUTPUT: 2,
+    SLASH_COMMAND: 3,
+    WORLD_INFO: 5,
+    REASONING: 6,
+};
+
+const DEFAULT_RULE_PLACEMENT = [REGEX_PLACEMENT.AI_OUTPUT];
+const DEFAULT_PLACEMENT_VALUE = REGEX_PLACEMENT.AI_OUTPUT;
+
 const defaultDocument = typeof document !== 'undefined' ? document : null;
 const TEXT_NODE_FILTER =
     typeof NodeFilter !== 'undefined' ? NodeFilter.SHOW_TEXT : 4;
@@ -166,6 +178,11 @@ const REGEX_RULES = [
     {
         id: 'bhl-char-bubble',
         pattern: /^"(.*?)"$/gm,
+        placement: [REGEX_PLACEMENT.AI_OUTPUT],
+        markdownOnly: true,
+        promptOnly: false,
+        minDepth: null,
+        maxDepth: 2,
         createNode({ documentRef, groups }) {
             const [message = ''] = groups;
             const doc = documentRef || defaultDocument;
@@ -402,6 +419,63 @@ function markApplied(element) {
     element.dataset.cipRegexApplied = '1';
 }
 
+function normalizePlacementValue(value) {
+    return typeof value === 'number' && !Number.isNaN(value)
+        ? value
+        : DEFAULT_PLACEMENT_VALUE;
+}
+
+function getRulePlacements(rule) {
+    if (!rule) return DEFAULT_RULE_PLACEMENT;
+    const placements = rule.placement;
+    if (Array.isArray(placements) && placements.length > 0) {
+        return placements;
+    }
+    if (typeof placements === 'number' && !Number.isNaN(placements)) {
+        return [placements];
+    }
+    return DEFAULT_RULE_PLACEMENT;
+}
+
+function isFiniteNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function shouldApplyRule(rule, context = {}) {
+    if (!rule || rule.disabled) {
+        return false;
+    }
+
+    const placementValue = normalizePlacementValue(context.placement);
+    if (!getRulePlacements(rule).includes(placementValue)) {
+        return false;
+    }
+
+    const isMarkdown = Boolean(context.isMarkdown);
+    const isPrompt = Boolean(context.isPrompt);
+
+    if (rule.markdownOnly && !isMarkdown) {
+        return false;
+    }
+
+    if (rule.promptOnly && !isPrompt) {
+        return false;
+    }
+
+    const depth = context.depth;
+    if (isFiniteNumber(depth)) {
+        if (isFiniteNumber(rule.minDepth) && depth < rule.minDepth) {
+            return false;
+        }
+
+        if (isFiniteNumber(rule.maxDepth) && depth > rule.maxDepth) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function restoreOriginal(element) {
     if (!element) return false;
     const original = originalContentMap.get(element);
@@ -441,6 +515,10 @@ export function applyRegexReplacements(element, options = {}) {
     const {
         enabled = true,
         documentRef = defaultDocument,
+        placement = DEFAULT_PLACEMENT_VALUE,
+        depth,
+        isMarkdown = true,
+        isPrompt = false,
     } = options;
 
     if (!enabled) {
@@ -450,6 +528,13 @@ export function applyRegexReplacements(element, options = {}) {
     if (!documentRef) {
         return false;
     }
+
+    const context = {
+        placement,
+        depth: isFiniteNumber(depth) ? depth : undefined,
+        isMarkdown,
+        isPrompt,
+    };
 
     let replacedAny = false;
     let storedOriginal = false;
@@ -461,6 +546,10 @@ export function applyRegexReplacements(element, options = {}) {
     };
 
     for (const rule of REGEX_RULES) {
+        if (!shouldApplyRule(rule, context)) {
+            continue;
+        }
+
         const textNodes = collectTextNodes(element, documentRef);
         if (!textNodes.length) break;
 
