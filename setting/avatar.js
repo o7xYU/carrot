@@ -1,3 +1,6 @@
+const DEFAULT_CHAR_AVATAR = '{{charAvatarPath}}';
+const DEFAULT_USER_AVATAR = '{{userAvatarPath}}';
+
 export function initAvatarSettings(
     {
         charAvatarUrlInput,
@@ -84,14 +87,16 @@ export function initAvatarSettings(
         }
         let cssRules = '';
         cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
-        if (charUrl) {
-            const safeCharUrl = charUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
-        }
-        if (userUrl) {
-            const safeUserUrl = userUrl.replace(/'/g, "\\'");
-            cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
-        }
+        const resolvedCharUrl = (charUrl || DEFAULT_CHAR_AVATAR).replace(
+            /'/g,
+            "\\'",
+        );
+        const resolvedUserUrl = (userUrl || DEFAULT_USER_AVATAR).replace(
+            /'/g,
+            "\\'",
+        );
+        cssRules += `.custom-B_C_avar { background-image: url('${resolvedCharUrl}') !important; }\n`;
+        cssRules += `.custom-B_U_avar { background-image: url('${resolvedUserUrl}') !important; }\n`;
         if (charFrameUrl) {
             const safeCharFrameUrl = charFrameUrl.replace(/'/g, "\\'");
             const charAdj = frameAdjustments.char;
