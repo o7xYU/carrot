@@ -701,6 +701,7 @@
             },
             {
                 documentRef: document,
+                windowRef: window,
                 localStorageRef: localStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),

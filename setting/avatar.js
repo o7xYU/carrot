@@ -1,5 +1,5 @@
-const DEFAULT_CHAR_AVATAR = '{{charAvatarPath}}';
-const DEFAULT_USER_AVATAR = '{{userAvatarPath}}';
+const TEMPLATE_CHAR_AVATAR = '{{charAvatarPath}}';
+const TEMPLATE_USER_AVATAR = '{{userAvatarPath}}';
 
 export function initAvatarSettings(
     {
@@ -35,6 +35,7 @@ export function initAvatarSettings(
     },
     {
         documentRef = document,
+        windowRef = window,
         localStorageRef = localStorage,
         alertRef = (message) => alert(message),
         confirmRef = (message) => confirm(message),
@@ -53,6 +54,104 @@ export function initAvatarSettings(
         char: { size: 120, offsetX: 0, offsetY: 0 },
         user: { size: 120, offsetX: 0, offsetY: 0 },
     };
+    const defaultAvatars = {
+        char: TEMPLATE_CHAR_AVATAR,
+        user: TEMPLATE_USER_AVATAR,
+    };
+    const avatarSelectorMap = {
+        char: [
+            '.custom-B_C_avar',
+            '.B_C_avar',
+            '#char_avatar',
+            '.char_avatar',
+            '[data-avatar="char"]',
+        ],
+        user: [
+            '.custom-B_U_avar',
+            '.B_U_avar',
+            '#user_avatar',
+            '.user_avatar',
+            '[data-avatar="user"]',
+        ],
+    };
+
+    function extractUrlFromCssValue(value) {
+        if (!value || value === 'none') return '';
+        const match = value.match(/url\((['"]?)(.*?)\1\)/i);
+        return match ? match[2] : '';
+    }
+
+    function readAvatarFromElement(element) {
+        if (!element) return '';
+        const dataset = element.dataset || {};
+        if (dataset.avatar) return dataset.avatar;
+        if (dataset.src) return dataset.src;
+        if (dataset.bg) return dataset.bg;
+        const directAttr =
+            element.getAttribute?.('data-avatar-url') ||
+            element.getAttribute?.('data-src');
+        if (directAttr) return directAttr.trim();
+        const srcsetAttr = element.getAttribute?.('srcset');
+        if (srcsetAttr) {
+            const firstEntry = srcsetAttr.split(',')[0]?.trim().split(' ')[0];
+            if (firstEntry) return firstEntry;
+        }
+        const inlineBg = extractUrlFromCssValue(
+            element.style?.backgroundImage,
+        );
+        if (inlineBg) return inlineBg;
+        if (windowRef?.getComputedStyle) {
+            const computedBg = extractUrlFromCssValue(
+                windowRef.getComputedStyle(element)?.backgroundImage,
+            );
+            if (computedBg) return computedBg;
+        }
+        if (element.tagName === 'IMG') {
+            return element.currentSrc || element.src || '';
+        }
+        const imgChild = element.querySelector?.('img');
+        if (imgChild) {
+            return imgChild.currentSrc || imgChild.src || '';
+        }
+        const pictureSource = element.querySelector?.('source[srcset]');
+        if (pictureSource) {
+            const pictureSrcset = pictureSource.getAttribute('srcset');
+            if (pictureSrcset) {
+                const firstEntry = pictureSrcset
+                    .split(',')[0]
+                    ?.trim()
+                    .split(' ')[0];
+                if (firstEntry) return firstEntry;
+            }
+        }
+        return '';
+    }
+
+    function detectDefaultAvatar(type) {
+        const selectors = avatarSelectorMap[type] || [];
+        for (const selector of selectors) {
+            const element = documentRef.querySelector(selector);
+            const url = readAvatarFromElement(element);
+            if (url) {
+                defaultAvatars[type] = url;
+                return url;
+            }
+        }
+        return defaultAvatars[type] || '';
+    }
+
+    function resolveAvatarUrl(type, explicitUrl) {
+        if (explicitUrl) {
+            return explicitUrl;
+        }
+        const detected = detectDefaultAvatar(type);
+        return detected || defaultAvatars[type] || '';
+    }
+
+    function refreshDetectedDefaults() {
+        detectDefaultAvatar('char');
+        detectDefaultAvatar('user');
+    }
 
     if (subtabList.length && paneList.length) {
         subtabList.forEach((btn) => {
@@ -87,16 +186,16 @@ export function initAvatarSettings(
         }
         let cssRules = '';
         cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
-        const resolvedCharUrl = (charUrl || DEFAULT_CHAR_AVATAR).replace(
-            /'/g,
-            "\\'",
-        );
-        const resolvedUserUrl = (userUrl || DEFAULT_USER_AVATAR).replace(
-            /'/g,
-            "\\'",
-        );
-        cssRules += `.custom-B_C_avar { background-image: url('${resolvedCharUrl}') !important; }\n`;
-        cssRules += `.custom-B_U_avar { background-image: url('${resolvedUserUrl}') !important; }\n`;
+        const resolvedCharUrl = resolveAvatarUrl('char', charUrl);
+        const resolvedUserUrl = resolveAvatarUrl('user', userUrl);
+        if (resolvedCharUrl) {
+            const safeCharUrl = resolvedCharUrl.replace(/'/g, "\\'");
+            cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
+        }
+        if (resolvedUserUrl) {
+            const safeUserUrl = resolvedUserUrl.replace(/'/g, "\\'");
+            cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
+        }
         if (charFrameUrl) {
             const safeCharFrameUrl = charFrameUrl.replace(/'/g, "\\'");
             const charAdj = frameAdjustments.char;
@@ -445,11 +544,13 @@ export function initAvatarSettings(
     }
 
     initAvatarStyler();
+    refreshDetectedDefaults();
     loadAvatarProfiles();
     loadFrameProfiles();
 
     return {
         applyAvatars,
+        refreshDefaultAvatars: refreshDetectedDefaults,
         getFrameAdjustments: () => ({
             char: { ...frameAdjustments.char },
             user: { ...frameAdjustments.user },
