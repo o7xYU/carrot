@@ -23,6 +23,12 @@
         -ms-user-select: none;
         user-select: none;
     }
+    #cip-input-panel.cip-docked {
+        width: calc(100vw - 24px) !important;
+        max-width: 420px;
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+    }
     .cip-tab-button,
     .cip-sub-option-btn,
     #cip-recall-button,
@@ -163,6 +169,7 @@
     width: min(360px, calc(100vw - 32px));
     max-width: 360px;
     max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
     transform: none;
     z-index: 1100;
     margin-left: 0;
@@ -1030,6 +1037,12 @@ emoji-picker {
         width: calc(100vw - 20px);
         padding: 12px;
         gap: 12px;
+    }
+    #cip-input-panel.cip-docked {
+        width: calc(100vw - 20px) !important;
+        max-width: none;
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
     }
     .cip-modal-backdrop {
         padding: 10px;

@@ -9,6 +9,7 @@
     let regexEnabled = true;
     let isDocked = false;
     let dockedLauncherButton = null;
+    let dockPlaceholder = null;
 
     try {
         const regexModule = await import('./regex.js');
@@ -1610,6 +1611,41 @@
         return dockedLauncherButton;
     }
 
+    function ensureDockPlaceholder(parent, referenceNode) {
+        if (!dockPlaceholder) {
+            dockPlaceholder = document.createElement('span');
+            dockPlaceholder.id = 'cip-docked-panel-anchor';
+            dockPlaceholder.style.display = 'none';
+        }
+
+        if (dockPlaceholder.parentNode && dockPlaceholder.parentNode !== parent) {
+            dockPlaceholder.parentNode.removeChild(dockPlaceholder);
+        }
+
+        parent.insertBefore(dockPlaceholder, referenceNode);
+    }
+
+    function clearPanelInlinePositioning() {
+        inputPanel.style.removeProperty('top');
+        inputPanel.style.removeProperty('left');
+        inputPanel.style.removeProperty('bottom');
+        inputPanel.style.removeProperty('right');
+        inputPanel.style.removeProperty('visibility');
+        inputPanel.style.removeProperty('position');
+        inputPanel.style.removeProperty('transform');
+        inputPanel.style.removeProperty('opacity');
+    }
+
+    function restorePanelToDockAnchor() {
+        if (!isDocked || !dockPlaceholder?.parentNode) return;
+        if (inputPanel.parentNode === dockPlaceholder.parentNode) return;
+
+        dockPlaceholder.parentNode.insertBefore(
+            inputPanel,
+            dockPlaceholder.nextSibling,
+        );
+    }
+
     function dockPanel() {
         if (isDocked) return;
         const targetContainer = document.getElementById('nonQRFormItems');
@@ -1640,18 +1676,12 @@
         launcher.setAttribute('aria-pressed', 'false');
 
         parentForInsertion.insertBefore(launcher, referenceNode);
+        ensureDockPlaceholder(parentForInsertion, referenceNode);
         parentForInsertion.insertBefore(inputPanel, referenceNode);
 
         inputPanel.classList.add('cip-docked');
         inputPanel.classList.remove('active');
-        inputPanel.style.removeProperty('top');
-        inputPanel.style.removeProperty('left');
-        inputPanel.style.removeProperty('bottom');
-        inputPanel.style.removeProperty('right');
-        inputPanel.style.removeProperty('visibility');
-        inputPanel.style.removeProperty('position');
-        inputPanel.style.removeProperty('transform');
-        inputPanel.style.removeProperty('opacity');
+        clearPanelInlinePositioning();
         carrotButton.style.display = 'none';
         isDocked = true;
         if (dockButton) {
@@ -1664,20 +1694,15 @@
         if (!isDocked) return;
         hidePanel(true);
         inputPanel.classList.remove('cip-docked');
-        inputPanel.style.removeProperty('top');
-        inputPanel.style.removeProperty('left');
-        inputPanel.style.removeProperty('bottom');
-        inputPanel.style.removeProperty('right');
-        inputPanel.style.removeProperty('visibility');
-        inputPanel.style.removeProperty('position');
-        inputPanel.style.removeProperty('transform');
-        inputPanel.style.removeProperty('opacity');
+        clearPanelInlinePositioning();
         document.body.appendChild(inputPanel);
         if (dockedLauncherButton) {
             dockedLauncherButton.classList.remove('active');
             dockedLauncherButton.setAttribute('aria-pressed', 'false');
             dockedLauncherButton.remove();
         }
+        dockPlaceholder?.remove();
+        dockPlaceholder = null;
         carrotButton.style.display = '';
         isDocked = false;
         if (dockButton) {
@@ -1698,6 +1723,10 @@
         const isMobile = window.innerWidth <= 768;
 
         if (!isDocked && inputPanel.classList.contains('active')) return;
+
+        if (isDocked && inputPanel.parentNode !== document.body) {
+            document.body.appendChild(inputPanel);
+        }
 
         // 先显示面板以获取正确的尺寸
         inputPanel.style.visibility = 'hidden';
@@ -1775,6 +1804,10 @@
         if (isDocked && !force) return;
         inputPanel.classList.remove('active');
         dockedLauncherButton?.setAttribute('aria-pressed', 'false');
+        if (isDocked) {
+            restorePanelToDockAnchor();
+            clearPanelInlinePositioning();
+        }
     }
 
     document.addEventListener('click', (e) => {
