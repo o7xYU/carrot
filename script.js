@@ -131,7 +131,7 @@
                 </div>
                 <div class="cip-footer-actions">
                     <button id="cip-recall-button">撤回</button>
-                    <button id="cip-insert-button">插 入</button>
+                    <button id="cip-insert-button">插入</button>
                 </div>
             </div>
         `,

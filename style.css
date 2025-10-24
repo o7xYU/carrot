@@ -321,9 +321,11 @@
 }
 #cip-panel-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     padding: 0 12px 12px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 .cip-wallet-row {
     display: flex;
@@ -440,7 +442,7 @@
 .cip-switch {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: pointer;
     color: var(--cip-text-color, #f5f5f5);
     font-size: 14px;
@@ -462,7 +464,7 @@
 
 .cip-switch-track {
     position: relative;
-    width: 52px;
+    width: 48px;
     height: 32px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
@@ -491,7 +493,7 @@
 
 .cip-switch.active .cip-switch-thumb,
 .cip-switch-input:checked + .cip-switch-track .cip-switch-thumb {
-    transform: translateX(24px);
+    transform: translateX(16px);
     background: var(--cip-insert-text-color, #ffffff);
 }
 
@@ -540,17 +542,22 @@
 }
 .cip-footer-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin-left: auto;
 }
 #cip-recall-button,
 #cip-insert-button {
-    padding: 8px 20px;
+    padding: 6px 16px;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     transition: background-color var(--cip-transition-speed);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 #cip-recall-button {
     background-color: var(--cip-accent-color);
