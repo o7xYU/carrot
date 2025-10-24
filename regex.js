@@ -1,209 +1,245 @@
-import { characters, substituteParams, substituteParamsExtended, this_chid } from '../../../script.js';
-import { extension_settings } from '../../extensions.js';
-import { regexFromString } from '../../utils.js';
-export {
-    regex_placement,
-    getRegexedString,
-    runRegexScript,
-};
+import { getRegexedString, regexFromString, regex_placement } from './engine.js';
 
-/**
- * @enum {number} Where the regex script should be applied
- */
-const regex_placement = {
-    /**
-     * @deprecated MD Display is deprecated. Do not use.
-     */
-    MD_DISPLAY: 0,
-    USER_INPUT: 1,
-    AI_OUTPUT: 2,
-    SLASH_COMMAND: 3,
-    // 4 - sendAs (legacy)
-    WORLD_INFO: 5,
-    REASONING: 6,
-};
+const STORAGE_KEY = 'cip_regex_enabled_v1';
+const DEFAULT_REGEX_ENABLED = true;
+const originalContentMap = new WeakMap();
 
-export const substitute_find_regex = {
-    NONE: 0,
-    RAW: 1,
-    ESCAPED: 2,
-};
+const REGEX_SCRIPTS = [
+    {
+        id: '1',
+        scriptName: 'BHL-撤回',
+        disabled: false,
+        runOnEdit: true,
+        findRegex: '/^-(.*?)-$/gm',
+        replaceString: `<div style="text-align: center; margin-bottom: 6px;">
+  <details style="display: inline-block;">
+    <summary style="color: #999999; font-style: italic; font-size: 13px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent;">
+      对方撤回了一条消息
+    </summary>
 
-function sanitizeRegexMacro(x) {
-    return (x && typeof x === 'string') ?
-        x.replaceAll(/[\n\r\t\v\f\0.^$*+?{}[\]\\/|()]/gs, function (s) {
-            switch (s) {
-                case '\n':
-                    return '\\n';
-                case '\r':
-                    return '\\r';
-                case '\t':
-                    return '\\t';
-                case '\v':
-                    return '\\v';
-                case '\f':
-                    return '\\f';
-                case '\0':
-                    return '\\0';
-                default:
-                    return '\\' + s;
-            }
-        }) : x;
+    <div style="padding: 8px 12px; margin-top: 8px; background-color: rgba(0,0,0,0.04); border-radius: 10px; text-align: left;">
+      <p style="margin: 0; color: #555; font-style: normal; font-size: 14px; line-height: 1.4;">
+        $1
+      </p>
+    </div>
+
+  </details>
+
+</div>`,
+        trimStrings: [],
+        placement: [
+            regex_placement.USER_INPUT,
+            regex_placement.AI_OUTPUT,
+        ],
+        substituteRegex: 0,
+        minDepth: null,
+        maxDepth: 2,
+        markdownOnly: true,
+        promptOnly: false,
+    },
+    {
+        id: '2',
+        scriptName: 'BHL-时间戳',
+        disabled: false,
+        runOnEdit: true,
+        findRegex: '/^『(.*?) \\|(.*?)』$/gm',
+        replaceString: `<div style="text-align: center; color: #8e8e93; font-family: 'linja waso', sans-serif; font-size: 13px; margin: 9px 0;">
+  $1   $2
+</div>`,
+        trimStrings: [],
+        placement: [
+            regex_placement.USER_INPUT,
+            regex_placement.AI_OUTPUT,
+        ],
+        substituteRegex: 0,
+        minDepth: null,
+        maxDepth: 2,
+        markdownOnly: true,
+        promptOnly: false,
+    },
+    {
+        id: '3',
+        scriptName: 'BHL-系统提示',
+        disabled: false,
+        runOnEdit: true,
+        findRegex: '/\\+(.*?)\\+/g',
+        replaceString: `<div style="text-align: center; color: #888888; font-size: 14px; margin: 10px 0;">系统提示：$1</div>`,
+        trimStrings: [],
+        placement: [
+            regex_placement.USER_INPUT,
+            regex_placement.AI_OUTPUT,
+        ],
+        substituteRegex: 0,
+        minDepth: null,
+        maxDepth: 2,
+        markdownOnly: true,
+        promptOnly: false,
+    },
+    {
+        id: '4',
+        scriptName: 'BHL-char气泡（水滴+头像）',
+        disabled: false,
+        runOnEdit: true,
+        findRegex: '/^"(.*?)"$/gm',
+        replaceString: `<div class="char_bubble"><div style="display: flex;margin-bottom: 18px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">   <div class="B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url('https://i.postimg.cc/nhqSPb2R/640-1.jpg'); background-size: cover; background-position: center;">  </div>  <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important; word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: auto;right: 5px; width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span> $1  <span style="position: absolute;top: 15px; left: auto;right: 5px; width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"> </span></div></div></div>`,
+        trimStrings: [],
+        placement: [
+            regex_placement.USER_INPUT,
+            regex_placement.AI_OUTPUT,
+        ],
+        substituteRegex: 0,
+        minDepth: null,
+        maxDepth: 2,
+        markdownOnly: true,
+        promptOnly: false,
+    },
+];
+
+function markApplied(element) {
+    if (!element?.dataset) return;
+    element.dataset.cipRegexApplied = '1';
 }
 
-function getScopedRegex() {
-    const isAllowed = extension_settings?.character_allowed_regex?.includes(characters?.[this_chid]?.avatar);
-
-    if (!isAllowed) {
-        return [];
-    }
-
-    const scripts = characters[this_chid]?.data?.extensions?.regex_scripts;
-
-    if (!Array.isArray(scripts)) {
-        return [];
-    }
-
-    return scripts;
+function clearApplied(element) {
+    if (!element?.dataset) return;
+    delete element.dataset.cipRegexApplied;
 }
 
-/**
- * Parent function to fetch a regexed version of a raw string
- * @param {string} rawString The raw string to be regexed
- * @param {regex_placement} placement The placement of the string
- * @param {RegexParams} params The parameters to use for the regex script
- * @returns {string} The regexed string
- * @typedef {{characterOverride?: string, isMarkdown?: boolean, isPrompt?: boolean, isEdit?: boolean, depth?: number }} RegexParams The parameters to use for the regex script
- */
-function getRegexedString(rawString, placement, { characterOverride, isMarkdown, isPrompt, isEdit, depth } = {}) {
-    // WTF have you passed me?
-    if (typeof rawString !== 'string') {
-        console.warn('getRegexedString: rawString is not a string. Returning empty string.');
-        return '';
-    }
+function restoreOriginal(element) {
+    if (!element) return false;
+    if (!originalContentMap.has(element)) return false;
 
-    let finalString = rawString;
-    if (extension_settings.disabledExtensions.includes('regex') || !rawString || placement === undefined) {
-        return finalString;
-    }
+    const original = originalContentMap.get(element);
+    element.innerHTML = original;
+    originalContentMap.delete(element);
+    clearApplied(element);
+    return true;
+}
 
-    const allRegex = [...(extension_settings.regex ?? []), ...(getScopedRegex() ?? [])];
-    allRegex.forEach((script) => {
-        if (
-            // Script applies to Markdown and input is Markdown
-            (script.markdownOnly && isMarkdown) ||
-            // Script applies to Generate and input is Generate
-            (script.promptOnly && isPrompt) ||
-            // Script applies to all cases when neither "only"s are true, but there's no need to do it when `isMarkdown`, the as source (chat history) should already be changed beforehand
-            (!script.markdownOnly && !script.promptOnly && !isMarkdown && !isPrompt)
-        ) {
-            if (isEdit && !script.runOnEdit) {
-                console.debug(`getRegexedString: Skipping script ${script.scriptName} because it does not run on edit`);
-                return;
-            }
-
-            // Check if the depth is within the min/max depth
-            if (typeof depth === 'number') {
-                if (!isNaN(script.minDepth) && script.minDepth !== null && script.minDepth >= -1 && depth < script.minDepth) {
-                    console.debug(`getRegexedString: Skipping script ${script.scriptName} because depth ${depth} is less than minDepth ${script.minDepth}`);
-                    return;
-                }
-
-                if (!isNaN(script.maxDepth) && script.maxDepth !== null && script.maxDepth >= 0 && depth > script.maxDepth) {
-                    console.debug(`getRegexedString: Skipping script ${script.scriptName} because depth ${depth} is greater than maxDepth ${script.maxDepth}`);
-                    return;
-                }
-            }
-
-            if (script.placement.includes(placement)) {
-                finalString = runRegexScript(script, finalString, { characterOverride });
-            }
+export function getRegexEnabled() {
+    try {
+        if (typeof localStorage === 'undefined') {
+            return DEFAULT_REGEX_ENABLED;
         }
-    });
 
-    return finalString;
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored === null) {
+            return DEFAULT_REGEX_ENABLED;
+        }
+
+        return stored === 'true';
+    } catch (error) {
+        console.warn('胡萝卜插件：读取正则开关失败', error);
+        return DEFAULT_REGEX_ENABLED;
+    }
 }
 
-/**
- * Runs the provided regex script on the given string
- * @param {import('./index.js').RegexScript} regexScript The regex script to run
- * @param {string} rawString The string to run the regex script on
- * @param {RegexScriptParams} params The parameters to use for the regex script
- * @returns {string} The new string
- * @typedef {{characterOverride?: string}} RegexScriptParams The parameters to use for the regex script
- */
-function runRegexScript(regexScript, rawString, { characterOverride } = {}) {
-    let newString = rawString;
-    if (!regexScript || !!(regexScript.disabled) || !regexScript?.findRegex || !rawString) {
-        return newString;
+export function setRegexEnabled(enabled) {
+    try {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
+
+        localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
+    } catch (error) {
+        console.warn('胡萝卜插件：写入正则开关失败', error);
+    }
+}
+
+function ensureOriginalStored(element) {
+    if (!element) {
+        return;
     }
 
-    const getRegexString = () => {
-        switch (Number(regexScript.substituteRegex)) {
-            case substitute_find_regex.NONE:
-                return regexScript.findRegex;
-            case substitute_find_regex.RAW:
-                return substituteParamsExtended(regexScript.findRegex);
-            case substitute_find_regex.ESCAPED:
-                return substituteParamsExtended(regexScript.findRegex, {}, sanitizeRegexMacro);
-            default:
-                console.warn(`runRegexScript: Unknown substituteRegex value ${regexScript.substituteRegex}. Using raw regex.`);
-                return regexScript.findRegex;
-        }
+    const hasApplied = element.dataset?.cipRegexApplied === '1';
+    const stored = originalContentMap.get(element);
+
+    if (!hasApplied && stored !== element.innerHTML) {
+        originalContentMap.set(element, element.innerHTML);
+        return;
+    }
+
+    if (!originalContentMap.has(element)) {
+        originalContentMap.set(element, element.innerHTML);
+    }
+}
+
+function buildRegexOptions(options = {}) {
+    const {
+        placement = regex_placement.AI_OUTPUT,
+        isMarkdown = true,
+        isPrompt = false,
+        isEdit = false,
+        depth = 0,
+    } = options;
+
+    return {
+        placement,
+        isMarkdown,
+        isPrompt,
+        isEdit,
+        depth,
     };
-    const regexString = getRegexString();
-    const findRegex = regexFromString(regexString);
+}
 
-    // The user skill issued. Return with nothing.
-    if (!findRegex) {
-        return newString;
+export function applyRegexReplacements(element, options = {}) {
+    if (!element) {
+        return false;
     }
 
-    // Run replacement. Currently does not support the Overlay strategy
-    newString = rawString.replace(findRegex, function (match) {
-        const args = [...arguments];
-        const replaceString = regexScript.replaceString.replace(/{{match}}/gi, '$0');
-        const replaceWithGroups = replaceString.replaceAll(/\$(\d+)|\$<([^>]+)>/g, (_, num, groupName) => {
-            if (num) {
-                // Handle numbered capture groups ($1, $2, etc.)
-                match = args[Number(num)];
-            } else if (groupName) {
-                // Handle named capture groups ($<name>)
-                const groups = args[args.length - 1];
-                match = groups && typeof groups === 'object' && groups[groupName];
-            }
+    const { enabled = true } = options;
 
-            // No match found - return the empty string
-            if (!match) {
-                return '';
-            }
+    if (!enabled) {
+        return restoreOriginal(element);
+    }
 
-            // Remove trim strings from the match
-            const filteredMatch = filterString(match, regexScript.trimStrings, { characterOverride });
+    ensureOriginalStored(element);
 
-            return filteredMatch;
-        });
+    const regexOptions = buildRegexOptions(options);
+    const processed = getRegexedString(
+        originalContentMap.get(element) ?? element.innerHTML,
+        regexOptions.placement,
+        REGEX_SCRIPTS,
+        {
+            isMarkdown: regexOptions.isMarkdown,
+            isPrompt: regexOptions.isPrompt,
+            isEdit: regexOptions.isEdit,
+            depth: regexOptions.depth,
+        },
+    );
 
-        // Substitute at the end
-        return substituteParams(replaceWithGroups);
-    });
+    if (typeof processed !== 'string') {
+        return false;
+    }
 
-    return newString;
+    if (processed === element.innerHTML) {
+        return element.dataset?.cipRegexApplied === '1';
+    }
+
+    element.innerHTML = processed;
+    markApplied(element);
+    return true;
 }
 
-/**
- * Filters anything to trim from the regex match
- * @param {string} rawString The raw string to filter
- * @param {string[]} trimStrings The strings to trim
- * @param {RegexScriptParams} params The parameters to use for the regex filter
- * @returns {string} The filtered string
- */
-function filterString(rawString, trimStrings, { characterOverride } = {}) {
-    let finalString = rawString;
-    trimStrings.forEach((trimString) => {
-        const subTrimString = substituteParams(trimString, undefined, characterOverride);
-        finalString = finalString.replaceAll(subTrimString, '');
-    });
-
-    return finalString;
+export function getRegexScripts() {
+    return REGEX_SCRIPTS.slice();
 }
+
+export function regexTest(value, script) {
+    const targetScript = script ?? null;
+    const findRegex = regexFromString(targetScript?.findRegex);
+    if (!findRegex) {
+        return false;
+    }
+
+    return findRegex.test(value);
+}
+
+export default {
+    applyRegexReplacements,
+    getRegexEnabled,
+    setRegexEnabled,
+    getRegexScripts,
+};
+
+export { regex_placement };
