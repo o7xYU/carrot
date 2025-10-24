@@ -27,6 +27,143 @@ const REGEX_RULES = [
         },
     },
     {
+        id: 'bhl-bubble-self',
+        pattern: /\[(.*?)\\(.*?)\\(.*?)\]/gm,
+        createNode({ documentRef, groups }) {
+            const [name = '', time = '', message = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const container = doc.createElement('div');
+            container.style.margin = '10px 0';
+            container.style.maxWidth = '75%';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'flex-end';
+            container.style.marginLeft = 'auto';
+
+            const header = doc.createElement('div');
+            header.style.fontSize = '12px';
+            header.style.color = '#8a8a8a';
+            header.style.marginRight = '5px';
+            header.style.marginBottom = '5px';
+
+            const nameSpan = doc.createElement('span');
+            nameSpan.textContent = name.trim();
+
+            header.appendChild(nameSpan);
+
+            const bodyWrapper = doc.createElement('div');
+            bodyWrapper.style.display = 'flex';
+            bodyWrapper.style.alignItems = 'flex-end';
+            bodyWrapper.style.width = '100%';
+            bodyWrapper.style.justifyContent = 'flex-end';
+
+            const timeSpan = doc.createElement('span');
+            timeSpan.style.fontSize = '12px';
+            timeSpan.style.color = '#b2b2b2';
+            timeSpan.style.marginRight = '8px';
+            timeSpan.style.flexShrink = '0';
+            timeSpan.textContent = time.trim();
+
+            const bubble = doc.createElement('div');
+            bubble.style.backgroundColor = '#8DE041';
+            bubble.style.color = '#000000';
+            bubble.style.padding = '12px 16px';
+            bubble.style.borderRadius = '20px';
+            bubble.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.08)';
+            bubble.style.position = 'relative';
+            bubble.style.maxWidth = '100%';
+
+            const paragraph = doc.createElement('p');
+            paragraph.style.margin = '0';
+            paragraph.style.whiteSpace = 'pre-wrap';
+            paragraph.style.wordWrap = 'break-word';
+            paragraph.style.fontSize = '12px';
+            paragraph.style.lineHeight = '1.5';
+            paragraph.textContent = message.trim();
+
+            bubble.appendChild(paragraph);
+
+            bodyWrapper.appendChild(timeSpan);
+            bodyWrapper.appendChild(bubble);
+
+            container.appendChild(header);
+            container.appendChild(bodyWrapper);
+
+            return container;
+        },
+    },
+    {
+        id: 'bhl-bubble',
+        pattern: /\[(.*?)\/(.*?)\/(.*?)\]/gm,
+        createNode({ documentRef, groups }) {
+            const [name = '', message = '', time = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const container = doc.createElement('div');
+            container.style.margin = '10px 0';
+            container.style.maxWidth = '75%';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'flex-start';
+
+            const header = doc.createElement('div');
+            header.style.fontSize = '13px';
+            header.style.color = '#8a8a8a';
+            header.style.marginLeft = '5px';
+            header.style.marginBottom = '5px';
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+
+            const nameSpan = doc.createElement('span');
+            nameSpan.style.fontWeight = '300';
+            nameSpan.textContent = name.trim();
+
+            header.appendChild(nameSpan);
+
+            const bodyWrapper = doc.createElement('div');
+            bodyWrapper.style.display = 'flex';
+            bodyWrapper.style.alignItems = 'flex-end';
+            bodyWrapper.style.width = '100%';
+
+            const bubble = doc.createElement('div');
+            bubble.style.backgroundColor = '#ffffff';
+            bubble.style.color = '#000000';
+            bubble.style.padding = '12px 16px';
+            bubble.style.borderRadius = '20px';
+            bubble.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.08)';
+            bubble.style.position = 'relative';
+            bubble.style.maxWidth = '100%';
+
+            const paragraph = doc.createElement('p');
+            paragraph.style.margin = '0';
+            paragraph.style.whiteSpace = 'pre-wrap';
+            paragraph.style.wordWrap = 'break-word';
+            paragraph.style.fontSize = '12px';
+            paragraph.style.lineHeight = '1.5';
+            paragraph.textContent = message.trim();
+
+            bubble.appendChild(paragraph);
+
+            const timeSpan = doc.createElement('span');
+            timeSpan.style.fontSize = '12px';
+            timeSpan.style.color = '#b2b2b2';
+            timeSpan.style.marginLeft = '8px';
+            timeSpan.style.flexShrink = '0';
+            timeSpan.textContent = time.trim();
+
+            bodyWrapper.appendChild(bubble);
+            bodyWrapper.appendChild(timeSpan);
+
+            container.appendChild(header);
+            container.appendChild(bodyWrapper);
+
+            return container;
+        },
+    },
+    {
         id: 'bhl-system',
         pattern: /\+(.*?)\+/g,
         createNode({ documentRef, groups }) {
