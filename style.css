@@ -61,9 +61,9 @@
 
     /* 调整：移动端浮标大小 */
     #cip-carrot-button {
-        width: 44px;
-        height: 44px;
-        font-size: 24px;
+        width: 22px;
+        height: 22px;
+        font-size: 12px;
     }
 
     /* 移动端：定时设置布局优化 */
