@@ -1,9 +1,9 @@
 {
   "name": "carrot-input-panel",
   "display_name": "兔子不吃胡萝卜",
-  "version": "4.4",
-  "manifest_version": 3,
-  "description": "一个提供多种格式化输入选项的浮动面板，由一个可拖拽的胡萝卜按钮触发。",
+  "version": "5.1",
+  "manifest_version": 5,
+  "description": "对文件结构进行了重构，内置了一些正则",
   "js": ["script.js"],
   "css": ["style.css"]
 }

@@ -23,6 +23,12 @@
         -ms-user-select: none;
         user-select: none;
     }
+    #cip-input-panel.cip-docked {
+        width: calc(100vw - 24px) !important;
+        max-width: 420px;
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+    }
     .cip-tab-button,
     .cip-sub-option-btn,
     #cip-recall-button,
@@ -155,6 +161,28 @@
     display: flex;
     opacity: 1;
     transform: scale(1);
+}
+#cip-input-panel.cip-docked {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    width: min(360px, calc(100vw - 32px));
+    max-width: 360px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    transform: none;
+    z-index: 1100;
+    margin-left: 0;
+}
+
+#cip-input-panel.cip-docked:not(.active) {
+    display: none;
+    opacity: 0;
+}
+
+#cip-input-panel.cip-docked.active {
+    display: flex;
+    opacity: 1;
 }
 #cip-panel-tabs {
     display: flex;
@@ -293,9 +321,11 @@
 }
 #cip-panel-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     padding: 0 12px 12px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 .cip-wallet-row {
     display: flex;
@@ -322,20 +352,103 @@
 }
 /* 新增：底部左侧控制按钮容器 */
 #cip-footer-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+#cip-footer-controls > * {
+    flex-shrink: 0;
+}
+
+#cip-settings-button {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.cip-docked-launcher,
+#cip-docked-launcher {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(
+        --cip-panel-bg-color,
+        rgba(32, 32, 32, 0.8)
+    );
+    color: var(--cip-text-color, #f5f5f5);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition:
+        transform var(--cip-transition-speed),
+        box-shadow var(--cip-transition-speed),
+        background-color var(--cip-transition-speed);
+}
+
+.cip-docked-launcher.active,
+#cip-docked-launcher.active {
+    display: flex;
+}
+
+.cip-docked-launcher:hover,
+#cip-docked-launcher:hover {
+    transform: translateY(-1px);
+}
+
+.cip-docked-launcher[aria-pressed='true'],
+#cip-docked-launcher[aria-pressed='true'] {
+    box-shadow: none;
+}
+
+.cip-footer-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--cip-text-color, #f5f5f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: transform var(--cip-transition-speed),
+        opacity var(--cip-transition-speed);
+}
+
+.cip-footer-icon:hover {
+    transform: translateY(2px);
+}
+
+.cip-footer-icon:disabled,
+.cip-footer-icon[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.5;
+    transform: none;
 }
 
 .cip-switch {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     cursor: pointer;
     color: var(--cip-text-color, #f5f5f5);
     font-size: 14px;
     user-select: none;
     transition: opacity var(--cip-transition-speed);
+    white-space: nowrap;
 }
 
 .cip-switch.disabled {
@@ -351,7 +464,7 @@
 
 .cip-switch-track {
     position: relative;
-    width: 38px;
+    width: 40px;
     height: 22px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
@@ -361,10 +474,10 @@
 
 .cip-switch-thumb {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 16px;
-    height: 16px;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -429,17 +542,22 @@
 }
 .cip-footer-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin-left: auto;
 }
 #cip-recall-button,
 #cip-insert-button {
-    padding: 8px 20px;
+    padding: 6px 16px;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     transition: background-color var(--cip-transition-speed);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 #cip-recall-button {
     background-color: var(--cip-accent-color);
@@ -943,6 +1061,12 @@ emoji-picker {
         padding: 12px;
         gap: 12px;
     }
+    #cip-input-panel.cip-docked {
+        width: calc(100vw - 20px) !important;
+        max-width: none;
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+    }
     .cip-modal-backdrop {
         padding: 10px;
     }
@@ -984,11 +1108,11 @@ emoji-picker {
         font-size: 13px;
     }
     #cip-carrot-button {
-        width: 56px;
-        height: 56px;
-        font-size: 28px;
-        min-width: 44px;
-        min-height: 44px;
+        width: 36px;
+        height: 36px;
+        font-size: 26px;
+        min-width: 22px;
+        min-height: 22px;
     }
 }
 .cip-modal-content p {
