@@ -164,6 +164,200 @@ const REGEX_RULES = [
         },
     },
     {
+        id: 'eden-entry',
+        pattern:
+            /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
+        createNode({ documentRef, groups }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const [
+                time = '',
+                location = '',
+                stage = '',
+                day = '',
+                name = '',
+                race = '',
+                age = '',
+                smallHole = '',
+                uterus = '',
+                anus = '',
+                rectum = '',
+                breast = '',
+                trait = '',
+                sperm = '',
+                egg = '',
+                fetus = '',
+                father = '',
+                health = '',
+                support = '',
+                reaction = '',
+            ] = groups;
+
+            const normalize = (value) => (value ?? '').trim();
+
+            const fragment = doc.createDocumentFragment();
+
+            const styleEl = doc.createElement('style');
+            styleEl.textContent =
+                '@keyframes float-vertical {\n  0%, 100% { transform: translateY(0); }\n  50%      { transform: translateY(-3px); }\n}\ndetails[open] summary .float {\n  animation: float-vertical 2.5s ease-in-out infinite;\n}';
+
+            const details = doc.createElement('details');
+            details.setAttribute('close', '');
+
+            const summary = doc.createElement('summary');
+            summary.textContent = 'ʚ 伊甸园 ɞ';
+
+            const card = doc.createElement('div');
+            card.style.cssText =
+                "background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;";
+
+            const header = doc.createElement('div');
+            header.style.cssText =
+                'display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;';
+
+            const timeSpan = doc.createElement('span');
+            timeSpan.textContent = normalize(time);
+
+            const bunnySpan = doc.createElement('span');
+            bunnySpan.className = 'float';
+            bunnySpan.textContent = '🐰';
+            bunnySpan.style.cssText =
+                'cursor:pointer; font-size:20px; will-change:transform;';
+
+            const locationSpan = doc.createElement('span');
+            locationSpan.textContent = normalize(location);
+
+            header.appendChild(timeSpan);
+            header.appendChild(bunnySpan);
+            header.appendChild(locationSpan);
+
+            const nameDiv = doc.createElement('div');
+            nameDiv.style.cssText =
+                'text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;';
+            nameDiv.textContent = normalize(name);
+
+            const stageDiv = doc.createElement('div');
+            stageDiv.style.cssText =
+                'margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;';
+
+            const stageLine = doc.createElement('div');
+            stageLine.textContent = `阶段：${normalize(stage)}`;
+
+            const dayLine = doc.createElement('div');
+            dayLine.textContent = `第 ${normalize(day)} 天`;
+
+            stageDiv.appendChild(stageLine);
+            stageDiv.appendChild(dayLine);
+
+            const statsDiv = doc.createElement('div');
+            statsDiv.style.cssText =
+                'text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;';
+
+            const statsLines = [
+                `种族 | ${normalize(race)}`,
+                `年龄 | ${normalize(age)}`,
+                '身高 | 165cm',
+                '体重 | 75kg',
+                '三围 | 95E / 110 / 90',
+            ];
+
+            for (const text of statsLines) {
+                const line = doc.createElement('div');
+                line.textContent = text;
+                statsDiv.appendChild(line);
+            }
+
+            const createFloatSpan = (content) => {
+                const span = doc.createElement('span');
+                span.className = 'float';
+                span.textContent = content;
+                span.style.display = 'inline-block';
+                span.style.willChange = 'transform';
+                return span;
+            };
+
+            const createInfoDetails = (
+                title,
+                entries,
+            ) => {
+                const detailsEl = doc.createElement('details');
+                detailsEl.style.marginBottom = '8px';
+
+                const summaryEl = doc.createElement('summary');
+                summaryEl.style.cursor = 'pointer';
+                summaryEl.style.fontWeight = 'bold';
+                summaryEl.style.textAlign = 'center';
+                summaryEl.style.padding = '6px';
+                summaryEl.style.borderRadius = '4px';
+                summaryEl.style.listStyle = 'none';
+                summaryEl.style.backgroundColor =
+                    'rgba(191,225,211,0.7)';
+
+                const leftSpan = createFloatSpan('ʚ');
+                const rightSpan = createFloatSpan('ɞ');
+
+                summaryEl.appendChild(leftSpan);
+                summaryEl.appendChild(doc.createTextNode(` ${title} `));
+                summaryEl.appendChild(rightSpan);
+
+                const contentEl = doc.createElement('div');
+                contentEl.style.padding = '6px';
+                contentEl.style.fontSize = '14px';
+                contentEl.style.lineHeight = '1.5';
+                contentEl.style.borderRadius = '4px';
+                contentEl.style.marginTop = '4px';
+                contentEl.style.backgroundColor =
+                    'rgba(255,255,255,0.5)';
+
+                for (const [label, value] of entries) {
+                    const entryDiv = doc.createElement('div');
+                    entryDiv.textContent = `${label} | ${normalize(value)}`;
+                    contentEl.appendChild(entryDiv);
+                }
+
+                detailsEl.appendChild(summaryEl);
+                detailsEl.appendChild(contentEl);
+
+                return detailsEl;
+            };
+
+            const biologyDetails = createInfoDetails('生理信息', [
+                ['小穴', smallHole],
+                ['子宫', uterus],
+                ['菊穴', anus],
+                ['直腸', rectum],
+                ['乳房', breast],
+                ['特质', trait],
+            ]);
+
+            const reproductionDetails = createInfoDetails('生殖信息', [
+                ['精子', sperm],
+                ['卵子', egg],
+                ['胎数', fetus],
+                ['父亲', father],
+                ['健康', health],
+                ['供养', support],
+                ['反应', reaction],
+            ]);
+
+            card.appendChild(header);
+            card.appendChild(nameDiv);
+            card.appendChild(stageDiv);
+            card.appendChild(statsDiv);
+            card.appendChild(biologyDetails);
+            card.appendChild(reproductionDetails);
+
+            details.appendChild(summary);
+            details.appendChild(card);
+
+            fragment.appendChild(styleEl);
+            fragment.appendChild(details);
+
+            return fragment;
+        },
+    },
+    {
         id: 'bhl-system',
         pattern: /\+(.*?)\+/g,
         createNode({ documentRef, groups }) {
