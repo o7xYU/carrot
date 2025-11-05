@@ -227,8 +227,7 @@ const REGEX_RULES = [
     },
     {
         id: 'eden-details',
-        pattern:
-            /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
+        pattern: /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
         createNode({ documentRef, groups }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -650,4 +649,5 @@ export function clearRegexState(element) {
 
 export function getRegexRules() {
     return REGEX_RULES.slice();
+
 }
