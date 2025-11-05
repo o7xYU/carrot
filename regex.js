@@ -165,355 +165,137 @@ const REGEX_RULES = [
     },
     {
         id: 'eden-entry',
-        pattern: /<伊甸园>([\s\S]*?)(?:<\/伊甸园>|$)/gm,
+        pattern:
+            /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
         createNode({ documentRef, groups }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
 
-            const rawBlock = groups[0] ?? '';
-
-            const stripTags = (value) =>
-                (value ?? '').replace(/<\/?[^>]+>/g, '\n');
-
-            const normalize = (value) => (value ?? '').trim();
-
-            const sanitizedLines = stripTags(rawBlock)
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0);
-
-            const parsed = {
-                time: '',
-                location: '',
-                stage: '',
-                day: '',
-                name: '',
-                race: '',
-                age: '',
-                smallHole: '',
-                uterus: '',
-                anus: '',
-                rectum: '',
-                breast: '',
-                trait: '',
-                sperm: '',
-                egg: '',
-                fetus: '',
-                father: '',
-                health: '',
-                support: '',
-                reaction: '',
-            };
-
-            if (sanitizedLines.length > 0) {
-                const timeRegex =
-                    /(\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2})(?:\s+(.+))?/;
-                const timeIndex = sanitizedLines.findIndex((line) =>
-                    timeRegex.test(line),
-                );
-
-                if (timeIndex !== -1) {
-                    const timeLocationMatch = sanitizedLines[timeIndex].match(
-                        timeRegex,
-                    );
-                    parsed.time = timeLocationMatch?.[1] ?? '';
-                    parsed.location = timeLocationMatch?.[2] ?? '';
-                }
-
-                let index = timeIndex !== -1 ? timeIndex + 1 : 0;
-                let dataStart = sanitizedLines.length;
-
-                for (; index < sanitizedLines.length; index += 1) {
-                    const line = sanitizedLines[index];
-
-                    if (!parsed.stage) {
-                        const stageMatch = line.match(/阶段[:：]\s*(.*)/);
-                        if (stageMatch) {
-                            const stageContent = stageMatch[1] ?? '';
-                            const dayFromStage = stageContent.match(/(第.+)$/);
-                            if (dayFromStage && !parsed.day) {
-                                parsed.day = dayFromStage[1];
-                            }
-                            parsed.stage = stageContent
-                                .replace(/\s*第.+$/, '')
-                                .trim();
-                            continue;
-                        }
-                    }
-
-                    if (!parsed.day && /^第.+/.test(line)) {
-                        parsed.day = line;
-                        continue;
-                    }
-
-                    if (
-                        !parsed.name &&
-                        !line.includes('|') &&
-                        !/阶段[:：]/.test(line)
-                    ) {
-                        parsed.name = line;
-                        continue;
-                    }
-
-                    if (line.includes('|')) {
-                        dataStart = index;
-                        break;
-                    }
-                }
-
-                if (dataStart === sanitizedLines.length) {
-                    dataStart = index;
-                }
-
-                for (let i = dataStart; i < sanitizedLines.length; i += 1) {
-                    const line = sanitizedLines[i];
-                    const [label, ...rest] = line.split('|');
-                    if (!label || rest.length === 0) continue;
-
-                    const value = rest.join('|').trim();
-                    const cleanLabel = label.trim();
-
-                    switch (cleanLabel) {
-                        case '种族':
-                            parsed.race = value;
-                            break;
-                        case '年龄':
-                            parsed.age = value;
-                            break;
-                        case '小穴':
-                            parsed.smallHole = value;
-                            break;
-                        case '子宫':
-                            parsed.uterus = value;
-                            break;
-                        case '菊穴':
-                            parsed.anus = value;
-                            break;
-                        case '直肠':
-                        case '直腸':
-                            parsed.rectum = value;
-                            break;
-                        case '乳房':
-                            parsed.breast = value;
-                            break;
-                        case '特质':
-                            parsed.trait = value;
-                            break;
-                        case '精子':
-                            parsed.sperm = value;
-                            break;
-                        case '卵子':
-                            parsed.egg = value;
-                            break;
-                        case '胎数':
-                            parsed.fetus = value;
-                            break;
-                        case '父亲':
-                            parsed.father = value;
-                            break;
-                        case '健康':
-                            parsed.health = value;
-                            break;
-                        case '供养':
-                            parsed.support = value;
-                            break;
-                        case '反应':
-                            parsed.reaction = value;
-                            break;
+            const escapeHTML = (value) =>
+                (value ?? '').replace(/[&<>'"]/g, (char) => {
+                    switch (char) {
+                        case '&':
+                            return '&amp;';
+                        case '<':
+                            return '&lt;';
+                        case '>':
+                            return '&gt;';
+                        case "'":
+                            return '&#39;';
+                        case '"':
+                            return '&quot;';
                         default:
-                            break;
+                            return char;
                     }
-                }
-            }
+                });
+
+            const normalized = groups.map((value) => escapeHTML(value?.trim() ?? ''));
+
+            const [
+                time,
+                location,
+                stage,
+                day,
+                name,
+                race,
+                age,
+                smallHole,
+                uterus,
+                anus,
+                rectum,
+                breast,
+                trait,
+                sperm,
+                egg,
+                fetus,
+                father,
+                health,
+                support,
+                reaction,
+            ] = normalized;
+
+            const stageLine = stage ? `阶段：${stage}` : '';
+            const dayLine = day ? `第 ${day} 天` : '';
+
+            const html = `
+<style>
+@keyframes float-vertical {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+details[open] summary .float {
+  animation: float-vertical 2.5s ease-in-out infinite;
+}
+</style>
+<details close>
+  <summary>ʚ 伊甸园 ɞ</summary>
+  <div style="background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;">
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;">
+      <span>${time}</span>
+      <span class="float" style="cursor:pointer; font-size:20px; will-change:transform;">🐰</span>
+      <span>${location}</span>
+    </div>
+    <div style="text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;">${name}</div>
+    <div style="margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;">
+      <div>${stageLine}</div>
+      <div>${dayLine}</div>
+    </div>
+    <div style="text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;">
+      <div>种族 | ${race}</div>
+      <div>年龄 | ${age}</div>
+      <div>身高 | 165cm</div>
+      <div>体重 | 75kg</div>
+      <div>三围 | 95E / 110 / 90</div>
+    </div>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生理信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>小穴 | ${smallHole}</div>
+        <div>子宫 | ${uterus}</div>
+        <div>菊穴 | ${anus}</div>
+        <div>直腸 | ${rectum}</div>
+        <div>乳房 | ${breast}</div>
+        <div>特质 | ${trait}</div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生殖信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>精子 | ${sperm}</div>
+        <div>卵子 | ${egg}</div>
+        <div>胎数 | ${fetus}</div>
+        <div>父亲 | ${father}</div>
+        <div>健康 | ${health}</div>
+        <div>供养 | ${support}</div>
+        <div>反应 | ${reaction}</div>
+      </div>
+    </details>
+  </div>
+</details>`;
+
+            const wrapper = doc.createElement('div');
+            wrapper.innerHTML = html.trim();
 
             const fragment = doc.createDocumentFragment();
-
-            const styleEl = doc.createElement('style');
-            styleEl.textContent =
-                '@keyframes float-vertical {\n  0%, 100% { transform: translateY(0); }\n  50%      { transform: translateY(-3px); }\n}\ndetails[open] summary .float {\n  animation: float-vertical 2.5s ease-in-out infinite;\n}';
-
-            const details = doc.createElement('details');
-            details.setAttribute('close', '');
-
-            const summary = doc.createElement('summary');
-            summary.textContent = 'ʚ 伊甸园 ɞ';
-
-            const card = doc.createElement('div');
-            card.style.cssText =
-                "background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;";
-
-            const header = doc.createElement('div');
-            header.style.cssText =
-                'display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;';
-
-            const timeSpan = doc.createElement('span');
-            timeSpan.textContent = normalize(parsed.time);
-
-            const bunnySpan = doc.createElement('span');
-            bunnySpan.className = 'float';
-            bunnySpan.textContent = '🐰';
-            bunnySpan.style.cssText =
-                'cursor:pointer; font-size:20px; will-change:transform;';
-
-            const locationSpan = doc.createElement('span');
-            locationSpan.textContent = normalize(parsed.location);
-
-            header.appendChild(timeSpan);
-            header.appendChild(bunnySpan);
-            header.appendChild(locationSpan);
-
-            const nameDiv = doc.createElement('div');
-            nameDiv.style.cssText =
-                'text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;';
-            nameDiv.textContent = normalize(parsed.name);
-
-            const stageDiv = doc.createElement('div');
-            stageDiv.style.cssText =
-                'margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;';
-
-            const stageLine = doc.createElement('div');
-            const normalizedStage = normalize(parsed.stage);
-            stageLine.textContent = normalizedStage
-                ? `阶段：${normalizedStage}`
-                : '';
-            if (!normalizedStage) {
-                stageLine.style.display = 'none';
+            while (wrapper.firstChild) {
+                fragment.appendChild(wrapper.firstChild);
             }
-
-            const dayLine = doc.createElement('div');
-            const rawDay = normalize(parsed.day);
-            const dayDisplay = rawDay
-                ? /^第.+/.test(rawDay)
-                    ? rawDay
-                    : `第 ${rawDay} 天`
-                : '';
-            dayLine.textContent = dayDisplay;
-            if (!dayDisplay) {
-                dayLine.style.display = 'none';
-            }
-
-            stageDiv.appendChild(stageLine);
-            stageDiv.appendChild(dayLine);
-            if (!normalizedStage && !dayDisplay) {
-                stageDiv.style.display = 'none';
-            }
-
-            const statsDiv = doc.createElement('div');
-            statsDiv.style.cssText =
-                'text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;';
-
-            const statsLines = [
-                parsed.race && `种族 | ${normalize(parsed.race)}`,
-                parsed.age && `年龄 | ${normalize(parsed.age)}`,
-                '身高 | 165cm',
-                '体重 | 75kg',
-                '三围 | 95E / 110 / 90',
-            ].filter(Boolean);
-
-            for (const text of statsLines) {
-                const line = doc.createElement('div');
-                line.textContent = text;
-                statsDiv.appendChild(line);
-            }
-
-            const createFloatSpan = (content) => {
-                const span = doc.createElement('span');
-                span.className = 'float';
-                span.textContent = content;
-                span.style.display = 'inline-block';
-                span.style.willChange = 'transform';
-                return span;
-            };
-
-            const createInfoDetails = (title, entries) => {
-                const detailsEl = doc.createElement('details');
-                detailsEl.style.marginBottom = '8px';
-
-                const summaryEl = doc.createElement('summary');
-                summaryEl.style.cursor = 'pointer';
-                summaryEl.style.fontWeight = 'bold';
-                summaryEl.style.textAlign = 'center';
-                summaryEl.style.padding = '6px';
-                summaryEl.style.borderRadius = '4px';
-                summaryEl.style.listStyle = 'none';
-                summaryEl.style.backgroundColor =
-                    'rgba(191,225,211,0.7)';
-
-                const leftSpan = createFloatSpan('ʚ');
-                const rightSpan = createFloatSpan('ɞ');
-
-                summaryEl.appendChild(leftSpan);
-                summaryEl.appendChild(doc.createTextNode(` ${title} `));
-                summaryEl.appendChild(rightSpan);
-
-                const contentEl = doc.createElement('div');
-                contentEl.style.padding = '6px';
-                contentEl.style.fontSize = '14px';
-                contentEl.style.lineHeight = '1.5';
-                contentEl.style.borderRadius = '4px';
-                contentEl.style.marginTop = '4px';
-                contentEl.style.backgroundColor =
-                    'rgba(255,255,255,0.5)';
-
-                let hasContent = false;
-                for (const [label, value] of entries) {
-                    const normalizedValue = normalize(value);
-                    if (!normalizedValue) continue;
-                    hasContent = true;
-                    const entryDiv = doc.createElement('div');
-                    entryDiv.textContent = `${label} | ${normalizedValue}`;
-                    contentEl.appendChild(entryDiv);
-                }
-
-                if (!hasContent) {
-                    return null;
-                }
-
-                detailsEl.appendChild(summaryEl);
-                detailsEl.appendChild(contentEl);
-
-                return detailsEl;
-            };
-
-            const biologyDetails = createInfoDetails('生理信息', [
-                ['小穴', parsed.smallHole],
-                ['子宫', parsed.uterus],
-                ['菊穴', parsed.anus],
-                ['直腸', parsed.rectum],
-                ['乳房', parsed.breast],
-                ['特质', parsed.trait],
-            ]);
-
-            const reproductionDetails = createInfoDetails('生殖信息', [
-                ['精子', parsed.sperm],
-                ['卵子', parsed.egg],
-                ['胎数', parsed.fetus],
-                ['父亲', parsed.father],
-                ['健康', parsed.health],
-                ['供养', parsed.support],
-                ['反应', parsed.reaction],
-            ]);
-
-            card.appendChild(header);
-            card.appendChild(nameDiv);
-            card.appendChild(stageDiv);
-            card.appendChild(statsDiv);
-            if (biologyDetails) {
-                card.appendChild(biologyDetails);
-            }
-            if (reproductionDetails) {
-                card.appendChild(reproductionDetails);
-            }
-
-            details.appendChild(summary);
-            details.appendChild(card);
-
-            fragment.appendChild(styleEl);
-            fragment.appendChild(details);
 
             return fragment;
         },
     },
+
     {
         id: 'bhl-system',
         pattern: /\+(.*?)\+/g,
