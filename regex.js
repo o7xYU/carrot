@@ -225,6 +225,79 @@ const REGEX_RULES = [
             return outer;
         },
     },
+    {
+        id: 'eden-details',
+        pattern:
+            /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
+        createNode({ documentRef, groups }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const safeGroups = groups.map((value) => (value ?? '').trim());
+            const template = doc.createElement('template');
+            template.innerHTML = `
+<details close="">
+  <summary>ʚ 伊甸园 ɞ</summary>
+  <div style="background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;">
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;">
+      <span>${safeGroups[0]}</span>
+      <span class="float" style="cursor:pointer; font-size:20px; will-change:transform;">🐰</span>
+      <span>${safeGroups[1]}</span>
+    </div>
+    <div style="text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;">${safeGroups[4]}</div>
+    <div style="margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;">
+      <div>阶段：${safeGroups[2]}</div>
+      <div>第 ${safeGroups[3]} 天</div>
+    </div>
+    <div style="text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;">
+      <div>种族 | ${safeGroups[5]}</div>
+      <div>年龄 | ${safeGroups[6]}</div>
+      <div>身高 | 165cm</div>
+      <div>体重 | 75kg</div>
+      <div>三围 | 95E / 110 / 90</div>
+    </div>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生理信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>小穴 | ${safeGroups[7]}</div>
+        <div>子宫 | ${safeGroups[8]}</div>
+        <div>菊穴 | ${safeGroups[9]}</div>
+        <div>直腸 | ${safeGroups[10]}</div>
+        <div>乳房 | ${safeGroups[11]}</div>
+        <div>特质 | ${safeGroups[12]}</div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生殖信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>精子 | ${safeGroups[13]}</div>
+        <div>卵子 | ${safeGroups[14]}</div>
+        <div>胎数 | ${safeGroups[15]}</div>
+        <div>父亲 | ${safeGroups[16]}</div>
+        <div>健康 | ${safeGroups[17]}</div>
+        <div>供养 | ${safeGroups[18]}</div>
+        <div>反应 | ${safeGroups[19]}</div>
+      </div>
+    </details>
+  </div>
+</details>`;
+
+            const fragment = template.content.cloneNode(true);
+            markRegexNode(fragment, 'eden-details');
+            return fragment;
+        },
+    },
 ];
 
 function clonePattern(pattern) {
