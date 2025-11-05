@@ -165,36 +165,166 @@ const REGEX_RULES = [
     },
     {
         id: 'eden-entry',
-        pattern:
-            /<伊甸园>\s*<time>(.*?)<\/time>\s*<location>(.*?)<\/location>\s*<character>\s*<AAA>\s*阶段：(.*?)\s*第(.*?)天\s*<\/AAA>\s*<namestr>(.*?)<\/namestr>\s*<appearance>\s*种族\|(.*?)\s*年龄\|(.*?)\s*<\/appearance>\s*<SSS>\s*小穴\|(.*?)\s*子宫\|(.*?)\s*菊穴\|(.*?)\s*直肠\|(.*?)\s*乳房\|(.*?)\s*特质\|(.*?)\s*<\/SSS>\s*<reproduction>\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*供养\|(.*?)\s*反应\|(.*?)\s*<\/reproduction>\s*<\/character>\s*<\/伊甸园>/gs,
+        pattern: /<伊甸园>([\s\S]*?)(?:<\/伊甸园>|$)/gm,
         createNode({ documentRef, groups }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
 
-            const [
-                time = '',
-                location = '',
-                stage = '',
-                day = '',
-                name = '',
-                race = '',
-                age = '',
-                smallHole = '',
-                uterus = '',
-                anus = '',
-                rectum = '',
-                breast = '',
-                trait = '',
-                sperm = '',
-                egg = '',
-                fetus = '',
-                father = '',
-                health = '',
-                support = '',
-                reaction = '',
-            ] = groups;
+            const rawBlock = groups[0] ?? '';
+
+            const stripTags = (value) =>
+                (value ?? '').replace(/<\/?[^>]+>/g, '\n');
 
             const normalize = (value) => (value ?? '').trim();
+
+            const sanitizedLines = stripTags(rawBlock)
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0);
+
+            const parsed = {
+                time: '',
+                location: '',
+                stage: '',
+                day: '',
+                name: '',
+                race: '',
+                age: '',
+                smallHole: '',
+                uterus: '',
+                anus: '',
+                rectum: '',
+                breast: '',
+                trait: '',
+                sperm: '',
+                egg: '',
+                fetus: '',
+                father: '',
+                health: '',
+                support: '',
+                reaction: '',
+            };
+
+            if (sanitizedLines.length > 0) {
+                const timeRegex =
+                    /(\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2})(?:\s+(.+))?/;
+                const timeIndex = sanitizedLines.findIndex((line) =>
+                    timeRegex.test(line),
+                );
+
+                if (timeIndex !== -1) {
+                    const timeLocationMatch = sanitizedLines[timeIndex].match(
+                        timeRegex,
+                    );
+                    parsed.time = timeLocationMatch?.[1] ?? '';
+                    parsed.location = timeLocationMatch?.[2] ?? '';
+                }
+
+                let index = timeIndex !== -1 ? timeIndex + 1 : 0;
+                let dataStart = sanitizedLines.length;
+
+                for (; index < sanitizedLines.length; index += 1) {
+                    const line = sanitizedLines[index];
+
+                    if (!parsed.stage) {
+                        const stageMatch = line.match(/阶段[:：]\s*(.*)/);
+                        if (stageMatch) {
+                            const stageContent = stageMatch[1] ?? '';
+                            const dayFromStage = stageContent.match(/(第.+)$/);
+                            if (dayFromStage && !parsed.day) {
+                                parsed.day = dayFromStage[1];
+                            }
+                            parsed.stage = stageContent
+                                .replace(/\s*第.+$/, '')
+                                .trim();
+                            continue;
+                        }
+                    }
+
+                    if (!parsed.day && /^第.+/.test(line)) {
+                        parsed.day = line;
+                        continue;
+                    }
+
+                    if (
+                        !parsed.name &&
+                        !line.includes('|') &&
+                        !/阶段[:：]/.test(line)
+                    ) {
+                        parsed.name = line;
+                        continue;
+                    }
+
+                    if (line.includes('|')) {
+                        dataStart = index;
+                        break;
+                    }
+                }
+
+                if (dataStart === sanitizedLines.length) {
+                    dataStart = index;
+                }
+
+                for (let i = dataStart; i < sanitizedLines.length; i += 1) {
+                    const line = sanitizedLines[i];
+                    const [label, ...rest] = line.split('|');
+                    if (!label || rest.length === 0) continue;
+
+                    const value = rest.join('|').trim();
+                    const cleanLabel = label.trim();
+
+                    switch (cleanLabel) {
+                        case '种族':
+                            parsed.race = value;
+                            break;
+                        case '年龄':
+                            parsed.age = value;
+                            break;
+                        case '小穴':
+                            parsed.smallHole = value;
+                            break;
+                        case '子宫':
+                            parsed.uterus = value;
+                            break;
+                        case '菊穴':
+                            parsed.anus = value;
+                            break;
+                        case '直肠':
+                        case '直腸':
+                            parsed.rectum = value;
+                            break;
+                        case '乳房':
+                            parsed.breast = value;
+                            break;
+                        case '特质':
+                            parsed.trait = value;
+                            break;
+                        case '精子':
+                            parsed.sperm = value;
+                            break;
+                        case '卵子':
+                            parsed.egg = value;
+                            break;
+                        case '胎数':
+                            parsed.fetus = value;
+                            break;
+                        case '父亲':
+                            parsed.father = value;
+                            break;
+                        case '健康':
+                            parsed.health = value;
+                            break;
+                        case '供养':
+                            parsed.support = value;
+                            break;
+                        case '反应':
+                            parsed.reaction = value;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
 
             const fragment = doc.createDocumentFragment();
 
@@ -217,7 +347,7 @@ const REGEX_RULES = [
                 'display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;';
 
             const timeSpan = doc.createElement('span');
-            timeSpan.textContent = normalize(time);
+            timeSpan.textContent = normalize(parsed.time);
 
             const bunnySpan = doc.createElement('span');
             bunnySpan.className = 'float';
@@ -226,7 +356,7 @@ const REGEX_RULES = [
                 'cursor:pointer; font-size:20px; will-change:transform;';
 
             const locationSpan = doc.createElement('span');
-            locationSpan.textContent = normalize(location);
+            locationSpan.textContent = normalize(parsed.location);
 
             header.appendChild(timeSpan);
             header.appendChild(bunnySpan);
@@ -235,32 +365,50 @@ const REGEX_RULES = [
             const nameDiv = doc.createElement('div');
             nameDiv.style.cssText =
                 'text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;';
-            nameDiv.textContent = normalize(name);
+            nameDiv.textContent = normalize(parsed.name);
 
             const stageDiv = doc.createElement('div');
             stageDiv.style.cssText =
                 'margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;';
 
             const stageLine = doc.createElement('div');
-            stageLine.textContent = `阶段：${normalize(stage)}`;
+            const normalizedStage = normalize(parsed.stage);
+            stageLine.textContent = normalizedStage
+                ? `阶段：${normalizedStage}`
+                : '';
+            if (!normalizedStage) {
+                stageLine.style.display = 'none';
+            }
 
             const dayLine = doc.createElement('div');
-            dayLine.textContent = `第 ${normalize(day)} 天`;
+            const rawDay = normalize(parsed.day);
+            const dayDisplay = rawDay
+                ? /^第.+/.test(rawDay)
+                    ? rawDay
+                    : `第 ${rawDay} 天`
+                : '';
+            dayLine.textContent = dayDisplay;
+            if (!dayDisplay) {
+                dayLine.style.display = 'none';
+            }
 
             stageDiv.appendChild(stageLine);
             stageDiv.appendChild(dayLine);
+            if (!normalizedStage && !dayDisplay) {
+                stageDiv.style.display = 'none';
+            }
 
             const statsDiv = doc.createElement('div');
             statsDiv.style.cssText =
                 'text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;';
 
             const statsLines = [
-                `种族 | ${normalize(race)}`,
-                `年龄 | ${normalize(age)}`,
+                parsed.race && `种族 | ${normalize(parsed.race)}`,
+                parsed.age && `年龄 | ${normalize(parsed.age)}`,
                 '身高 | 165cm',
                 '体重 | 75kg',
                 '三围 | 95E / 110 / 90',
-            ];
+            ].filter(Boolean);
 
             for (const text of statsLines) {
                 const line = doc.createElement('div');
@@ -277,10 +425,7 @@ const REGEX_RULES = [
                 return span;
             };
 
-            const createInfoDetails = (
-                title,
-                entries,
-            ) => {
+            const createInfoDetails = (title, entries) => {
                 const detailsEl = doc.createElement('details');
                 detailsEl.style.marginBottom = '8px';
 
@@ -310,10 +455,18 @@ const REGEX_RULES = [
                 contentEl.style.backgroundColor =
                     'rgba(255,255,255,0.5)';
 
+                let hasContent = false;
                 for (const [label, value] of entries) {
+                    const normalizedValue = normalize(value);
+                    if (!normalizedValue) continue;
+                    hasContent = true;
                     const entryDiv = doc.createElement('div');
-                    entryDiv.textContent = `${label} | ${normalize(value)}`;
+                    entryDiv.textContent = `${label} | ${normalizedValue}`;
                     contentEl.appendChild(entryDiv);
+                }
+
+                if (!hasContent) {
+                    return null;
                 }
 
                 detailsEl.appendChild(summaryEl);
@@ -323,30 +476,34 @@ const REGEX_RULES = [
             };
 
             const biologyDetails = createInfoDetails('生理信息', [
-                ['小穴', smallHole],
-                ['子宫', uterus],
-                ['菊穴', anus],
-                ['直腸', rectum],
-                ['乳房', breast],
-                ['特质', trait],
+                ['小穴', parsed.smallHole],
+                ['子宫', parsed.uterus],
+                ['菊穴', parsed.anus],
+                ['直腸', parsed.rectum],
+                ['乳房', parsed.breast],
+                ['特质', parsed.trait],
             ]);
 
             const reproductionDetails = createInfoDetails('生殖信息', [
-                ['精子', sperm],
-                ['卵子', egg],
-                ['胎数', fetus],
-                ['父亲', father],
-                ['健康', health],
-                ['供养', support],
-                ['反应', reaction],
+                ['精子', parsed.sperm],
+                ['卵子', parsed.egg],
+                ['胎数', parsed.fetus],
+                ['父亲', parsed.father],
+                ['健康', parsed.health],
+                ['供养', parsed.support],
+                ['反应', parsed.reaction],
             ]);
 
             card.appendChild(header);
             card.appendChild(nameDiv);
             card.appendChild(stageDiv);
             card.appendChild(statsDiv);
-            card.appendChild(biologyDetails);
-            card.appendChild(reproductionDetails);
+            if (biologyDetails) {
+                card.appendChild(biologyDetails);
+            }
+            if (reproductionDetails) {
+                card.appendChild(reproductionDetails);
+            }
 
             details.appendChild(summary);
             details.appendChild(card);
