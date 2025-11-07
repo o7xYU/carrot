@@ -129,8 +129,9 @@
                     </label>
                     <button id="cip-dock-button" class="cip-footer-icon" type="button" title="停靠到底部">👇</button>
                 </div>
+                <button id="cip-date-button" class="cip-footer-icon" type="button" title="插入时间标记">💮</button>
                 <div class="cip-footer-actions">
-                    <button id="cip-recall-button">撤回</button>
+                    <button id="cip-recall-button" title="撤回">↪️</button>
                     <button id="cip-insert-button">插入</button>
                 </div>
             </div>
@@ -453,7 +454,8 @@
     const queryAll = (sel) => document.querySelectorAll(sel);
     const formatDisplay = get('cip-format-display'),
         insertButton = get('cip-insert-button'),
-        recallButton = get('cip-recall-button');
+        recallButton = get('cip-recall-button'),
+        dateButton = get('cip-date-button');
     const mainInput = get('cip-main-input'),
         voiceDurationInput = get('cip-voice-duration'),
         voiceMessageInput = get('cip-voice-message');
@@ -804,6 +806,27 @@
         stickers: '“[{desc}]”',
         recall: '--',
     };
+    const weekdayLabels = [
+        '星期日',
+        '星期一',
+        '星期二',
+        '星期三',
+        '星期四',
+        '星期五',
+        '星期六',
+    ];
+
+    function buildDateSnippet() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const weekday = weekdayLabels[now.getDay()] || '';
+
+        return `『${year}-${month}-${day} ${weekday} ${hours}:${minutes}』`;
+    }
     const textPlaceholderMap = {
         plain: '在此输入文字...',
         image: '在此输入文字...',
@@ -1452,6 +1475,10 @@
     );
     recallButton.addEventListener('click', () =>
         insertIntoSillyTavern(formatTemplates.recall),
+    );
+
+    dateButton.addEventListener('click', () =>
+        insertIntoSillyTavern(buildDateSnippet()),
     );
 
     insertButton.addEventListener('click', () => {
