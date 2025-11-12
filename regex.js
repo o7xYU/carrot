@@ -265,7 +265,7 @@ const REGEX_RULES = [
             shineLarge.style.position = 'absolute';
             shineLarge.style.top = '0px';
             shineLarge.style.left = 'auto';
-            shineLarge.style.right = '0px';
+            shineLarge.style.right = '-4px';
             shineLarge.style.width = '12px';
             shineLarge.style.height = '6px';
             shineLarge.style.background = 'white';
@@ -276,9 +276,9 @@ const REGEX_RULES = [
 
             const shineSmall = doc.createElement('span');
             shineSmall.style.position = 'absolute';
-            shineSmall.style.top = '10px';
+            shineSmall.style.top = '12px';
             shineSmall.style.left = 'auto';
-            shineSmall.style.right = '0px';
+            shineSmall.style.right = '-4px';
             shineSmall.style.width = '4px';
             shineSmall.style.height = '4px';
             shineSmall.style.background = 'white';
@@ -737,3 +737,4 @@ export function getRegexRules() {
     return REGEX_RULES.slice();
 
 }
+
