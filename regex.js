@@ -413,6 +413,7 @@ const REGEX_RULES = [
             shineLarge.style.opacity = '0.9';
             shineLarge.style.zIndex = '2';
             shineLarge.style.transform = 'rotate(-45deg)';
+            shineLarge.style.pointerEvents = 'none';
 
             const shineSmall = doc.createElement('span');
             shineSmall.style.position = 'absolute';
@@ -424,12 +425,11 @@ const REGEX_RULES = [
             shineSmall.style.borderRadius = '50%';
             shineSmall.style.opacity = '0.6';
             shineSmall.style.zIndex = '2';
+            shineSmall.style.pointerEvents = 'none';
 
             summary.appendChild(playIcon);
             summary.appendChild(waves);
             summary.appendChild(titleSpan);
-            summary.appendChild(shineLarge);
-            summary.appendChild(shineSmall);
 
             const detailContent = doc.createElement('div');
             detailContent.style.setProperty('padding', '12px 14px', 'important');
@@ -446,6 +446,8 @@ const REGEX_RULES = [
 
             details.appendChild(summary);
             details.appendChild(detailContent);
+            details.appendChild(shineLarge);
+            details.appendChild(shineSmall);
 
             const avatar = doc.createElement('div');
             avatar.className = 'B_U_avar custom-B_U_avar';
