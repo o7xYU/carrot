@@ -430,6 +430,8 @@ const REGEX_RULES = [
             summary.appendChild(playIcon);
             summary.appendChild(waves);
             summary.appendChild(titleSpan);
+            summary.appendChild(shineLarge);
+            summary.appendChild(shineSmall);
 
             const detailContent = doc.createElement('div');
             detailContent.style.setProperty('padding', '12px 14px', 'important');
@@ -446,8 +448,6 @@ const REGEX_RULES = [
 
             details.appendChild(summary);
             details.appendChild(detailContent);
-            details.appendChild(shineLarge);
-            details.appendChild(shineSmall);
 
             const avatar = doc.createElement('div');
             avatar.className = 'B_U_avar custom-B_U_avar';
