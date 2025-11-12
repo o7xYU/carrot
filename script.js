@@ -1,4 +1,4 @@
-// script.js (v2.9 - 新增群聊正则、回复至底部栏)
+// script.js (v3.0 - 新增超次元、语音正则)
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -801,8 +801,8 @@
             post: '“[{content}.link]”',
             bunny: "+{content}+",
         },
-        voice: "={duration}'|{message}=",
-        wallet: '[{platform}|{amount}|{message}]',
+        voice: '={duration}-{message}=',
+        wallet: '[{platform}-{amount}-{message}]',
         stickers: '“[{desc}]”',
         recall: '--',
     };
@@ -852,10 +852,11 @@
                 formatDisplay.textContent = `格式: ${formatTemplates.text[currentTextSubType].replace('{content}', '内容')}`;
                 break;
             case 'voice':
-                formatDisplay.textContent = "格式: =数字'|内容=";
+                formatDisplay.textContent = '格式: =数字-内容=';
                 break;
             case 'wallet':
-                formatDisplay.textContent = '格式: [平台名称|金额/车牌号|留言/物品名称]';
+                formatDisplay.textContent =
+                    '格式: [平台名称-金额/车牌号-留言/物品名称]';
                 break;
             case 'stickers':
                 formatDisplay.textContent = '格式: "描述"';
