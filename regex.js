@@ -226,7 +226,6 @@ const REGEX_RULES = [
             summary.style.display = 'flex';
             summary.style.alignItems = 'center';
             summary.style.setProperty('padding', '0', 'important');
-            summary.style.setProperty('padding-right', '28px', 'important');
             summary.style.cursor = 'pointer';
             summary.style.listStyle = 'none';
             summary.style.webkitTapHighlightColor = 'transparent';
@@ -260,35 +259,32 @@ const REGEX_RULES = [
             titleSpan.style.fontSize = '15px';
             titleSpan.style.marginLeft = '12px';
             titleSpan.style.marginTop = '-2px';
-            titleSpan.style.paddingRight = '4px';
             titleSpan.textContent = title.trim();
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
-            shineLarge.style.top = '5px';
+            shineLarge.style.top = '2px';
             shineLarge.style.left = 'auto';
-            shineLarge.style.right = '5px';
+            shineLarge.style.right = '-2px';
             shineLarge.style.width = '12px';
             shineLarge.style.height = '6px';
             shineLarge.style.background = 'white';
             shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
             shineLarge.style.opacity = '0.9';
             shineLarge.style.zIndex = '2';
-            shineLarge.style.pointerEvents = 'none';
             shineLarge.style.transform = 'rotate(45deg)';
 
             const shineSmall = doc.createElement('span');
             shineSmall.style.position = 'absolute';
-            shineSmall.style.top = '15px';
+            shineSmall.style.top = '12px';
             shineSmall.style.left = 'auto';
-            shineSmall.style.right = '5px';
+            shineSmall.style.right = '-2px';
             shineSmall.style.width = '4px';
             shineSmall.style.height = '4px';
             shineSmall.style.background = 'white';
             shineSmall.style.borderRadius = '50%';
             shineSmall.style.opacity = '0.6';
             shineSmall.style.zIndex = '2';
-            shineSmall.style.pointerEvents = 'none';
 
             summary.appendChild(playIcon);
             summary.appendChild(waves);
@@ -350,7 +346,6 @@ const REGEX_RULES = [
 
             const bubble = doc.createElement('div');
             bubble.style.padding = '12px 16px';
-            bubble.style.paddingRight = '32px';
             bubble.style.setProperty('border-radius', '16px', 'important');
             bubble.style.lineHeight = '1.4';
             bubble.style.setProperty(
@@ -402,30 +397,28 @@ const REGEX_RULES = [
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
-            shineLarge.style.top = '5px';
+            shineLarge.style.top = '2px';
             shineLarge.style.left = 'auto';
-            shineLarge.style.right = '5px';
+            shineLarge.style.right = '-2px';
             shineLarge.style.width = '12px';
             shineLarge.style.height = '6px';
             shineLarge.style.background = 'white';
             shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
             shineLarge.style.opacity = '0.9';
             shineLarge.style.zIndex = '2';
-            shineLarge.style.pointerEvents = 'none';
             shineLarge.style.transform = 'rotate(45deg)';
 
             const shineSmall = doc.createElement('span');
             shineSmall.style.position = 'absolute';
-            shineSmall.style.top = '15px';
+            shineSmall.style.top = '12px';
             shineSmall.style.left = 'auto';
-            shineSmall.style.right = '5px';
+            shineSmall.style.right = '-2px';
             shineSmall.style.width = '4px';
             shineSmall.style.height = '4px';
             shineSmall.style.background = 'white';
             shineSmall.style.borderRadius = '50%';
             shineSmall.style.opacity = '0.6';
             shineSmall.style.zIndex = '2';
-            shineSmall.style.pointerEvents = 'none';
 
             bubble.appendChild(titleSpan);
             bubble.appendChild(valueSpan);
