@@ -164,6 +164,539 @@ const REGEX_RULES = [
         },
     },
     {
+        id: 'bhl-char-voice',
+        pattern: /^=(.*?)\|(.*?)=$/gm,
+        createNode({ documentRef, groups }) {
+            const [title = '', content = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const outerContainer = doc.createElement('div');
+            outerContainer.className = 'char_bubble';
+
+            const wrapper = doc.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.marginBottom = '16px';
+            wrapper.style.alignItems = 'flex-start';
+            wrapper.style.position = 'relative';
+            wrapper.style.animation = 'message-pop 0.3s ease-out';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_C_avar custom-B_C_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.padding = '5px 5px';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginRight = '10px';
+            avatar.style.backgroundImage = "url('{{charAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            const details = doc.createElement('details');
+            details.style.display = 'inline-block';
+            details.style.maxWidth = '400px';
+            details.style.padding = '10px 14px';
+            details.style.setProperty('border-radius', '24px', 'important');
+            details.style.fontSize = '14px';
+            details.style.lineHeight = '1.4';
+            details.style.setProperty(
+                'border-bottom-left-radius',
+                '24px',
+                'important',
+            );
+            details.style.wordWrap = 'break-word';
+            details.style.position = 'relative';
+            details.style.transition = 'transform 0.2s';
+            details.style.setProperty('background', 'transparent', 'important');
+            details.style.color = '#333';
+            details.style.setProperty(
+                'box-shadow',
+                '-4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            details.style.setProperty(
+                'border',
+                '1px solid rgba(200, 200, 200, 0.3)',
+                'important',
+            );
+
+            const summary = doc.createElement('summary');
+            summary.style.display = 'flex';
+            summary.style.alignItems = 'center';
+            summary.style.setProperty('padding', '0', 'important');
+            summary.style.cursor = 'pointer';
+            summary.style.listStyle = 'none';
+            summary.style.webkitTapHighlightColor = 'transparent';
+            summary.style.position = 'relative';
+
+            const playIcon = doc.createElement('span');
+            playIcon.style.fontSize = '16px';
+            playIcon.style.color = '#333';
+            playIcon.style.marginRight = '8px';
+            playIcon.textContent = '▶';
+
+            const waves = doc.createElement('div');
+            waves.style.display = 'flex';
+            waves.style.alignItems = 'center';
+            waves.style.height = '20px';
+            waves.style.gap = '2px';
+
+            const barHeights = ['60%', '80%', '40%', '90%', '50%', '75%'];
+            for (const height of barHeights) {
+                const bar = doc.createElement('span');
+                bar.style.display = 'inline-block';
+                bar.style.width = '3px';
+                bar.style.height = height;
+                bar.style.backgroundColor = '#555';
+                bar.style.borderRadius = '2px';
+                waves.appendChild(bar);
+            }
+
+            const titleSpan = doc.createElement('span');
+            titleSpan.style.fontWeight = 'normal';
+            titleSpan.style.fontSize = '15px';
+            titleSpan.style.marginLeft = '12px';
+            titleSpan.style.marginTop = '-2px';
+            titleSpan.textContent = title.trim();
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.left = 'auto';
+            shineLarge.style.right = '5px';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.left = 'auto';
+            shineSmall.style.right = '5px';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            summary.appendChild(playIcon);
+            summary.appendChild(waves);
+            summary.appendChild(titleSpan);
+            summary.appendChild(shineLarge);
+            summary.appendChild(shineSmall);
+
+            const detailContent = doc.createElement('div');
+            detailContent.style.setProperty('padding', '12px 14px', 'important');
+            detailContent.style.borderTop = '1px solid rgba(0, 0, 0, 0.08)';
+
+            const paragraph = doc.createElement('p');
+            paragraph.style.margin = '0';
+            paragraph.style.fontWeight = 'normal';
+            paragraph.style.fontSize = '14px';
+            paragraph.style.lineHeight = '1.4';
+            paragraph.textContent = content.trim();
+
+            detailContent.appendChild(paragraph);
+
+            details.appendChild(summary);
+            details.appendChild(detailContent);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(details);
+
+            outerContainer.appendChild(wrapper);
+
+            return outerContainer;
+        },
+    },
+    {
+        id: 'bhl-user-voice',
+        pattern: /^=(.*?)-(.*?)=$/gm,
+        createNode({ documentRef, groups }) {
+            const [title = '', content = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const container = doc.createElement('div');
+            container.style.textAlign = 'right';
+            container.style.marginBottom = '18px';
+            container.style.display = 'flex';
+            container.style.justifyContent = 'flex-end';
+            container.style.alignItems = 'flex-start';
+            container.style.position = 'relative';
+            container.style.animation = 'message-pop 0.3s ease-out';
+
+            const details = doc.createElement('details');
+            details.style.display = 'inline-block';
+            details.style.maxWidth = '400px';
+            details.style.textAlign = 'left';
+            details.style.padding = '10px 14px';
+            details.style.setProperty('border-radius', '24px', 'important');
+            details.style.fontSize = '14px';
+            details.style.lineHeight = '1.4';
+            details.style.setProperty(
+                'border-bottom-right-radius',
+                '24px',
+                'important',
+            );
+            details.style.wordWrap = 'break-word';
+            details.style.position = 'relative';
+            details.style.transition = 'transform 0.2s';
+            details.style.setProperty('background', 'transparent', 'important');
+            details.style.color = '#333';
+            details.style.setProperty(
+                'box-shadow',
+                '-4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            details.style.setProperty(
+                'border',
+                '1px solid rgba(200, 200, 200, 0.3)',
+                'important',
+            );
+            details.style.overflow = 'hidden';
+
+            const summary = doc.createElement('summary');
+            summary.style.display = 'flex';
+            summary.style.alignItems = 'center';
+            summary.style.setProperty('padding', '0', 'important');
+            summary.style.cursor = 'pointer';
+            summary.style.listStyle = 'none';
+            summary.style.webkitTapHighlightColor = 'transparent';
+            summary.style.position = 'relative';
+
+            const playIcon = doc.createElement('span');
+            playIcon.style.fontSize = '16px';
+            playIcon.style.color = '#333';
+            playIcon.style.marginRight = '8px';
+            playIcon.textContent = '▶';
+
+            const waves = doc.createElement('div');
+            waves.style.display = 'flex';
+            waves.style.alignItems = 'center';
+            waves.style.height = '20px';
+            waves.style.gap = '2px';
+
+            const barHeights = ['60%', '80%', '40%', '90%', '50%', '75%'];
+            for (const height of barHeights) {
+                const bar = doc.createElement('span');
+                bar.style.display = 'inline-block';
+                bar.style.width = '3px';
+                bar.style.height = height;
+                bar.style.backgroundColor = '#555';
+                bar.style.borderRadius = '2px';
+                waves.appendChild(bar);
+            }
+
+            const titleSpan = doc.createElement('span');
+            titleSpan.style.fontWeight = 'normal';
+            titleSpan.style.fontSize = '15px';
+            titleSpan.style.marginLeft = '12px';
+            titleSpan.style.marginTop = '-2px';
+            titleSpan.textContent = title.trim();
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.right = '5px';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.right = '5px';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            summary.appendChild(playIcon);
+            summary.appendChild(waves);
+            summary.appendChild(titleSpan);
+            summary.appendChild(shineLarge);
+            summary.appendChild(shineSmall);
+
+            const detailContent = doc.createElement('div');
+            detailContent.style.setProperty('padding', '12px 14px', 'important');
+            detailContent.style.borderTop = '1px solid rgba(0, 0, 0, 0.08)';
+
+            const paragraph = doc.createElement('p');
+            paragraph.style.margin = '0';
+            paragraph.style.fontWeight = 'normal';
+            paragraph.style.fontSize = '14px';
+            paragraph.style.lineHeight = '1.4';
+            paragraph.textContent = content.trim();
+
+            detailContent.appendChild(paragraph);
+
+            details.appendChild(summary);
+            details.appendChild(detailContent);
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_U_avar custom-B_U_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginLeft = '10px';
+            avatar.style.backgroundImage = "url('{{userAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            container.appendChild(details);
+            container.appendChild(avatar);
+
+            return container;
+        },
+    },
+    {
+        id: 'bhl-char-dimension',
+        pattern: /\[(.*?)\|(.*?)\|(.*?)\]/g,
+        createNode({ documentRef, groups }) {
+            const [title = '', value = '', description = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const container = doc.createElement('div');
+            container.style.display = 'flex';
+            container.style.marginBottom = '18px';
+            container.style.alignItems = 'flex-start';
+            container.style.position = 'relative';
+            container.style.animation = 'message-pop 0.3s ease-out';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_C_avar custom-B_C_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.padding = '5px 5px';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginRight = '10px';
+            avatar.style.backgroundImage = "url('{{charAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            const bubble = doc.createElement('div');
+            bubble.style.setProperty('padding', '12px 16px', 'important');
+            bubble.style.setProperty('border-radius', '16px', 'important');
+            bubble.style.lineHeight = '1.4';
+            bubble.style.setProperty(
+                'border-bottom-left-radius',
+                '24px',
+                'important',
+            );
+            bubble.style.wordWrap = 'break-word';
+            bubble.style.position = 'relative';
+            bubble.style.transition = 'transform 0.2s';
+            bubble.style.setProperty(
+                'background',
+                'linear-gradient(135deg, #C7CB85, #BBCDE0)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'box-shadow',
+                '-4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'border',
+                '1px solid rgba(255, 255, 255, 0.2)',
+                'important',
+            );
+            bubble.style.minWidth = '160px';
+
+            const titleSpan = doc.createElement('span');
+            titleSpan.style.fontSize = '14px';
+            titleSpan.style.fontWeight = 'bold';
+            titleSpan.style.color = '#352B2D';
+            titleSpan.style.display = 'block';
+            titleSpan.style.marginBottom = '4px';
+            titleSpan.textContent = title.trim();
+
+            const valueSpan = doc.createElement('span');
+            valueSpan.style.fontSize = '24px';
+            valueSpan.style.fontWeight = 'bold';
+            valueSpan.style.color = '#615055';
+            valueSpan.style.margin = '4px 0 8px 0';
+            valueSpan.style.display = 'block';
+            valueSpan.textContent = value.trim();
+
+            const descriptionSpan = doc.createElement('span');
+            descriptionSpan.style.fontSize = '14px';
+            descriptionSpan.style.color = '#817478';
+            descriptionSpan.style.opacity = '0.9';
+            descriptionSpan.textContent = description.trim();
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.left = 'auto';
+            shineLarge.style.right = '5px';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.left = 'auto';
+            shineSmall.style.right = '5px';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            bubble.appendChild(titleSpan);
+            bubble.appendChild(valueSpan);
+            bubble.appendChild(descriptionSpan);
+            bubble.appendChild(shineLarge);
+            bubble.appendChild(shineSmall);
+
+            container.appendChild(avatar);
+            container.appendChild(bubble);
+
+            return container;
+        },
+    },
+    {
+        id: 'bhl-user-dimension',
+        pattern: /\[(.*?)-(.*?)-(.*?)\]/g,
+        createNode({ documentRef, groups }) {
+            const [title = '', value = '', description = ''] = groups;
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const container = doc.createElement('div');
+            container.style.display = 'flex';
+            container.style.marginBottom = '18px';
+            container.style.alignItems = 'flex-start';
+            container.style.position = 'relative';
+            container.style.animation = 'message-pop 0.3s ease-out';
+            container.style.flexDirection = 'row-reverse';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_U_avar custom-B_U_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.padding = '5px 5px';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginLeft = '10px';
+            avatar.style.backgroundImage = "url('{{userAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            const bubble = doc.createElement('div');
+            bubble.style.setProperty('padding', '12px 16px', 'important');
+            bubble.style.setProperty('border-radius', '16px', 'important');
+            bubble.style.lineHeight = '1.4';
+            bubble.style.setProperty(
+                'border-bottom-right-radius',
+                '24px',
+                'important',
+            );
+            bubble.style.wordWrap = 'break-word';
+            bubble.style.position = 'relative';
+            bubble.style.transition = 'transform 0.2s';
+            bubble.style.setProperty(
+                'background',
+                'linear-gradient(135deg, #C7CB85, #FFC0BE)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'box-shadow',
+                '4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10), inset -6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'border',
+                '1px solid rgba(255, 255, 255, 0.2)',
+                'important',
+            );
+            bubble.style.minWidth = '160px';
+
+            const titleSpan = doc.createElement('span');
+            titleSpan.style.fontSize = '14px';
+            titleSpan.style.fontWeight = 'bold';
+            titleSpan.style.color = '#352B2D';
+            titleSpan.style.display = 'block';
+            titleSpan.style.marginBottom = '4px';
+            titleSpan.textContent = title.trim();
+
+            const valueSpan = doc.createElement('span');
+            valueSpan.style.fontSize = '24px';
+            valueSpan.style.fontWeight = 'bold';
+            valueSpan.style.color = '#615055';
+            valueSpan.style.margin = '4px 0 8px 0';
+            valueSpan.style.display = 'block';
+            valueSpan.textContent = value.trim();
+
+            const descriptionSpan = doc.createElement('span');
+            descriptionSpan.style.fontSize = '14px';
+            descriptionSpan.style.color = '#817478';
+            descriptionSpan.style.opacity = '0.9';
+            descriptionSpan.textContent = description.trim();
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.left = '5px';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(-45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.left = '5px';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            bubble.appendChild(titleSpan);
+            bubble.appendChild(valueSpan);
+            bubble.appendChild(descriptionSpan);
+            bubble.appendChild(shineLarge);
+            bubble.appendChild(shineSmall);
+
+            container.appendChild(avatar);
+            container.appendChild(bubble);
+
+            return container;
+        },
+    },
+    {
         id: 'bhl-system',
         pattern: /\+(.*?)\+/g,
         createNode({ documentRef, groups }) {
