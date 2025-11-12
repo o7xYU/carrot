@@ -182,7 +182,7 @@ const REGEX_RULES = [
             wrapper.style.animation = 'message-pop 0.3s ease-out';
 
             const avatar = doc.createElement('div');
-            avatar.className = 'B_C_avar';
+            avatar.className = 'B_C_avar custom-B_C_avar';
             avatar.style.width = '40px';
             avatar.style.height = '40px';
             avatar.style.flexShrink = '0';
@@ -332,7 +332,7 @@ const REGEX_RULES = [
             container.style.animation = 'message-pop 0.3s ease-out';
 
             const avatar = doc.createElement('div');
-            avatar.className = 'B_C_avar';
+            avatar.className = 'B_C_avar custom-B_C_avar';
             avatar.style.width = '40px';
             avatar.style.height = '40px';
             avatar.style.flexShrink = '0';
