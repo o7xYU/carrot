@@ -708,39 +708,75 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-eden',
-        pattern:
-            /<伊甸园>\s*(.*?)\s*阶段\|(.*?)\s*乳房\|(.*?)\s*小穴\|(.*?)\s*子宫\|(.*?)\s*后庭\|(.*?)\s*特质\|(.*?)\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*<\/伊甸园>/gms,
+        pattern: /<伊甸园>([\s\S]*?)<\/伊甸园>/gm,
         createNode({ documentRef, groups }) {
-            const [
-                stage = '',
-                stageDesc = '',
-                breast = '',
-                vagina = '',
-                uterus = '',
-                anus = '',
-                traits = '',
-                sperm = '',
-                egg = '',
-                fetus = '',
-                father = '',
-                health = '',
-            ] = groups;
-
+            const [rawContent = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
 
             const safe = (value) => (value ?? '').toString().trim();
+            const segmentOrder = [
+                { id: 'stageDesc', nextKey: '乳房' },
+                { id: 'breast', nextKey: '小穴' },
+                { id: 'vagina', nextKey: '子宫' },
+                { id: 'uterus', nextKey: '后庭' },
+                { id: 'anus', nextKey: '特质' },
+                { id: 'traits', nextKey: '精子' },
+                { id: 'sperm', nextKey: '卵子' },
+                { id: 'egg', nextKey: '胎数' },
+                { id: 'fetus', nextKey: '父亲' },
+                { id: 'father', nextKey: '健康' },
+                { id: 'health', nextKey: null },
+            ];
+
+            const stageMarker = '阶段|';
+            let remaining = (rawContent ?? '').toString();
+            const stageIndex = remaining.indexOf(stageMarker);
+            let stage = '';
+
+            if (stageIndex >= 0) {
+                stage = remaining.slice(0, stageIndex);
+                remaining = remaining.slice(stageIndex + stageMarker.length);
+            } else {
+                stage = remaining;
+                remaining = '';
+            }
+
+            const takeValue = (nextKey) => {
+                if (!remaining) return '';
+                remaining = remaining.replace(/^\s+/, '');
+                if (!nextKey) {
+                    const value = remaining;
+                    remaining = '';
+                    return value;
+                }
+                const marker = `${nextKey}|`;
+                const nextIndex = remaining.indexOf(marker);
+                if (nextIndex === -1) {
+                    const value = remaining;
+                    remaining = '';
+                    return value;
+                }
+                const value = remaining.slice(0, nextIndex);
+                remaining = remaining.slice(nextIndex + marker.length);
+                return value;
+            };
+
+            const values = { stage: safe(stage) };
+            for (const segment of segmentOrder) {
+                values[segment.id] = safe(takeValue(segment.nextKey));
+            }
 
             const template = doc.createElement('template');
             template.innerHTML = `
   <div style="background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;">
 
     <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;">
-      <span>${safe(stage)}</span>
+      <span>${values.stage}</span>
     </div>
     <div style="text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;">{{user}}</div>
     <div style="margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;">
-      <div>${safe(stageDesc)}</div>
+      <div>${values.stageDesc}</div>
     </div>
     <div style="text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;">
       <div>种族 | {{getvar::种族}}</div>
@@ -757,11 +793,11 @@ const REGEX_RULES = [
         <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
       </summary>
       <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
-        <div>乳房 | ${safe(breast)}</div>
-        <div>小穴 | ${safe(vagina)}</div>
-        <div>子宫 | ${safe(uterus)}</div>
-        <div>后庭 | ${safe(anus)}</div>
-        <div>特质 | ${safe(traits)}</div>
+        <div>乳房 | ${values.breast}</div>
+        <div>小穴 | ${values.vagina}</div>
+        <div>子宫 | ${values.uterus}</div>
+        <div>后庭 | ${values.anus}</div>
+        <div>特质 | ${values.traits}</div>
       </div>
     </details>
 
@@ -772,11 +808,11 @@ const REGEX_RULES = [
         <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
       </summary>
       <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
-        <div>精子 | ${safe(sperm)}</div>
-        <div>卵子 | ${safe(egg)}</div>
-        <div>胎数 | ${safe(fetus)}</div>
-        <div>父亲 | ${safe(father)}</div>
-        <div>健康 | ${safe(health)}</div>
+        <div>精子 | ${values.sperm}</div>
+        <div>卵子 | ${values.egg}</div>
+        <div>胎数 | ${values.fetus}</div>
+        <div>父亲 | ${values.father}</div>
+        <div>健康 | ${values.health}</div>
       </div>
     </details>
   </div>
