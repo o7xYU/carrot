@@ -706,6 +706,87 @@ const REGEX_RULES = [
             return outer;
         },
     },
+    {
+        id: 'bhl-eden',
+        pattern:
+            /<伊甸园>\s*(.*?)\s*阶段\|(.*?)\s*乳房\|(.*?)\s*小穴\|(.*?)\s*子宫\|(.*?)\s*后庭\|(.*?)\s*特质\|(.*?)\s*精子\|(.*?)\s*卵子\|(.*?)\s*胎数\|(.*?)\s*父亲\|(.*?)\s*健康\|(.*?)\s*<\/伊甸园>/gms,
+        createNode({ documentRef, groups }) {
+            const [
+                stage = '',
+                stageDesc = '',
+                breast = '',
+                vagina = '',
+                uterus = '',
+                anus = '',
+                traits = '',
+                sperm = '',
+                egg = '',
+                fetus = '',
+                father = '',
+                health = '',
+            ] = groups;
+
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const safe = (value) => (value ?? '').toString().trim();
+
+            const template = doc.createElement('template');
+            template.innerHTML = `
+  <div style="background-image:url('https://i.postimg.cc/138zqs7B/20250912145334-89-154.jpg'); background-size:cover; background-position:center; border-radius:12px; padding:1px; margin:2px auto; border:2px solid #d1d9e6; box-shadow:2px 2px 5px rgba(0,0,0,0.1); max-width:480px; color:#D17B88; position:relative; font-size:16px; contain:paint;">
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:bold; background-color:rgba(255,255,255,0.8); border-radius:4px; padding:4px;">
+      <span>${safe(stage)}</span>
+    </div>
+    <div style="text-align:center; margin-bottom:4px; font-weight:bold; font-size:20px;">{{user}}</div>
+    <div style="margin-bottom:8px; padding:6px; background-color:rgba(187,219,209,0.7); border-radius:4px; text-align:center; font-weight:bold; font-size:16px;">
+      <div>${safe(stageDesc)}</div>
+    </div>
+    <div style="text-align:center; margin-bottom:8px; background-color:rgba(255,255,255,0.7); border-radius:4px; padding:4px 8px; font-size:14px; line-height:1.5;">
+      <div>种族 | {{getvar::种族}}</div>
+      <div>年龄 | {{getvar::年龄}}</div>
+      <div>身高 | {{getvar::身高}}</div>
+      <div>体重 | {{getvar::体重}}</div>
+      <div>三围 | {{getvar::三围}}</div>
+    </div>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生理信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>乳房 | ${safe(breast)}</div>
+        <div>小穴 | ${safe(vagina)}</div>
+        <div>子宫 | ${safe(uterus)}</div>
+        <div>后庭 | ${safe(anus)}</div>
+        <div>特质 | ${safe(traits)}</div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:bold; text-align:center; padding:6px; border-radius:4px; list-style:none; background-color:rgba(191,225,211,0.7);">
+        <span class="float" style="display:inline-block; will-change:transform;">ʚ</span>
+        生殖信息
+        <span class="float" style="display:inline-block; will-change:transform;">ɞ</span>
+      </summary>
+      <div style="padding:6px; font-size:14px; line-height:1.5; border-radius:4px; margin-top:4px; background-color:rgba(255,255,255,0.5);">
+        <div>精子 | ${safe(sperm)}</div>
+        <div>卵子 | ${safe(egg)}</div>
+        <div>胎数 | ${safe(fetus)}</div>
+        <div>父亲 | ${safe(father)}</div>
+        <div>健康 | ${safe(health)}</div>
+      </div>
+    </details>
+  </div>
+            `.trim();
+
+            const content = template.content.firstElementChild;
+            if (!content) return null;
+            return content;
+        },
+    },
 ];
 
 function clonePattern(pattern) {
