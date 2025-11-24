@@ -1,10 +1,11 @@
 {
   "name": "carrot-input-panel",
   "display_name": "兔子不吃胡萝卜",
-  "version": "5.2",
-  "manifest_version": 5,
-  "description": "现在只需要3个来自小图正则+2个气泡正则+世界面板正则+两个面板正则",
+  "version": "6",
+  "manifest_version": 6,
+  "description": "现在只需要2个来自小图正则+2个世界面板正则+两个面板正则",
   "js": ["script.js"],
   "css": ["style.css"]
 }
+
 
