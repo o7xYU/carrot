@@ -129,7 +129,7 @@ const REGEX_RULES = [
             bodyWrapper.style.width = '100%';
 
             const bubble = doc.createElement('div');
-            bubble.style.backgroundColor = '#ffffff';
+            bubble.style.backgroundColor = '#F0EBE3';
             bubble.style.color = '#000000';
             bubble.style.padding = '12px 16px';
             bubble.style.borderRadius = '20px';
@@ -137,15 +137,15 @@ const REGEX_RULES = [
             bubble.style.position = 'relative';
             bubble.style.maxWidth = '100%';
 
-            const paragraph = doc.createElement('p');
-            paragraph.style.margin = '0';
-            paragraph.style.whiteSpace = 'pre-wrap';
-            paragraph.style.wordWrap = 'break-word';
-            paragraph.style.fontSize = '12px';
-            paragraph.style.lineHeight = '1.5';
-            paragraph.textContent = message.trim();
+            const content = doc.createElement('div');
+            content.style.margin = '0';
+            content.style.whiteSpace = 'pre-wrap';
+            content.style.wordWrap = 'break-word';
+            content.style.fontSize = '12px';
+            content.style.lineHeight = '1.5';
+            content.textContent = message.trim();
 
-            bubble.appendChild(paragraph);
+            bubble.appendChild(content);
 
             const timeSpan = doc.createElement('span');
             timeSpan.style.fontSize = '12px';
@@ -656,7 +656,7 @@ const REGEX_RULES = [
             container.style.color = '#888888';
             container.style.fontSize = '14px';
             container.style.margin = '10px 0';
-            container.textContent = `系统提示：${message.trim()}`;
+            container.textContent = message.trim();
             return container;
         },
     },
