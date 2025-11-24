@@ -1096,18 +1096,19 @@
                 replacePlaceholderWithNode,
                 documentRef: document,
             });
+            replaceStickerPlaceholders(element);
         });
     }
 
     async function processMessageElement(element) {
         if (!element) return;
 
-        const replacedSticker = replaceStickerPlaceholders(element);
         const replacedRegex = applyRegexReplacements(element, {
             enabled: regexEnabled,
             replacePlaceholderWithNode,
             documentRef: document,
         });
+        const replacedSticker = replaceStickerPlaceholders(element);
 
         // 使用 textContent 而不是 innerHTML 来避免HTML实体编码问题
         const text = element.textContent || element.innerText || '';
