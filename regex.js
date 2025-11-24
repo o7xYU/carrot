@@ -892,20 +892,40 @@ function resolveCustomReplacement({
 let cachedRuleSettings = null;
 let cachedCustomRules = null;
 
-function sanitizeCustomRule(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    const source = typeof raw.patternSource === 'string' ? raw.patternSource.trim() : '';
-    if (!source) return null;
-    const flags =
-        typeof raw.flags === 'string' && raw.flags.trim()
-            ? raw.flags.trim()
-            : 'g';
+function parsePatternInput(input, fallbackFlags = 'gm') {
+    if (typeof input !== 'string') return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    let source = trimmed;
+    let flags = fallbackFlags;
+
+    if (trimmed.startsWith('/') && trimmed.lastIndexOf('/') > 0) {
+        const lastSlash = trimmed.lastIndexOf('/');
+        source = trimmed.slice(1, lastSlash);
+        const flagPart = trimmed.slice(lastSlash + 1).trim();
+        if (flagPart) {
+            flags = flagPart;
+        }
+    }
+
     try {
         // eslint-disable-next-line no-new
         new RegExp(source, flags);
     } catch (error) {
         return null;
     }
+
+    return { source, flags };
+}
+
+function sanitizeCustomRule(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const parsed =
+        parsePatternInput(raw.patternSource, raw.flags || 'gm') ||
+        parsePatternInput(raw.pattern, raw.flags || 'gm');
+    if (!parsed) return null;
+
     const replacement =
         typeof raw.defaultReplacement === 'string' ? raw.defaultReplacement : '';
     const id =
@@ -919,8 +939,8 @@ function sanitizeCustomRule(raw) {
     return {
         id,
         name,
-        patternSource: source,
-        flags,
+        patternSource: parsed.source,
+        flags: parsed.flags,
         defaultReplacement: replacement,
         isCustom: true,
     };
@@ -1004,6 +1024,9 @@ function normalizeRuleSettings(raw) {
         if (typeof candidate.replacement === 'string') {
             merged[ruleId].replacement = candidate.replacement;
         }
+        if (typeof candidate.flags === 'string' && candidate.flags.trim()) {
+            merged[ruleId].flags = candidate.flags.trim();
+        }
     }
     return merged;
 }
@@ -1055,8 +1078,15 @@ function getRuleConfig(ruleSettings, rule) {
 
 function buildPattern(rule, config) {
     if (!rule) return null;
-    const source = config?.pattern || rule.patternSource;
-    const flags = rule.flags || 'g';
+    const parsed =
+        parsePatternInput(
+            config?.pattern || rule.patternSource,
+            config?.flags || rule.flags || 'g',
+        ) || {
+            source: config?.pattern || rule.patternSource,
+            flags: config?.flags || rule.flags || 'g',
+        };
+    const { source, flags } = parsed;
     try {
         return new RegExp(source, flags);
     } catch (error) {
@@ -1249,9 +1279,25 @@ export function setRegexRuleSettings(settings) {
 export function updateRegexRuleSetting(ruleId, updates = {}) {
     const settings = getRuleSettingsWithDefaults();
     if (!settings[ruleId]) return settings;
+    let nextPattern = updates.pattern;
+    let nextFlags = updates.flags;
+
+    if (typeof updates.pattern === 'string') {
+        const parsed = parsePatternInput(
+            updates.pattern,
+            updates.flags || settings[ruleId]?.flags || 'g',
+        );
+        if (parsed) {
+            nextPattern = parsed.source;
+            nextFlags = parsed.flags;
+        }
+    }
+
     const next = {
         ...settings[ruleId],
         ...updates,
+        ...(typeof nextPattern === 'string' ? { pattern: nextPattern } : {}),
+        ...(typeof nextFlags === 'string' ? { flags: nextFlags } : {}),
     };
     return setRegexRuleSettings({
         ...settings,
@@ -1275,17 +1321,11 @@ export function resetAllRegexRuleSettings() {
     return defaults;
 }
 
-export function addCustomRegexRule({
-    name,
-    pattern,
-    replacement = '',
-    flags = 'gm',
-} = {}) {
+export function addCustomRegexRule({ name, pattern, replacement = '' } = {}) {
     const prepared = sanitizeCustomRule({
         id: '',
         name,
         patternSource: typeof pattern === 'string' ? pattern.trim() : '',
-        flags: typeof flags === 'string' && flags.trim() ? flags.trim() : 'gm',
         defaultReplacement:
             typeof replacement === 'string' ? replacement : `${replacement ?? ''}`,
     });
@@ -1329,7 +1369,7 @@ export function getRegexRulesForUI() {
         pattern: settings[rule.id]?.pattern || rule.patternSource,
         replacement:
             settings[rule.id]?.replacement ?? rule.defaultReplacement ?? '',
-        flags: rule.flags || 'g',
+        flags: settings[rule.id]?.flags || rule.flags || 'g',
         isCustom: !!rule.isCustom,
         defaults: {
             pattern: rule.patternSource,

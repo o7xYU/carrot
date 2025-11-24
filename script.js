@@ -606,6 +606,30 @@
         if (label) label.textContent = enabled ? '开启' : '关闭';
     }
 
+    function parsePatternInput(raw, fallbackFlags = 'gm') {
+        if (typeof raw !== 'string') return null;
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        let source = trimmed;
+        let flags = fallbackFlags;
+
+        if (trimmed.startsWith('/') && trimmed.lastIndexOf('/') > 0) {
+            const lastSlash = trimmed.lastIndexOf('/');
+            source = trimmed.slice(1, lastSlash);
+            const flagPart = trimmed.slice(lastSlash + 1).trim();
+            if (flagPart) flags = flagPart;
+        }
+
+        try {
+            // eslint-disable-next-line no-new
+            new RegExp(source, flags);
+        } catch (error) {
+            return null;
+        }
+
+        return { source, flags };
+    }
+
     function updateRegexMasterUI() {
         if (!regexMasterToggle) return;
         if (!regexModuleReady) {
@@ -666,18 +690,23 @@
             patternBtn.className = 'cip-regex-edit-btn';
             patternBtn.textContent = '表达式';
             patternBtn.addEventListener('click', () => {
-                const next = prompt('修改匹配表达式（支持分组：$1、$2...）', rule.pattern);
+                const defaultPattern = rule.pattern
+                    ? `/${rule.pattern}/${rule.flags || 'gm'}`
+                    : rule.pattern;
+                const next = prompt(
+                    '修改匹配表达式（可输入完整 /表达式/标志，支持分组：$1、$2...）',
+                    defaultPattern,
+                );
                 if (next === null) return;
-                try {
-                    const { defaults } = rule;
-                    const flags = defaults?.flags || rule.flags || 'g';
-                    // eslint-disable-next-line no-new
-                    new RegExp(next, flags);
-                } catch (error) {
+                const parsed = parsePatternInput(next, rule.flags || 'gm');
+                if (!parsed) {
                     alert('表达式无效，请检查语法');
                     return;
                 }
-                updateRegexRuleSetting(rule.id, { pattern: next });
+                updateRegexRuleSetting(rule.id, {
+                    pattern: parsed.source,
+                    flags: parsed.flags,
+                });
                 renderRegexRuleList();
                 reprocessRegexPlaceholders();
             });
@@ -742,19 +771,11 @@
         if (!regexModuleReady) return;
         const name = prompt('输入功能名称', '自定义正则');
         if (name === null) return;
-        const pattern = prompt('输入匹配表达式', '');
+        const pattern = prompt('输入匹配表达式（支持直接输入 /表达式/标志）', '');
         if (pattern === null) return;
-        const trimmedPattern = pattern.trim();
-        if (!trimmedPattern) {
+        const parsedPattern = parsePatternInput(pattern, 'gm');
+        if (!parsedPattern) {
             alert('请输入有效的匹配表达式');
-            return;
-        }
-        const flags = (prompt('可选：正则标志（默认 gm）', 'gm') || 'gm').trim() || 'gm';
-        try {
-            // eslint-disable-next-line no-new
-            new RegExp(trimmedPattern, flags);
-        } catch (error) {
-            alert('表达式无效，请检查语法');
             return;
         }
         const replacement = prompt(
@@ -765,9 +786,8 @@
         try {
             addCustomRegexRule({
                 name: name.trim() || '自定义正则',
-                pattern: trimmedPattern,
+                pattern: `/${parsedPattern.source}/${parsedPattern.flags}`,
                 replacement,
-                flags,
             });
         } catch (error) {
             console.warn('胡萝卜插件：新增自定义正则失败', error);
