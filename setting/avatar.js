@@ -102,18 +102,27 @@ export function initAvatarSettings(
         const selectorCandidates =
             type === 'char'
                 ? [
+                      '.mes:not(.self):not(.user):not(.right) .avatar img',
                       '.mes .mes_avatar img',
                       '.mes .avatar img',
                       '#character_avatar img',
                       '.character_avatar img',
+                      '.mes:not(.self):not(.user):not(.right) .avatar',
                       '.mes .mes_avatar',
+                      '.mes .avatar',
                   ]
                 : [
+                      '.mes.self .avatar img',
+                      '.mes.user .avatar img',
+                      '.mes.right .avatar img',
                       '.mes.self .mes_avatar img',
                       '.mes.user .mes_avatar img',
                       '.mes.right .mes_avatar img',
                       '#user_avatar img',
                       '.user_avatar img',
+                      '.mes.self .avatar',
+                      '.mes.user .avatar',
+                      '.mes.right .avatar',
                       '.mes.self .mes_avatar',
                       '.mes.right .mes_avatar',
                   ];
