@@ -51,7 +51,7 @@
     }
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
-    const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
+    const stickerPlaceholderRegex = /【([^【】]+?)】/g;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -803,7 +803,7 @@
         },
         voice: '={duration}-{message}=',
         wallet: '[{platform}-{amount}-{message}]',
-        stickers: '“[{desc}]”',
+        stickers: '“【{desc}】”',
         recall: '--',
     };
     const weekdayLabels = [
