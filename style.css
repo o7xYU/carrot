@@ -792,6 +792,50 @@ emoji-picker {
     gap: 10px;
 }
 
+.cip-regex-group {
+    border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
+    border-radius: 12px;
+    background: var(--cip-input-bg-color, rgba(255, 255, 255, 0.06));
+    overflow: hidden;
+}
+
+.cip-regex-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: var(--cip-text-color);
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.cip-regex-group-title {
+    font-size: 13px;
+}
+
+.cip-regex-group-caret {
+    transition: transform var(--cip-transition-speed);
+}
+
+.cip-regex-group-caret.collapsed {
+    transform: rotate(-90deg);
+}
+
+.cip-regex-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+}
+
+.cip-regex-group-body.collapsed {
+    display: none;
+}
+
 .cip-regex-rule {
     display: flex;
     align-items: center;

@@ -736,7 +736,7 @@
             return;
         }
 
-        for (const rule of rules) {
+        const createRuleRow = (rule) => {
             const row = document.createElement('div');
             row.className = 'cip-regex-rule';
 
@@ -816,8 +816,59 @@
             row.appendChild(patternBtn);
             row.appendChild(replacementBtn);
             row.appendChild(resetBtn);
-            regexRuleList.appendChild(row);
-        }
+            return row;
+        };
+
+        const createGroup = (title, items, collapsed = false) => {
+            const group = document.createElement('div');
+            group.className = 'cip-regex-group';
+
+            const header = document.createElement('button');
+            header.type = 'button';
+            header.className = 'cip-regex-group-header';
+            const headerTitle = document.createElement('span');
+            headerTitle.className = 'cip-regex-group-title';
+            headerTitle.textContent = `${title}（${items.length}）`;
+            const caret = document.createElement('span');
+            caret.className = 'cip-regex-group-caret';
+            caret.textContent = '▾';
+
+            header.appendChild(headerTitle);
+            header.appendChild(caret);
+
+            const body = document.createElement('div');
+            body.className = 'cip-regex-group-body';
+            if (collapsed) {
+                body.classList.add('collapsed');
+                caret.classList.add('collapsed');
+            }
+
+            header.addEventListener('click', () => {
+                body.classList.toggle('collapsed');
+                caret.classList.toggle('collapsed');
+            });
+
+            if (!items.length) {
+                const empty = document.createElement('div');
+                empty.className = 'cip-regex-empty';
+                empty.textContent = title === '自定义' ? '暂无自定义正则' : '暂无默认正则';
+                body.appendChild(empty);
+            } else {
+                for (const item of items) {
+                    body.appendChild(createRuleRow(item));
+                }
+            }
+
+            group.appendChild(header);
+            group.appendChild(body);
+            regexRuleList.appendChild(group);
+        };
+
+        const defaultRules = rules.filter((item) => !item.isCustom);
+        const customRules = rules.filter((item) => item.isCustom);
+
+        createGroup('默认', defaultRules);
+        createGroup('自定义', customRules, customRules.length === 0);
     }
 
     updateRegexMasterUI();
