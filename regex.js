@@ -1187,10 +1187,12 @@ function replaceMatchesInTextNode({
             );
         }
 
-        const replacementNode = rule.createNode({
+        const replacementNode = createReplacementNode({
             documentRef: doc,
             groups: match.slice(1),
             config: ruleConfig,
+            rule,
+            fallbackText: matchText,
         });
 
         if (replacementNode) {
@@ -1265,6 +1267,40 @@ export function setRegexEnabled(enabled) {
     } catch (error) {
         console.warn('胡萝卜插件：写入正则开关失败', error);
     }
+}
+
+function createReplacementNode({
+    rule,
+    groups,
+    config,
+    documentRef,
+    fallbackText = '',
+}) {
+    const doc = documentRef || defaultDocument;
+    if (!doc) return null;
+
+    if (typeof rule?.createNode === 'function') {
+        return rule.createNode({
+            documentRef: doc,
+            groups,
+            config,
+        });
+    }
+
+    const template =
+        typeof config?.replacement === 'string'
+            ? config.replacement
+            : typeof rule?.defaultReplacement === 'string'
+              ? rule.defaultReplacement
+              : '';
+
+    if (template && template.trim()) {
+        const custom = buildCustomReplacement(doc, template, groups);
+        if (custom) return custom;
+    }
+
+    const text = applyTemplate(template, groups, fallbackText || '');
+    return doc.createTextNode(text);
 }
 
 export function getRegexRuleSettings() {
@@ -1407,26 +1443,35 @@ export function applyRegexReplacements(element, options = {}) {
     const ruleSettings = getRuleSettingsWithDefaults();
 
     for (const rule of getAllRules()) {
-        const config = getRuleConfig(ruleSettings, rule);
-        if (!config.enabled) continue;
-        const pattern = buildPattern(rule, config);
-        if (!pattern) continue;
+        try {
+            const config = getRuleConfig(ruleSettings, rule);
+            if (!config.enabled) continue;
+            const pattern = buildPattern(rule, config);
+            if (!pattern) continue;
 
-        const textNodes = collectTextNodes(element, documentRef);
-        if (!textNodes.length) break;
+            const textNodes = collectTextNodes(element, documentRef);
+            if (!textNodes.length) break;
 
-        for (const textNode of textNodes) {
-            const replaced = replaceMatchesInTextNode({
-                textNode,
-                rule,
-                pattern,
-                documentRef,
-                ensureOriginalStored,
-                ruleConfig: config,
-            });
-            if (replaced) {
-                replacedAny = true;
+            for (const textNode of textNodes) {
+                const replaced = replaceMatchesInTextNode({
+                    textNode,
+                    rule,
+                    pattern,
+                    documentRef,
+                    ensureOriginalStored,
+                    ruleConfig: config,
+                });
+                if (replaced) {
+                    replacedAny = true;
+                }
             }
+        } catch (error) {
+            console.warn('胡萝卜插件：应用正则规则失败', {
+                id: rule?.id,
+                name: rule?.name,
+                error,
+            });
+            continue;
         }
     }
 
