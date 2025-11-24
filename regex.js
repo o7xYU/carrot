@@ -82,7 +82,7 @@ const REGEX_RULES = [
             avatar.style.height = '40px';
             avatar.style.flexShrink = '0';
             avatar.style.borderRadius = '50%';
-            avatar.style.padding = '0px 5px';
+            avatar.style.padding = '0px 0px';
             avatar.style.overflow = 'hidden';
             avatar.style.marginRight = '10px';
             avatar.style.backgroundImage = "url('{{charAvatarPath}}')";
@@ -90,7 +90,7 @@ const REGEX_RULES = [
             avatar.style.backgroundPosition = 'center';
 
             const bubble = doc.createElement('div');
-            bubble.style.padding = '10px 14px';
+            bubble.style.padding = '0px 0px';
             bubble.style.setProperty('border-radius', '24px', 'important');
             bubble.style.lineHeight = '1.4';
             bubble.style.setProperty(
@@ -194,7 +194,7 @@ const REGEX_RULES = [
             avatar.style.height = '40px';
             avatar.style.flexShrink = '0';
             avatar.style.borderRadius = '50%';
-            avatar.style.padding = '5px 5px';
+            avatar.style.padding = '0px 0px';
             avatar.style.overflow = 'hidden';
             avatar.style.marginLeft = '10px';
             avatar.style.backgroundImage = "url('{{userAvatarPath}}')";
@@ -202,7 +202,7 @@ const REGEX_RULES = [
             avatar.style.backgroundPosition = 'center';
 
             const bubble = doc.createElement('div');
-            bubble.style.padding = '10px 14px';
+            bubble.style.padding = '0px 0px';
             bubble.style.setProperty('border-radius', '24px', 'important');
             bubble.style.lineHeight = '1.4';
             bubble.style.setProperty(
@@ -1904,4 +1904,5 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
+
 
