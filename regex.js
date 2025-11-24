@@ -270,7 +270,7 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-bubble-self',
-        name: '第一人称气泡',
+        name: '群-我方气泡',
         patternSource: '\\[(.*?)\\\\(.*?)\\\\(.*?)\\\]',
         flags: 'gm',
         defaultReplacement: '$3',
@@ -353,7 +353,7 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-bubble',
-        name: '第三人称气泡',
+        name: '群-对方气泡',
         patternSource: '\\[(.*?)\\/(.*?)\\/(.*?)\\\]',
         flags: 'gm',
         defaultReplacement: '$2',
@@ -717,7 +717,7 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-char-dimension',
-        name: '角色维度',
+        name: 'char超次元',
         patternSource: '\\[(.*?)\\|(.*?)\\|(.*?)\\\]',
         flags: 'g',
         defaultReplacement: '$3',
@@ -848,7 +848,7 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-user-dimension',
-        name: '用户维度',
+        name: 'user超次元',
         patternSource: '\\[(.*?)-(.*?)-(.*?)\\]',
         flags: 'g',
         defaultReplacement: '$3',
@@ -1892,3 +1892,4 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
+
