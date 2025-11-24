@@ -82,7 +82,7 @@ const REGEX_RULES = [
             avatar.style.height = '40px';
             avatar.style.flexShrink = '0';
             avatar.style.borderRadius = '50%';
-            avatar.style.padding = '5px 5px';
+            avatar.style.padding = '0px 5px';
             avatar.style.overflow = 'hidden';
             avatar.style.marginRight = '10px';
             avatar.style.backgroundImage = "url('{{charAvatarPath}}')";
@@ -1904,3 +1904,4 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
+
