@@ -51,7 +51,7 @@
     }
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
-    const stickerPlaceholderRegex = /【([^【】]+?)】/g;
+    const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
@@ -803,7 +803,7 @@
         },
         voice: '={duration}-{message}=',
         wallet: '[{platform}-{amount}-{message}]',
-        stickers: '“【{desc}】”',
+        stickers: '“[{desc}]”',
         recall: '--',
     };
     const weekdayLabels = [
@@ -1096,18 +1096,19 @@
                 replacePlaceholderWithNode,
                 documentRef: document,
             });
+            replaceStickerPlaceholders(element);
         });
     }
 
     async function processMessageElement(element) {
         if (!element) return;
 
-        const replacedSticker = replaceStickerPlaceholders(element);
         const replacedRegex = applyRegexReplacements(element, {
             enabled: regexEnabled,
             replacePlaceholderWithNode,
             documentRef: document,
         });
+        const replacedSticker = replaceStickerPlaceholders(element);
 
         // 使用 textContent 而不是 innerHTML 来避免HTML实体编码问题
         const text = element.textContent || element.innerText || '';
