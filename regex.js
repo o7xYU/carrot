@@ -1369,6 +1369,26 @@ function markRegexNode(node, ruleId) {
     node.dataset.cipRegexRule = ruleId || '';
 }
 
+function getReplacementTarget(textNode) {
+    if (!textNode?.parentNode) return textNode;
+    const parent = textNode.parentNode;
+    if (parent.nodeType !== 1) return textNode;
+
+    const tagName = parent.tagName ? parent.tagName.toUpperCase() : '';
+    if (tagName !== 'Q' && tagName !== 'BLOCKQUOTE') return textNode;
+
+    const children = Array.from(parent.childNodes || []);
+    const onlyText = children.every((child) => {
+        if (child === textNode) return true;
+        if (child.nodeType === 3) {
+            return !child.nodeValue || !child.nodeValue.trim();
+        }
+        return false;
+    });
+
+    return onlyText ? parent : textNode;
+}
+
 function replaceMatchesInTextNode({
     textNode,
     rule,
@@ -1378,7 +1398,8 @@ function replaceMatchesInTextNode({
     ruleConfig,
 }) {
     if (!textNode?.parentNode) return false;
-    const text = textNode.nodeValue;
+    const targetNode = getReplacementTarget(textNode);
+    const text = targetNode.textContent || textNode.nodeValue;
     if (!text) return false;
 
     const doc = documentRef || defaultDocument;
@@ -1445,7 +1466,7 @@ function replaceMatchesInTextNode({
         ensureOriginalStored();
     }
 
-    textNode.parentNode.replaceChild(fragment, textNode);
+    targetNode.parentNode.replaceChild(fragment, targetNode);
     return true;
 }
 
