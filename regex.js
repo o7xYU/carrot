@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'cip_regex_enabled_v1';
+const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
+const CUSTOM_RULES_KEY = 'cip_regex_custom_rules_v1';
+const REGEX_PROFILES_KEY = 'cip_regex_profiles_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
@@ -9,11 +12,22 @@ const TEXT_NODE_FILTER =
 const REGEX_RULES = [
     {
         id: 'bhl-timestamp',
-        pattern: /^『(.*?) \|(.*?)』$/gm,
-        createNode({ documentRef, groups }) {
-            const [time = '', text = ''] = groups;
+        name: '时间戳',
+        patternSource: '^『(.*?) \\|(.*?)』$',
+        flags: 'gm',
+        defaultReplacement: '$1   $2',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [time = '', text = ''] = groups;
             const container = doc.createElement('div');
             container.style.textAlign = 'center';
             container.style.color = '#8e8e93';
@@ -22,20 +36,259 @@ const REGEX_RULES = [
             container.style.margin = '12px 0';
             const safeTime = time.trim();
             const safeText = text.trim();
-            container.textContent = `${safeTime}\u00A0\u00A0\u00A0${safeText}`;
+            const display = applyTemplate(
+                config?.replacement,
+                groups,
+                `${safeTime}\u00A0\u00A0\u00A0${safeText}`,
+            );
+            container.textContent = display;
             return container;
         },
     },
     {
-        id: 'bhl-bubble-self',
-        pattern: /\[(.*?)\\(.*?)\\(.*?)\]/gm,
-        createNode({ documentRef, groups }) {
-            const [name = '', time = '', message = ''] = groups;
+        id: 'bhl-char-bubble-custom',
+        name: 'char气泡',
+        patternSource: '^"(.*?)"$',
+        flags: 'gm',
+        defaultReplacement:
+            '<div class="char_bubble"><div style="display: flex;margin-bottom: 0px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">   <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url(\'{{charAvatarPath}}\'); background-size: cover; background-position: center;">  </div>  <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important; word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: auto;right: 5px; width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span> $1  <span style="position: absolute;top: 15px; left: auto;right: 5px; width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"> </span></div></div></div>',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
 
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
+
+            const outer = doc.createElement('div');
+            outer.className = 'char_bubble custom-char-bubble';
+
+            const wrapper = doc.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.marginBottom = '0px';
+            wrapper.style.alignItems = 'flex-start';
+            wrapper.style.position = 'relative';
+            wrapper.style.animation = 'message-pop 0.3s ease-out';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_C_avar custom-B_C_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.padding = '5px 5px';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginRight = '10px';
+            avatar.style.backgroundImage = "url('{{charAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            const bubble = doc.createElement('div');
+            bubble.style.padding = '10px 14px';
+            bubble.style.setProperty('border-radius', '24px', 'important');
+            bubble.style.lineHeight = '1.4';
+            bubble.style.setProperty(
+                'border-bottom-left-radius',
+                '24px',
+                'important',
+            );
+            bubble.style.wordWrap = 'break-word';
+            bubble.style.position = 'relative';
+            bubble.style.transition = 'transform 0.2s';
+            bubble.style.setProperty('background', 'transparent', 'important');
+            bubble.style.setProperty(
+                'box-shadow',
+                '-4px 4px 8px rgba(0, 0, 0, 0.10), 2px -2px 4px rgba(255, 255, 255, 0.3), inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'border',
+                '1px solid rgba(200, 200, 200, 0.3)',
+                'important',
+            );
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.left = 'auto';
+            shineLarge.style.right = '5px';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.left = 'auto';
+            shineSmall.style.right = '5px';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            const content = doc.createElement('div');
+            content.style.whiteSpace = 'pre-wrap';
+            content.style.wordWrap = 'break-word';
+            content.style.fontSize = '14px';
+            content.style.lineHeight = '1.4';
+            content.textContent = message.trim();
+
+            bubble.appendChild(shineLarge);
+            bubble.appendChild(content);
+            bubble.appendChild(shineSmall);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            outer.appendChild(wrapper);
+
+            return outer;
+        },
+    },
+    {
+        id: 'bhl-user-bubble-custom',
+        name: 'user气泡',
+        patternSource: '^“(.*?)”$',
+        flags: 'gm',
+        defaultReplacement:
+            '<div class="user_bubble"><div style="display: flex;margin-bottom: 0px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;"><div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url(\'{{userAvatarPath}}\'); background-size: cover; background-position: center;"></div><div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>$1 <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span></div></div></div>',
+        createNode({ documentRef, groups, config }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
+
+            const outer = doc.createElement('div');
+            outer.className = 'user_bubble custom-user-bubble';
+
+            const wrapper = doc.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.marginBottom = '0px';
+            wrapper.style.alignItems = 'flex-start';
+            wrapper.style.position = 'relative';
+            wrapper.style.animation = 'message-pop 0.3s ease-out';
+            wrapper.style.flexDirection = 'row-reverse';
+
+            const avatar = doc.createElement('div');
+            avatar.className = 'B_U_avar custom-B_U_avar';
+            avatar.style.width = '40px';
+            avatar.style.height = '40px';
+            avatar.style.flexShrink = '0';
+            avatar.style.borderRadius = '50%';
+            avatar.style.padding = '5px 5px';
+            avatar.style.overflow = 'hidden';
+            avatar.style.marginLeft = '10px';
+            avatar.style.backgroundImage = "url('{{userAvatarPath}}')";
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+
+            const bubble = doc.createElement('div');
+            bubble.style.padding = '10px 14px';
+            bubble.style.setProperty('border-radius', '24px', 'important');
+            bubble.style.lineHeight = '1.4';
+            bubble.style.setProperty(
+                'border-bottom-right-radius',
+                '24px',
+                'important',
+            );
+            bubble.style.wordWrap = 'break-word';
+            bubble.style.position = 'relative';
+            bubble.style.transition = 'transform 0.2s';
+            bubble.style.setProperty('background', 'transparent', 'important');
+            bubble.style.setProperty(
+                'box-shadow',
+                '4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10), inset -6px -6px 8px rgba(255, 255, 255, 0.5)',
+                'important',
+            );
+            bubble.style.setProperty(
+                'border',
+                '1px solid rgba(200, 200, 200, 0.3)',
+                'important',
+            );
+
+            const shineLarge = doc.createElement('span');
+            shineLarge.style.position = 'absolute';
+            shineLarge.style.top = '5px';
+            shineLarge.style.left = '5px';
+            shineLarge.style.right = 'auto';
+            shineLarge.style.width = '12px';
+            shineLarge.style.height = '6px';
+            shineLarge.style.background = 'white';
+            shineLarge.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+            shineLarge.style.opacity = '0.9';
+            shineLarge.style.zIndex = '2';
+            shineLarge.style.transform = 'rotate(-45deg)';
+
+            const shineSmall = doc.createElement('span');
+            shineSmall.style.position = 'absolute';
+            shineSmall.style.top = '15px';
+            shineSmall.style.left = '5px';
+            shineSmall.style.right = 'auto';
+            shineSmall.style.width = '4px';
+            shineSmall.style.height = '4px';
+            shineSmall.style.background = 'white';
+            shineSmall.style.borderRadius = '50%';
+            shineSmall.style.opacity = '0.6';
+            shineSmall.style.zIndex = '2';
+
+            const content = doc.createElement('div');
+            content.style.whiteSpace = 'pre-wrap';
+            content.style.wordWrap = 'break-word';
+            content.style.fontSize = '14px';
+            content.style.lineHeight = '1.4';
+            content.textContent = message.trim();
+
+            bubble.appendChild(shineLarge);
+            bubble.appendChild(content);
+            bubble.appendChild(shineSmall);
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            outer.appendChild(wrapper);
+
+            return outer;
+        },
+    },
+    {
+        id: 'bhl-bubble-self',
+        name: '第一人称气泡',
+        patternSource: '\\[(.*?)\\\\(.*?)\\\\(.*?)\\\]',
+        flags: 'gm',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
+            const doc = documentRef || defaultDocument;
+            if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [name = '', time = '', message = ''] = groups;
+
             const container = doc.createElement('div');
-            container.style.margin = '10px 0';
+            container.style.margin = '0';
             container.style.maxWidth = '75%';
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
@@ -81,7 +334,11 @@ const REGEX_RULES = [
             paragraph.style.wordWrap = 'break-word';
             paragraph.style.fontSize = '12px';
             paragraph.style.lineHeight = '1.5';
-            paragraph.textContent = message.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             bubble.appendChild(paragraph);
 
@@ -96,14 +353,25 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-bubble',
-        pattern: /\[(.*?)\/(.*?)\/(.*?)\]/gm,
-        createNode({ documentRef, groups }) {
-            const [name = '', message = '', time = ''] = groups;
+        name: '第三人称气泡',
+        patternSource: '\\[(.*?)\\/(.*?)\\/(.*?)\\\]',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [name = '', message = '', time = ''] = groups;
 
             const container = doc.createElement('div');
-            container.style.margin = '10px 0';
+            container.style.margin = '0';
             container.style.maxWidth = '75%';
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
@@ -143,7 +411,11 @@ const REGEX_RULES = [
             content.style.wordWrap = 'break-word';
             content.style.fontSize = '12px';
             content.style.lineHeight = '1.5';
-            content.textContent = message.trim();
+            content.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             bubble.appendChild(content);
 
@@ -165,18 +437,29 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-char-voice',
-        pattern: /^=(.*?)\|(.*?)=$/gm,
-        createNode({ documentRef, groups }) {
-            const [title = '', content = ''] = groups;
+        name: '角色语音',
+        patternSource: '^=(.*?)\\|(.*?)=$',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', content = ''] = groups;
 
             const outerContainer = doc.createElement('div');
             outerContainer.className = 'char_bubble';
 
             const wrapper = doc.createElement('div');
             wrapper.style.display = 'flex';
-            wrapper.style.marginBottom = '16px';
+            wrapper.style.marginBottom = '0px';
             wrapper.style.alignItems = 'flex-start';
             wrapper.style.position = 'relative';
             wrapper.style.animation = 'message-pop 0.3s ease-out';
@@ -274,7 +557,11 @@ const REGEX_RULES = [
             paragraph.style.fontWeight = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = content.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                content.trim(),
+            );
 
             detailContent.appendChild(paragraph);
 
@@ -291,15 +578,26 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-user-voice',
-        pattern: /^=(.*?)-(.*?)=$/gm,
-        createNode({ documentRef, groups }) {
-            const [title = '', content = ''] = groups;
+        name: '用户语音',
+        patternSource: '^=(.*?)-(.*?)=$',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', content = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.textAlign = 'right';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.display = 'flex';
             container.style.justifyContent = 'flex-end';
             container.style.alignItems = 'flex-start';
@@ -388,7 +686,11 @@ const REGEX_RULES = [
             paragraph.style.fontWeight = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = content.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                content.trim(),
+            );
 
             detailContent.appendChild(paragraph);
 
@@ -415,15 +717,26 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-char-dimension',
-        pattern: /\[(.*?)\|(.*?)\|(.*?)\]/g,
-        createNode({ documentRef, groups }) {
-            const [title = '', value = '', description = ''] = groups;
+        name: '角色维度',
+        patternSource: '\\[(.*?)\\|(.*?)\\|(.*?)\\\]',
+        flags: 'g',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', value = '', description = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.alignItems = 'flex-start';
             container.style.position = 'relative';
             container.style.animation = 'message-pop 0.3s ease-out';
@@ -490,7 +803,11 @@ const REGEX_RULES = [
             descriptionSpan.style.fontSize = '14px';
             descriptionSpan.style.color = '#817478';
             descriptionSpan.style.opacity = '0.9';
-            descriptionSpan.textContent = description.trim();
+            descriptionSpan.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                description.trim(),
+            );
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
@@ -531,15 +848,26 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-user-dimension',
-        pattern: /\[(.*?)-(.*?)-(.*?)\]/g,
-        createNode({ documentRef, groups }) {
-            const [title = '', value = '', description = ''] = groups;
+        name: '用户维度',
+        patternSource: '\\[(.*?)-(.*?)-(.*?)\\]',
+        flags: 'g',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', value = '', description = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.alignItems = 'flex-start';
             container.style.position = 'relative';
             container.style.animation = 'message-pop 0.3s ease-out';
@@ -607,7 +935,11 @@ const REGEX_RULES = [
             descriptionSpan.style.fontSize = '14px';
             descriptionSpan.style.color = '#817478';
             descriptionSpan.style.opacity = '0.9';
-            descriptionSpan.textContent = description.trim();
+            descriptionSpan.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                description.trim(),
+            );
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
@@ -646,27 +978,53 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-system',
-        pattern: /\+(.*?)\+/g,
-        createNode({ documentRef, groups }) {
-            const [message = ''] = groups;
+        name: '系统提示',
+        patternSource: '\\+(.*?)\\+',
+        flags: 'g',
+        defaultReplacement: '$1',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
             const container = doc.createElement('div');
             container.style.textAlign = 'center';
             container.style.color = '#888888';
             container.style.fontSize = '14px';
-            container.style.margin = '10px 0';
-            container.textContent = message.trim();
+            container.style.margin = '0';
+            container.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
             return container;
         },
     },
     {
         id: 'bhl-recall',
-        pattern: /^-(.*?)-$/gm,
-        createNode({ documentRef, groups }) {
-            const [message = ''] = groups;
+        name: '撤回提示',
+        patternSource: '^-(.*?)-$',
+        flags: 'gm',
+        defaultReplacement: '$1',
+        createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
             const outer = doc.createElement('div');
             outer.style.textAlign = 'center';
             outer.style.marginBottom = '6px';
@@ -696,7 +1054,11 @@ const REGEX_RULES = [
             paragraph.style.fontStyle = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = message.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             content.appendChild(paragraph);
             details.appendChild(summary);
@@ -707,6 +1069,321 @@ const REGEX_RULES = [
         },
     },
 ];
+
+function applyTemplate(template, groups, fallback) {
+    if (!template) return fallback;
+    try {
+        return template.replace(/\$(\d+)/g, (_, index) => {
+            const position = Number(index) - 1;
+            return groups[position] !== undefined ? groups[position] : '';
+        });
+    } catch (error) {
+        console.warn('胡萝卜插件：渲染正则模板失败', error);
+        return fallback;
+    }
+}
+
+function buildCustomReplacement(documentRef, template, groups) {
+    const doc = documentRef || defaultDocument;
+    if (!doc) return null;
+    if (typeof template !== 'string') return null;
+    if (!template.trim()) return null;
+    try {
+        const html = applyTemplate(template, groups, template);
+        const tpl = doc.createElement('template');
+        tpl.innerHTML = html;
+        return tpl.content;
+    } catch (error) {
+        console.warn('胡萝卜插件：渲染自定义替换失败', error);
+        return null;
+    }
+}
+
+function resolveCustomReplacement({
+    documentRef,
+    replacement,
+    defaultReplacement,
+    groups,
+}) {
+    const template = typeof replacement === 'string' ? replacement : '';
+    const baseline =
+        typeof defaultReplacement === 'string' ? defaultReplacement : '';
+    if (!template.trim()) return null;
+    if (template === baseline) return null;
+    return buildCustomReplacement(documentRef, template, groups);
+}
+
+let cachedRuleSettings = null;
+let cachedCustomRules = null;
+let cachedProfileStore = null;
+
+function parsePatternInput(input, fallbackFlags = 'gm') {
+    if (typeof input !== 'string') return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    let source = trimmed;
+    let flags = fallbackFlags;
+
+    if (trimmed.startsWith('/') && trimmed.lastIndexOf('/') > 0) {
+        const lastSlash = trimmed.lastIndexOf('/');
+        source = trimmed.slice(1, lastSlash);
+        const flagPart = trimmed.slice(lastSlash + 1).trim();
+        if (flagPart) {
+            flags = flagPart;
+        }
+    }
+
+    try {
+        // eslint-disable-next-line no-new
+        new RegExp(source, flags);
+    } catch (error) {
+        return null;
+    }
+
+    return { source, flags };
+}
+
+function sanitizeCustomRule(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const parsed =
+        parsePatternInput(raw.patternSource, raw.flags || 'gm') ||
+        parsePatternInput(raw.pattern, raw.flags || 'gm');
+    if (!parsed) return null;
+
+    const replacement =
+        typeof raw.defaultReplacement === 'string' ? raw.defaultReplacement : '';
+    const id =
+        typeof raw.id === 'string' && raw.id.trim()
+            ? raw.id.trim()
+            : `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const name =
+        typeof raw.name === 'string' && raw.name.trim()
+            ? raw.name.trim()
+            : '自定义正则';
+    return {
+        id,
+        name,
+        patternSource: parsed.source,
+        flags: parsed.flags,
+        defaultReplacement: replacement,
+        isCustom: true,
+    };
+}
+
+function normalizeCustomRuleList(rawList = []) {
+    const unique = new Map();
+    for (const raw of rawList) {
+        const normalized = sanitizeCustomRule(raw);
+        if (!normalized || unique.has(normalized.id)) continue;
+        unique.set(normalized.id, normalized);
+    }
+    return Array.from(unique.values());
+}
+
+function loadCustomRuleDefinitions() {
+    if (cachedCustomRules) return cachedCustomRules;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedCustomRules = [];
+            return cachedCustomRules;
+        }
+        const raw = localStorage.getItem(CUSTOM_RULES_KEY);
+        if (!raw) {
+            cachedCustomRules = [];
+            return cachedCustomRules;
+        }
+        const parsed = JSON.parse(raw);
+        cachedCustomRules = normalizeCustomRuleList(parsed);
+        return cachedCustomRules;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取自定义正则失败', error);
+        cachedCustomRules = [];
+        return cachedCustomRules;
+    }
+}
+
+function persistCustomRuleDefinitions(list) {
+    cachedCustomRules = normalizeCustomRuleList(list);
+    cachedRuleSettings = null;
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入自定义正则失败', error);
+    }
+}
+
+function normalizeProfileStore(raw) {
+    const base = { active: '', profiles: {} };
+    if (!raw || typeof raw !== 'object') return base;
+    const store = {
+        active: typeof raw.active === 'string' ? raw.active : '',
+        profiles: {},
+    };
+    if (raw.profiles && typeof raw.profiles === 'object') {
+        for (const [name, entry] of Object.entries(raw.profiles)) {
+            if (typeof name !== 'string' || !name.trim()) continue;
+            const trimmed = name.trim();
+            const ruleSettings = normalizeRuleSettings(entry?.ruleSettings);
+            const customRules = normalizeCustomRuleList(entry?.customRules || []);
+            const enabled =
+                typeof entry?.enabled === 'boolean'
+                    ? entry.enabled
+                    : DEFAULT_REGEX_ENABLED;
+            store.profiles[trimmed] = {
+                name: trimmed,
+                ruleSettings,
+                customRules,
+                enabled,
+            };
+        }
+    }
+    return store;
+}
+
+function loadProfileStore() {
+    if (cachedProfileStore) return cachedProfileStore;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedProfileStore = { active: '', profiles: {} };
+            return cachedProfileStore;
+        }
+        const raw = localStorage.getItem(REGEX_PROFILES_KEY);
+        if (!raw) {
+            cachedProfileStore = { active: '', profiles: {} };
+            return cachedProfileStore;
+        }
+        const parsed = JSON.parse(raw);
+        cachedProfileStore = normalizeProfileStore(parsed);
+        return cachedProfileStore;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取正则配置预设失败', error);
+        cachedProfileStore = { active: '', profiles: {} };
+        return cachedProfileStore;
+    }
+}
+
+function persistProfileStore(store) {
+    cachedProfileStore = normalizeProfileStore(store);
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(REGEX_PROFILES_KEY, JSON.stringify(cachedProfileStore));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入正则配置预设失败', error);
+    }
+}
+
+function getAllRules() {
+    return [...REGEX_RULES, ...loadCustomRuleDefinitions()];
+}
+
+function getDefaultRuleSettings() {
+    const defaults = {};
+    for (const rule of getAllRules()) {
+        defaults[rule.id] = {
+            enabled: true,
+            pattern: rule.patternSource,
+            replacement: rule.defaultReplacement || '',
+            flags: rule.flags || 'g',
+        };
+    }
+    return defaults;
+}
+
+function normalizeRuleSettings(raw) {
+    const defaults = getDefaultRuleSettings();
+    if (!raw || typeof raw !== 'object') return defaults;
+
+    const merged = { ...defaults };
+    for (const [ruleId, ruleDefaults] of Object.entries(defaults)) {
+        const candidate = raw[ruleId];
+        if (!candidate || typeof candidate !== 'object') continue;
+        merged[ruleId] = { ...ruleDefaults };
+        if (typeof candidate.enabled === 'boolean') {
+            merged[ruleId].enabled = candidate.enabled;
+        }
+        if (typeof candidate.pattern === 'string' && candidate.pattern.trim()) {
+            merged[ruleId].pattern = candidate.pattern;
+        }
+        if (typeof candidate.replacement === 'string') {
+            merged[ruleId].replacement = candidate.replacement;
+        }
+        if (typeof candidate.flags === 'string' && candidate.flags.trim()) {
+            merged[ruleId].flags = candidate.flags.trim();
+        }
+    }
+    return merged;
+}
+
+function loadRuleSettingsFromStorage() {
+    if (cachedRuleSettings) return cachedRuleSettings;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedRuleSettings = getDefaultRuleSettings();
+            return cachedRuleSettings;
+        }
+        const raw = localStorage.getItem(RULE_SETTINGS_KEY);
+        if (!raw) {
+            cachedRuleSettings = getDefaultRuleSettings();
+            return cachedRuleSettings;
+        }
+        const parsed = JSON.parse(raw);
+        cachedRuleSettings = normalizeRuleSettings(parsed);
+        return cachedRuleSettings;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取正则规则配置失败', error);
+        cachedRuleSettings = getDefaultRuleSettings();
+        return cachedRuleSettings;
+    }
+}
+
+function persistRuleSettings(settings) {
+    cachedRuleSettings = normalizeRuleSettings(settings);
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(RULE_SETTINGS_KEY, JSON.stringify(cachedRuleSettings));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入正则规则配置失败', error);
+    }
+}
+
+function getRuleSettingsWithDefaults() {
+    return normalizeRuleSettings(loadRuleSettingsFromStorage());
+}
+
+function getRuleConfig(ruleSettings, rule) {
+    const defaults = getDefaultRuleSettings();
+    const merged = {
+        ...(defaults[rule.id] || {}),
+        ...(ruleSettings?.[rule.id] || {}),
+    };
+    return merged;
+}
+
+function buildPattern(rule, config) {
+    if (!rule) return null;
+    const parsed =
+        parsePatternInput(
+            config?.pattern || rule.patternSource,
+            config?.flags || rule.flags || 'g',
+        ) || {
+            source: config?.pattern || rule.patternSource,
+            flags: config?.flags || rule.flags || 'g',
+        };
+    const { source, flags } = parsed;
+    try {
+        return new RegExp(source, flags);
+    } catch (error) {
+        console.warn('胡萝卜插件：正则表达式无效', {
+            id: rule.id,
+            source,
+            flags,
+            error,
+        });
+        return null;
+    }
+}
 
 function clonePattern(pattern) {
     if (!(pattern instanceof RegExp)) return null;
@@ -754,34 +1431,73 @@ function markRegexNode(node, ruleId) {
     node.dataset.cipRegexRule = ruleId || '';
 }
 
+function hasQuoteAncestor(node) {
+    let current = node?.parentElement;
+    while (current) {
+        const tag = current.tagName ? current.tagName.toUpperCase() : '';
+        if (tag === 'Q' || tag === 'BLOCKQUOTE') return true;
+        current = current.parentElement;
+    }
+    return false;
+}
+
+function getReplacementTarget(textNode) {
+    if (!textNode?.parentNode) return textNode;
+    const parent = textNode.parentNode;
+    if (parent.nodeType !== 1) return textNode;
+
+    const tagName = parent.tagName ? parent.tagName.toUpperCase() : '';
+    if (tagName !== 'Q' && tagName !== 'BLOCKQUOTE') return textNode;
+
+    const children = Array.from(parent.childNodes || []);
+    const onlyText = children.every((child) => {
+        if (child === textNode) return true;
+        if (child.nodeType === 3) {
+            return !child.nodeValue || !child.nodeValue.trim();
+        }
+        return false;
+    });
+
+    if (!onlyText) return textNode;
+
+    if (hasQuoteAncestor(parent)) {
+        return textNode;
+    }
+
+    return parent;
+}
+
 function replaceMatchesInTextNode({
     textNode,
     rule,
+    pattern,
     documentRef,
     ensureOriginalStored,
+    ruleConfig,
 }) {
     if (!textNode?.parentNode) return false;
-    const text = textNode.nodeValue;
+    const targetNode = getReplacementTarget(textNode);
+    const text = targetNode.textContent || textNode.nodeValue;
     if (!text) return false;
 
     const doc = documentRef || defaultDocument;
     if (!doc) return false;
 
-    const pattern = clonePattern(rule.pattern);
-    if (!pattern) return false;
+    const workingPattern = clonePattern(pattern);
+    if (!workingPattern) return false;
 
     let match;
     let lastIndex = 0;
     let replaced = false;
     const fragment = doc.createDocumentFragment();
 
-    pattern.lastIndex = 0;
+    workingPattern.lastIndex = 0;
 
-    while ((match = pattern.exec(text)) !== null) {
+    while ((match = workingPattern.exec(text)) !== null) {
         const matchText = match[0];
         if (!matchText) {
-            if (pattern.lastIndex === match.index) {
-                pattern.lastIndex++;
+            if (workingPattern.lastIndex === match.index) {
+                workingPattern.lastIndex++;
             }
             continue;
         }
@@ -793,9 +1509,12 @@ function replaceMatchesInTextNode({
             );
         }
 
-        const replacementNode = rule.createNode({
+        const replacementNode = createReplacementNode({
             documentRef: doc,
             groups: match.slice(1),
+            config: ruleConfig,
+            rule,
+            fallbackText: matchText,
         });
 
         if (replacementNode) {
@@ -808,8 +1527,8 @@ function replaceMatchesInTextNode({
 
         lastIndex = startIndex + matchText.length;
 
-        if (pattern.lastIndex === match.index) {
-            pattern.lastIndex++;
+        if (workingPattern.lastIndex === match.index) {
+            workingPattern.lastIndex++;
         }
     }
 
@@ -825,7 +1544,7 @@ function replaceMatchesInTextNode({
         ensureOriginalStored();
     }
 
-    textNode.parentNode.replaceChild(fragment, textNode);
+    targetNode.parentNode.replaceChild(fragment, targetNode);
     return true;
 }
 
@@ -872,6 +1591,201 @@ export function setRegexEnabled(enabled) {
     }
 }
 
+export function getRegexProfiles() {
+    const store = loadProfileStore();
+    return Object.values(store.profiles).map((item) => ({
+        name: item.name,
+        isActive: store.active === item.name,
+    }));
+}
+
+export function getActiveRegexProfile() {
+    const store = loadProfileStore();
+    return store.active || '';
+}
+
+export function saveRegexProfile(name) {
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (!trimmed) return getRegexProfiles();
+
+    const store = loadProfileStore();
+    store.profiles[trimmed] = {
+        name: trimmed,
+        enabled: getRegexEnabled(),
+        ruleSettings: getRuleSettingsWithDefaults(),
+        customRules: loadCustomRuleDefinitions(),
+    };
+    store.active = trimmed;
+    persistProfileStore(store);
+    return getRegexProfiles();
+}
+
+export function applyRegexProfile(name) {
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (!trimmed) return false;
+
+    const store = loadProfileStore();
+    const profile = store.profiles?.[trimmed];
+    if (!profile) return false;
+
+    setRegexEnabled(
+        typeof profile.enabled === 'boolean'
+            ? profile.enabled
+            : DEFAULT_REGEX_ENABLED,
+    );
+    persistCustomRuleDefinitions(profile.customRules || []);
+    persistRuleSettings(profile.ruleSettings || {});
+    store.active = trimmed;
+    persistProfileStore(store);
+    return true;
+}
+
+function createReplacementNode({
+    rule,
+    groups,
+    config,
+    documentRef,
+    fallbackText = '',
+}) {
+    const doc = documentRef || defaultDocument;
+    if (!doc) return null;
+
+    if (typeof rule?.createNode === 'function') {
+        return rule.createNode({
+            documentRef: doc,
+            groups,
+            config,
+        });
+    }
+
+    const template =
+        typeof config?.replacement === 'string'
+            ? config.replacement
+            : typeof rule?.defaultReplacement === 'string'
+              ? rule.defaultReplacement
+              : '';
+
+    if (template && template.trim()) {
+        const custom = buildCustomReplacement(doc, template, groups);
+        if (custom) return custom;
+    }
+
+    const text = applyTemplate(template, groups, fallbackText || '');
+    return doc.createTextNode(text);
+}
+
+export function getRegexRuleSettings() {
+    return getRuleSettingsWithDefaults();
+}
+
+export function setRegexRuleSettings(settings) {
+    persistRuleSettings(settings);
+    return getRegexRuleSettings();
+}
+
+export function updateRegexRuleSetting(ruleId, updates = {}) {
+    const settings = getRuleSettingsWithDefaults();
+    if (!settings[ruleId]) return settings;
+    let nextPattern = updates.pattern;
+    let nextFlags = updates.flags;
+
+    if (typeof updates.pattern === 'string') {
+        const parsed = parsePatternInput(
+            updates.pattern,
+            updates.flags || settings[ruleId]?.flags || 'g',
+        );
+        if (parsed) {
+            nextPattern = parsed.source;
+            nextFlags = parsed.flags;
+        }
+    }
+
+    const next = {
+        ...settings[ruleId],
+        ...updates,
+        ...(typeof nextPattern === 'string' ? { pattern: nextPattern } : {}),
+        ...(typeof nextFlags === 'string' ? { flags: nextFlags } : {}),
+    };
+    return setRegexRuleSettings({
+        ...settings,
+        [ruleId]: next,
+    });
+}
+
+export function resetRegexRuleSetting(ruleId) {
+    const defaults = getDefaultRuleSettings();
+    if (!defaults[ruleId]) return getRuleSettingsWithDefaults();
+    const current = getRuleSettingsWithDefaults();
+    return setRegexRuleSettings({
+        ...current,
+        [ruleId]: defaults[ruleId],
+    });
+}
+
+export function resetAllRegexRuleSettings() {
+    const defaults = getDefaultRuleSettings();
+    setRegexRuleSettings(defaults);
+    return defaults;
+}
+
+export function addCustomRegexRule({ name, pattern, replacement = '' } = {}) {
+    const prepared = sanitizeCustomRule({
+        id: '',
+        name,
+        patternSource: typeof pattern === 'string' ? pattern.trim() : '',
+        defaultReplacement:
+            typeof replacement === 'string' ? replacement : `${replacement ?? ''}`,
+    });
+    if (!prepared) {
+        throw new Error('无效的正则定义');
+    }
+    const current = loadCustomRuleDefinitions();
+    const next = [...current, prepared];
+    persistCustomRuleDefinitions(next);
+    const settings = getRuleSettingsWithDefaults();
+    persistRuleSettings({
+        ...settings,
+        [prepared.id]: {
+            enabled: true,
+            pattern: prepared.patternSource,
+            replacement: prepared.defaultReplacement || '',
+            flags: prepared.flags || 'g',
+        },
+    });
+    return prepared;
+}
+
+export function removeCustomRegexRule(ruleId) {
+    if (!ruleId) return false;
+    const current = loadCustomRuleDefinitions();
+    const next = current.filter((rule) => rule.id !== ruleId);
+    if (next.length === current.length) return false;
+    persistCustomRuleDefinitions(next);
+    const settings = getRuleSettingsWithDefaults();
+    const { [ruleId]: _, ...rest } = settings;
+    persistRuleSettings(rest);
+    return true;
+}
+
+export function getRegexRulesForUI() {
+    const settings = getRuleSettingsWithDefaults();
+    return getAllRules().map((rule) => ({
+        id: rule.id,
+        name: rule.name || rule.id,
+        enabled: settings[rule.id]?.enabled !== false,
+        pattern: settings[rule.id]?.pattern || rule.patternSource,
+        replacement:
+            settings[rule.id]?.replacement ?? rule.defaultReplacement ?? '',
+        flags: settings[rule.id]?.flags || rule.flags || 'g',
+        isCustom: !!rule.isCustom,
+        defaults: {
+            pattern: rule.patternSource,
+            replacement: rule.defaultReplacement || '',
+            flags: rule.flags || 'g',
+        },
+    }));
+}
+
 export function applyRegexReplacements(element, options = {}) {
     if (!element) return false;
 
@@ -897,20 +1811,38 @@ export function applyRegexReplacements(element, options = {}) {
         storedOriginal = true;
     };
 
-    for (const rule of REGEX_RULES) {
-        const textNodes = collectTextNodes(element, documentRef);
-        if (!textNodes.length) break;
+    const ruleSettings = getRuleSettingsWithDefaults();
 
-        for (const textNode of textNodes) {
-            const replaced = replaceMatchesInTextNode({
-                textNode,
-                rule,
-                documentRef,
-                ensureOriginalStored,
-            });
-            if (replaced) {
-                replacedAny = true;
+    for (const rule of getAllRules()) {
+        try {
+            const config = getRuleConfig(ruleSettings, rule);
+            if (!config.enabled) continue;
+            const pattern = buildPattern(rule, config);
+            if (!pattern) continue;
+
+            const textNodes = collectTextNodes(element, documentRef);
+            if (!textNodes.length) continue;
+
+            for (const textNode of textNodes) {
+                const replaced = replaceMatchesInTextNode({
+                    textNode,
+                    rule,
+                    pattern,
+                    documentRef,
+                    ensureOriginalStored,
+                    ruleConfig: config,
+                });
+                if (replaced) {
+                    replacedAny = true;
+                }
             }
+        } catch (error) {
+            console.warn('胡萝卜插件：应用正则规则失败', {
+                id: rule?.id,
+                name: rule?.name,
+                error,
+            });
+            continue;
         }
     }
 
@@ -934,6 +1866,18 @@ export default {
     applyRegexReplacements,
     getRegexEnabled,
     setRegexEnabled,
+    getRegexProfiles,
+    saveRegexProfile,
+    applyRegexProfile,
+    getActiveRegexProfile,
+    getRegexRuleSettings,
+    setRegexRuleSettings,
+    updateRegexRuleSetting,
+    resetRegexRuleSetting,
+    resetAllRegexRuleSettings,
+    addCustomRegexRule,
+    removeCustomRegexRule,
+    getRegexRulesForUI,
 };
 
 export function restoreRegexOriginal(element) {
@@ -946,6 +1890,5 @@ export function clearRegexState(element) {
 }
 
 export function getRegexRules() {
-    return REGEX_RULES.slice();
-
+    return getAllRules();
 }

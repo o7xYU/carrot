@@ -25,6 +25,10 @@ export function initSyncSettings(
                 'cip_custom_command_v1',
                 'cip_sync_filename_v1',
                 'cip_tts_settings_v1',
+                'cip_regex_enabled_v1',
+                'cip_regex_rule_settings_v1',
+                'cip_regex_custom_rules_v1',
+                'cip_regex_profiles_v1',
             ];
             keysToExport.forEach((key) => {
                 const value = localStorageRef.getItem(key);
