@@ -1369,6 +1369,16 @@ function markRegexNode(node, ruleId) {
     node.dataset.cipRegexRule = ruleId || '';
 }
 
+function hasQuoteAncestor(node) {
+    let current = node?.parentElement;
+    while (current) {
+        const tag = current.tagName ? current.tagName.toUpperCase() : '';
+        if (tag === 'Q' || tag === 'BLOCKQUOTE') return true;
+        current = current.parentElement;
+    }
+    return false;
+}
+
 function getReplacementTarget(textNode) {
     if (!textNode?.parentNode) return textNode;
     const parent = textNode.parentNode;
@@ -1386,7 +1396,13 @@ function getReplacementTarget(textNode) {
         return false;
     });
 
-    return onlyText ? parent : textNode;
+    if (!onlyText) return textNode;
+
+    if (hasQuoteAncestor(parent)) {
+        return textNode;
+    }
+
+    return parent;
 }
 
 function replaceMatchesInTextNode({
