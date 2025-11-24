@@ -77,6 +77,56 @@ export function initAvatarSettings(
         }
     }
 
+    function extractAvatarUrl(element) {
+        if (!element) return '';
+
+        if (element.tagName?.toLowerCase() === 'img' && element.src) {
+            return element.src;
+        }
+
+        const inlineBg = element.style?.backgroundImage || '';
+        const computedBg = documentRef?.defaultView?.getComputedStyle
+            ? documentRef.defaultView.getComputedStyle(element).backgroundImage
+            : '';
+        const bgImage = inlineBg && inlineBg !== 'none' ? inlineBg : computedBg;
+        const bgMatch = (bgImage || '').match(/url\(["']?(.*?)["']?\)/i);
+        if (bgMatch?.[1]) return bgMatch[1];
+
+        const nestedImg = element.querySelector?.('img');
+        if (nestedImg?.src) return nestedImg.src;
+
+        return '';
+    }
+
+    function detectTavernAvatar(type) {
+        const selectorCandidates =
+            type === 'char'
+                ? [
+                      '.mes .mes_avatar img',
+                      '.mes .avatar img',
+                      '#character_avatar img',
+                      '.character_avatar img',
+                      '.mes .mes_avatar',
+                  ]
+                : [
+                      '.mes.self .mes_avatar img',
+                      '.mes.user .mes_avatar img',
+                      '.mes.right .mes_avatar img',
+                      '#user_avatar img',
+                      '.user_avatar img',
+                      '.mes.self .mes_avatar',
+                      '.mes.right .mes_avatar',
+                  ];
+
+        for (const selector of selectorCandidates) {
+            const element = documentRef?.querySelector(selector);
+            const url = extractAvatarUrl(element);
+            if (url) return url;
+        }
+
+        return '';
+    }
+
     function applyAvatars(charUrl, userUrl, charFrameUrl, userFrameUrl) {
         if (!avatarStyleTag) {
             console.error('Avatar styler tag not found.');
@@ -84,12 +134,14 @@ export function initAvatarSettings(
         }
         let cssRules = '';
         cssRules += `.custom-B_C_avar, .custom-B_U_avar { position: relative; overflow: visible !important; }\n`;
-        if (charUrl) {
-            const safeCharUrl = charUrl.replace(/'/g, "\\'");
+        const resolvedCharUrl = charUrl || detectTavernAvatar('char');
+        if (resolvedCharUrl) {
+            const safeCharUrl = resolvedCharUrl.replace(/'/g, "\\'");
             cssRules += `.custom-B_C_avar { background-image: url('${safeCharUrl}') !important; }\n`;
         }
-        if (userUrl) {
-            const safeUserUrl = userUrl.replace(/'/g, "\\'");
+        const resolvedUserUrl = userUrl || detectTavernAvatar('user');
+        if (resolvedUserUrl) {
+            const safeUserUrl = resolvedUserUrl.replace(/'/g, "\\'");
             cssRules += `.custom-B_U_avar { background-image: url('${safeUserUrl}') !important; }\n`;
         }
         if (charFrameUrl) {
