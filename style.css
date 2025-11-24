@@ -748,16 +748,16 @@ emoji-picker {
     gap: 12px;
 }
 
+.cip-regex-master-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .cip-regex-master-text h4 {
     margin: 0 0 4px 0;
     color: var(--cip-text-color);
-}
-
-.cip-regex-hint {
-    margin: 0;
-    font-size: 12px;
-    color: var(--cip-text-color);
-    opacity: 0.8;
 }
 
 .cip-regex-toolbar {
@@ -765,11 +765,12 @@ emoji-picker {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
     margin: 10px 0 4px;
 }
 
 .cip-regex-legend {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--cip-text-color);
     opacity: 0.85;
 }
@@ -783,44 +784,34 @@ emoji-picker {
 .cip-regex-rule {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 8px;
     padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
     background: var(--cip-input-bg-color, rgba(255, 255, 255, 0.08));
-    flex-wrap: wrap;
-}
-
-.cip-regex-row-head {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 160px;
+    flex-wrap: nowrap;
+    font-size: 12px;
 }
 
 .cip-regex-rule-name {
     font-weight: 600;
+    font-size: 13px;
     color: var(--cip-text-color);
     white-space: nowrap;
-}
-
-.cip-regex-actions-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-start;
+    min-width: 78px;
 }
 
 .cip-regex-edit-btn,
 .cip-regex-reset-btn,
-.cip-regex-reset-all {
-    padding: 6px 10px;
+.cip-regex-reset-all,
+.cip-regex-add {
+    padding: 6px 8px;
     border-radius: 8px;
     border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
     background: rgba(255, 255, 255, 0.12);
     color: var(--cip-text-color);
+    font-size: 12px;
     cursor: pointer;
     transition: all var(--cip-transition-speed);
 }
@@ -864,7 +855,7 @@ emoji-picker {
 }
 
 .cip-dot-toggle.small {
-    padding: 6px 10px;
+    padding: 6px 8px;
 }
 
 .cip-dot-toggle.disabled {
@@ -890,7 +881,15 @@ emoji-picker {
 }
 
 .cip-dot-label {
-    font-size: 13px;
+    font-size: 12px;
+}
+
+.cip-regex-rule .cip-dot-toggle {
+    flex-shrink: 0;
+}
+
+.cip-regex-rule button {
+    flex-shrink: 0;
 }
 .cip-settings-footer {
     display: flex;

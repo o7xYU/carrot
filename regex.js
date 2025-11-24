@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'cip_regex_enabled_v1';
 const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
+const CUSTOM_RULES_KEY = 'cip_regex_custom_rules_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
@@ -889,14 +890,97 @@ function resolveCustomReplacement({
 }
 
 let cachedRuleSettings = null;
+let cachedCustomRules = null;
+
+function sanitizeCustomRule(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const source = typeof raw.patternSource === 'string' ? raw.patternSource.trim() : '';
+    if (!source) return null;
+    const flags =
+        typeof raw.flags === 'string' && raw.flags.trim()
+            ? raw.flags.trim()
+            : 'g';
+    try {
+        // eslint-disable-next-line no-new
+        new RegExp(source, flags);
+    } catch (error) {
+        return null;
+    }
+    const replacement =
+        typeof raw.defaultReplacement === 'string' ? raw.defaultReplacement : '';
+    const id =
+        typeof raw.id === 'string' && raw.id.trim()
+            ? raw.id.trim()
+            : `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const name =
+        typeof raw.name === 'string' && raw.name.trim()
+            ? raw.name.trim()
+            : '自定义正则';
+    return {
+        id,
+        name,
+        patternSource: source,
+        flags,
+        defaultReplacement: replacement,
+        isCustom: true,
+    };
+}
+
+function normalizeCustomRuleList(rawList = []) {
+    const unique = new Map();
+    for (const raw of rawList) {
+        const normalized = sanitizeCustomRule(raw);
+        if (!normalized || unique.has(normalized.id)) continue;
+        unique.set(normalized.id, normalized);
+    }
+    return Array.from(unique.values());
+}
+
+function loadCustomRuleDefinitions() {
+    if (cachedCustomRules) return cachedCustomRules;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedCustomRules = [];
+            return cachedCustomRules;
+        }
+        const raw = localStorage.getItem(CUSTOM_RULES_KEY);
+        if (!raw) {
+            cachedCustomRules = [];
+            return cachedCustomRules;
+        }
+        const parsed = JSON.parse(raw);
+        cachedCustomRules = normalizeCustomRuleList(parsed);
+        return cachedCustomRules;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取自定义正则失败', error);
+        cachedCustomRules = [];
+        return cachedCustomRules;
+    }
+}
+
+function persistCustomRuleDefinitions(list) {
+    cachedCustomRules = normalizeCustomRuleList(list);
+    cachedRuleSettings = null;
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入自定义正则失败', error);
+    }
+}
+
+function getAllRules() {
+    return [...REGEX_RULES, ...loadCustomRuleDefinitions()];
+}
 
 function getDefaultRuleSettings() {
     const defaults = {};
-    for (const rule of REGEX_RULES) {
+    for (const rule of getAllRules()) {
         defaults[rule.id] = {
             enabled: true,
             pattern: rule.patternSource,
             replacement: rule.defaultReplacement || '',
+            flags: rule.flags || 'g',
         };
     }
     return defaults;
@@ -1191,9 +1275,54 @@ export function resetAllRegexRuleSettings() {
     return defaults;
 }
 
+export function addCustomRegexRule({
+    name,
+    pattern,
+    replacement = '',
+    flags = 'gm',
+} = {}) {
+    const prepared = sanitizeCustomRule({
+        id: '',
+        name,
+        patternSource: typeof pattern === 'string' ? pattern.trim() : '',
+        flags: typeof flags === 'string' && flags.trim() ? flags.trim() : 'gm',
+        defaultReplacement:
+            typeof replacement === 'string' ? replacement : `${replacement ?? ''}`,
+    });
+    if (!prepared) {
+        throw new Error('无效的正则定义');
+    }
+    const current = loadCustomRuleDefinitions();
+    const next = [...current, prepared];
+    persistCustomRuleDefinitions(next);
+    const settings = getRuleSettingsWithDefaults();
+    persistRuleSettings({
+        ...settings,
+        [prepared.id]: {
+            enabled: true,
+            pattern: prepared.patternSource,
+            replacement: prepared.defaultReplacement || '',
+            flags: prepared.flags || 'g',
+        },
+    });
+    return prepared;
+}
+
+export function removeCustomRegexRule(ruleId) {
+    if (!ruleId) return false;
+    const current = loadCustomRuleDefinitions();
+    const next = current.filter((rule) => rule.id !== ruleId);
+    if (next.length === current.length) return false;
+    persistCustomRuleDefinitions(next);
+    const settings = getRuleSettingsWithDefaults();
+    const { [ruleId]: _, ...rest } = settings;
+    persistRuleSettings(rest);
+    return true;
+}
+
 export function getRegexRulesForUI() {
     const settings = getRuleSettingsWithDefaults();
-    return REGEX_RULES.map((rule) => ({
+    return getAllRules().map((rule) => ({
         id: rule.id,
         name: rule.name || rule.id,
         enabled: settings[rule.id]?.enabled !== false,
@@ -1201,6 +1330,7 @@ export function getRegexRulesForUI() {
         replacement:
             settings[rule.id]?.replacement ?? rule.defaultReplacement ?? '',
         flags: rule.flags || 'g',
+        isCustom: !!rule.isCustom,
         defaults: {
             pattern: rule.patternSource,
             replacement: rule.defaultReplacement || '',
@@ -1236,7 +1366,7 @@ export function applyRegexReplacements(element, options = {}) {
 
     const ruleSettings = getRuleSettingsWithDefaults();
 
-    for (const rule of REGEX_RULES) {
+    for (const rule of getAllRules()) {
         const config = getRuleConfig(ruleSettings, rule);
         if (!config.enabled) continue;
         const pattern = buildPattern(rule, config);
@@ -1285,6 +1415,8 @@ export default {
     updateRegexRuleSetting,
     resetRegexRuleSetting,
     resetAllRegexRuleSettings,
+    addCustomRegexRule,
+    removeCustomRegexRule,
     getRegexRulesForUI,
 };
 
@@ -1298,5 +1430,5 @@ export function clearRegexState(element) {
 }
 
 export function getRegexRules() {
-    return REGEX_RULES.slice();
+    return getAllRules();
 }

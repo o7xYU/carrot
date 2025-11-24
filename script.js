@@ -10,6 +10,8 @@
     let resetRegexRuleSetting = () => {};
     let resetAllRegexRuleSettings = () => {};
     let getRegexRuleSettings = () => ({});
+    let addCustomRegexRule = () => null;
+    let removeCustomRegexRule = () => false;
     let regexModuleReady = false;
     let regexEnabled = true;
     let isDocked = false;
@@ -34,6 +36,14 @@
             typeof regexModule.getRegexRulesForUI === 'function'
                 ? regexModule.getRegexRulesForUI
                 : getRegexRulesForUI;
+        addCustomRegexRule =
+            typeof regexModule.addCustomRegexRule === 'function'
+                ? regexModule.addCustomRegexRule
+                : addCustomRegexRule;
+        removeCustomRegexRule =
+            typeof regexModule.removeCustomRegexRule === 'function'
+                ? regexModule.removeCustomRegexRule
+                : removeCustomRegexRule;
         updateRegexRuleSetting =
             typeof regexModule.updateRegexRuleSetting === 'function'
                 ? regexModule.updateRegexRuleSetting
@@ -348,12 +358,14 @@
                     <div class="cip-regex-master-row">
                         <div class="cip-regex-master-text">
                             <h4 class="cip-section-title">🔍 正则替换</h4>
-                            <p class="cip-regex-hint">可自定义匹配表达式和替换模板，留空模板将沿用默认显示效果。</p>
                         </div>
-                        <button id="cip-regex-master-toggle" class="cip-dot-toggle" type="button" aria-pressed="false">
-                            <span class="cip-dot"></span>
-                            <span class="cip-dot-label">关闭</span>
-                        </button>
+                        <div class="cip-regex-master-actions">
+                            <button id="cip-regex-add-btn" type="button" class="cip-regex-add">添加正则</button>
+                            <button id="cip-regex-master-toggle" class="cip-dot-toggle" type="button" aria-pressed="false">
+                                <span class="cip-dot"></span>
+                                <span class="cip-dot-label">关闭</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="cip-regex-toolbar">
                         <button id="cip-regex-reset-btn" type="button" class="cip-regex-reset-all">恢复全部默认</button>
@@ -504,6 +516,7 @@
         newStickersInput = get('cip-new-stickers-input');
     const settingsButton = get('cip-settings-button');
     const regexMasterToggle = get('cip-regex-master-toggle');
+    const regexAddBtn = get('cip-regex-add-btn');
     const regexRuleList = get('cip-regex-rule-list');
     const regexResetBtn = get('cip-regex-reset-btn');
     const dockButton = get('cip-dock-button');
@@ -635,12 +648,18 @@
             const name = document.createElement('div');
             name.className = 'cip-regex-rule-name';
             name.textContent = rule.name;
-
-            const header = document.createElement('div');
-            header.className = 'cip-regex-row-head';
-
-            const actions = document.createElement('div');
-            actions.className = 'cip-regex-actions-row';
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'cip-dot-toggle small';
+            toggleBtn.setAttribute('aria-label', `${rule.name} 开关`);
+            toggleBtn.innerHTML = '<span class="cip-dot"></span><span class="cip-dot-label"></span>';
+            setDotToggleState(toggleBtn, rule.enabled);
+            toggleBtn.addEventListener('click', () => {
+                const next = !rule.enabled;
+                updateRegexRuleSetting(rule.id, { enabled: next });
+                renderRegexRuleList();
+                reprocessRegexPlaceholders();
+            });
 
             const patternBtn = document.createElement('button');
             patternBtn.type = 'button';
@@ -650,7 +669,6 @@
                 const next = prompt('修改匹配表达式（支持分组：$1、$2...）', rule.pattern);
                 if (next === null) return;
                 try {
-                    // 使用默认 flags 进行验证
                     const { defaults } = rule;
                     const flags = defaults?.flags || rule.flags || 'g';
                     // eslint-disable-next-line no-new
@@ -682,34 +700,22 @@
             const resetBtn = document.createElement('button');
             resetBtn.type = 'button';
             resetBtn.className = 'cip-regex-reset-btn';
-            resetBtn.textContent = '恢复';
+            resetBtn.textContent = rule.isCustom ? '删除' : '恢复';
             resetBtn.addEventListener('click', () => {
-                resetRegexRuleSetting(rule.id);
+                if (rule.isCustom) {
+                    removeCustomRegexRule(rule.id);
+                } else {
+                    resetRegexRuleSetting(rule.id);
+                }
                 renderRegexRuleList();
                 reprocessRegexPlaceholders();
             });
 
-            const toggleBtn = document.createElement('button');
-            toggleBtn.type = 'button';
-            toggleBtn.className = 'cip-dot-toggle small';
-            toggleBtn.setAttribute('aria-label', `${rule.name} 开关`);
-            setDotToggleState(toggleBtn, rule.enabled);
-            toggleBtn.addEventListener('click', () => {
-                const next = !rule.enabled;
-                updateRegexRuleSetting(rule.id, { enabled: next });
-                renderRegexRuleList();
-                reprocessRegexPlaceholders();
-            });
-
-            header.appendChild(name);
-            header.appendChild(toggleBtn);
-
-            actions.appendChild(patternBtn);
-            actions.appendChild(replacementBtn);
-            actions.appendChild(resetBtn);
-
-            row.appendChild(header);
-            row.appendChild(actions);
+            row.appendChild(name);
+            row.appendChild(toggleBtn);
+            row.appendChild(patternBtn);
+            row.appendChild(replacementBtn);
+            row.appendChild(resetBtn);
             regexRuleList.appendChild(row);
         }
     }
@@ -729,6 +735,46 @@
             console.warn('胡萝卜插件：写入正则开关状态失败', error);
         }
         updateRegexMasterUI();
+        reprocessRegexPlaceholders();
+    });
+
+    regexAddBtn?.addEventListener('click', () => {
+        if (!regexModuleReady) return;
+        const name = prompt('输入功能名称', '自定义正则');
+        if (name === null) return;
+        const pattern = prompt('输入匹配表达式', '');
+        if (pattern === null) return;
+        const trimmedPattern = pattern.trim();
+        if (!trimmedPattern) {
+            alert('请输入有效的匹配表达式');
+            return;
+        }
+        const flags = (prompt('可选：正则标志（默认 gm）', 'gm') || 'gm').trim() || 'gm';
+        try {
+            // eslint-disable-next-line no-new
+            new RegExp(trimmedPattern, flags);
+        } catch (error) {
+            alert('表达式无效，请检查语法');
+            return;
+        }
+        const replacement = prompt(
+            '填写替换为内容（支持$1、$2分组，可输入HTML片段直接替换）',
+            '',
+        );
+        if (replacement === null) return;
+        try {
+            addCustomRegexRule({
+                name: name.trim() || '自定义正则',
+                pattern: trimmedPattern,
+                replacement,
+                flags,
+            });
+        } catch (error) {
+            console.warn('胡萝卜插件：新增自定义正则失败', error);
+            alert('添加失败，请稍后再试');
+            return;
+        }
+        renderRegexRuleList();
         reprocessRegexPlaceholders();
     });
 
