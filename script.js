@@ -357,7 +357,7 @@
                     </div>
                     <div class="cip-regex-toolbar">
                         <button id="cip-regex-reset-btn" type="button" class="cip-regex-reset-all">恢复全部默认</button>
-                        <div class="cip-regex-legend">功能名｜表达式｜替换为｜开关</div>
+                        <div class="cip-regex-legend">功能名｜开关｜表达式｜替换为｜恢复</div>
                     </div>
                     <div id="cip-regex-rule-list" class="cip-regex-rule-list"></div>
                 </section>
@@ -636,16 +636,8 @@
             name.className = 'cip-regex-rule-name';
             name.textContent = rule.name;
 
-            const meta = document.createElement('div');
-            meta.className = 'cip-regex-meta';
-            meta.textContent = rule.pattern;
-
-            const replacementMeta = document.createElement('div');
-            replacementMeta.className = 'cip-regex-meta';
-            replacementMeta.textContent =
-                rule.replacement && rule.replacement.length
-                    ? `替换为：${rule.replacement}`
-                    : '替换为：默认样式';
+            const header = document.createElement('div');
+            header.className = 'cip-regex-row-head';
 
             const actions = document.createElement('div');
             actions.className = 'cip-regex-actions-row';
@@ -678,7 +670,7 @@
             replacementBtn.textContent = '替换为';
             replacementBtn.addEventListener('click', () => {
                 const next = prompt(
-                    '设置替换模板（可用$1、$2引用分组，留空使用默认显示）',
+                    '填写完整替换内容（支持$1、$2分组，可输入HTML片段直接替换）',
                     rule.replacement,
                 );
                 if (next === null) return;
@@ -709,14 +701,14 @@
                 reprocessRegexPlaceholders();
             });
 
+            header.appendChild(name);
+            header.appendChild(toggleBtn);
+
             actions.appendChild(patternBtn);
             actions.appendChild(replacementBtn);
             actions.appendChild(resetBtn);
-            actions.appendChild(toggleBtn);
 
-            row.appendChild(name);
-            row.appendChild(meta);
-            row.appendChild(replacementMeta);
+            row.appendChild(header);
             row.appendChild(actions);
             regexRuleList.appendChild(row);
         }

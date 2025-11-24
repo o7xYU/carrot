@@ -15,9 +15,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$1   $2',
         createNode({ documentRef, groups, config }) {
-            const [time = '', text = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [time = '', text = ''] = groups;
             const container = doc.createElement('div');
             container.style.textAlign = 'center';
             container.style.color = '#8e8e93';
@@ -42,9 +50,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$3',
         createNode({ documentRef, groups, config }) {
-            const [name = '', time = '', message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [name = '', time = '', message = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.margin = '10px 0';
@@ -117,9 +133,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$2',
         createNode({ documentRef, groups, config }) {
-            const [name = '', message = '', time = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [name = '', message = '', time = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.margin = '10px 0';
@@ -193,9 +217,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$2',
         createNode({ documentRef, groups, config }) {
-            const [title = '', content = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', content = ''] = groups;
 
             const outerContainer = doc.createElement('div');
             outerContainer.className = 'char_bubble';
@@ -326,9 +358,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$2',
         createNode({ documentRef, groups, config }) {
-            const [title = '', content = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', content = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.textAlign = 'right';
@@ -457,9 +497,17 @@ const REGEX_RULES = [
         flags: 'g',
         defaultReplacement: '$3',
         createNode({ documentRef, groups, config }) {
-            const [title = '', value = '', description = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', value = '', description = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
@@ -580,9 +628,17 @@ const REGEX_RULES = [
         flags: 'g',
         defaultReplacement: '$3',
         createNode({ documentRef, groups, config }) {
-            const [title = '', value = '', description = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [title = '', value = '', description = ''] = groups;
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
@@ -702,9 +758,17 @@ const REGEX_RULES = [
         flags: 'g',
         defaultReplacement: '$1',
         createNode({ documentRef, groups, config }) {
-            const [message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
             const container = doc.createElement('div');
             container.style.textAlign = 'center';
             container.style.color = '#888888';
@@ -725,9 +789,17 @@ const REGEX_RULES = [
         flags: 'gm',
         defaultReplacement: '$1',
         createNode({ documentRef, groups, config }) {
-            const [message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
+            const custom = resolveCustomReplacement({
+                documentRef: doc,
+                replacement: config?.replacement,
+                defaultReplacement: this?.defaultReplacement,
+                groups,
+            });
+            if (custom) return custom;
+
+            const [message = ''] = groups;
             const outer = doc.createElement('div');
             outer.style.textAlign = 'center';
             outer.style.marginBottom = '6px';
@@ -784,6 +856,36 @@ function applyTemplate(template, groups, fallback) {
         console.warn('胡萝卜插件：渲染正则模板失败', error);
         return fallback;
     }
+}
+
+function buildCustomReplacement(documentRef, template, groups) {
+    const doc = documentRef || defaultDocument;
+    if (!doc) return null;
+    if (typeof template !== 'string') return null;
+    if (!template.trim()) return null;
+    try {
+        const html = applyTemplate(template, groups, template);
+        const tpl = doc.createElement('template');
+        tpl.innerHTML = html;
+        return tpl.content;
+    } catch (error) {
+        console.warn('胡萝卜插件：渲染自定义替换失败', error);
+        return null;
+    }
+}
+
+function resolveCustomReplacement({
+    documentRef,
+    replacement,
+    defaultReplacement,
+    groups,
+}) {
+    const template = typeof replacement === 'string' ? replacement : '';
+    const baseline =
+        typeof defaultReplacement === 'string' ? defaultReplacement : '';
+    if (!template.trim()) return null;
+    if (template === baseline) return null;
+    return buildCustomReplacement(documentRef, template, groups);
 }
 
 let cachedRuleSettings = null;

@@ -781,33 +781,36 @@ emoji-picker {
 }
 
 .cip-regex-rule {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
     background: var(--cip-input-bg-color, rgba(255, 255, 255, 0.08));
+    flex-wrap: wrap;
+}
+
+.cip-regex-row-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
 }
 
 .cip-regex-rule-name {
     font-weight: 600;
     color: var(--cip-text-color);
-}
-
-.cip-regex-meta {
-    grid-column: 1 / -1;
-    font-size: 12px;
-    color: var(--cip-subtle-text-color, rgba(255, 255, 255, 0.75));
-    word-break: break-all;
+    white-space: nowrap;
 }
 
 .cip-regex-actions-row {
-    grid-column: 1 / -1;
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-end;
+    justify-content: flex-start;
 }
 
 .cip-regex-edit-btn,
