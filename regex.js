@@ -63,7 +63,7 @@ const REGEX_RULES = [
             const [name = '', time = '', message = ''] = groups;
 
             const container = doc.createElement('div');
-            container.style.margin = '10px 0';
+            container.style.margin = '0';
             container.style.maxWidth = '75%';
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
@@ -146,7 +146,7 @@ const REGEX_RULES = [
             const [name = '', message = '', time = ''] = groups;
 
             const container = doc.createElement('div');
-            container.style.margin = '10px 0';
+            container.style.margin = '0';
             container.style.maxWidth = '75%';
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
@@ -773,7 +773,7 @@ const REGEX_RULES = [
             container.style.textAlign = 'center';
             container.style.color = '#888888';
             container.style.fontSize = '14px';
-            container.style.margin = '10px 0';
+            container.style.margin = '0';
             container.textContent = applyTemplate(
                 config?.replacement,
                 groups,
