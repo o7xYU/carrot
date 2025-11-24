@@ -1117,20 +1117,29 @@ let cachedRuleSettings = null;
 let cachedCustomRules = null;
 let cachedProfileStore = null;
 
+function normalizeFlags(flags = 'g') {
+    const raw = typeof flags === 'string' ? flags : '';
+    const uniq = [];
+    for (const ch of `${raw}g`) {
+        if (!uniq.includes(ch)) uniq.push(ch);
+    }
+    return uniq.join('');
+}
+
 function parsePatternInput(input, fallbackFlags = 'gm') {
     if (typeof input !== 'string') return null;
     const trimmed = input.trim();
     if (!trimmed) return null;
 
     let source = trimmed;
-    let flags = fallbackFlags;
+    let flags = normalizeFlags(fallbackFlags);
 
     if (trimmed.startsWith('/') && trimmed.lastIndexOf('/') > 0) {
         const lastSlash = trimmed.lastIndexOf('/');
         source = trimmed.slice(1, lastSlash);
         const flagPart = trimmed.slice(lastSlash + 1).trim();
         if (flagPart) {
-            flags = flagPart;
+            flags = normalizeFlags(flagPart);
         }
     }
 
@@ -1369,9 +1378,10 @@ function buildPattern(rule, config) {
             config?.flags || rule.flags || 'g',
         ) || {
             source: config?.pattern || rule.patternSource,
-            flags: config?.flags || rule.flags || 'g',
+            flags: normalizeFlags(config?.flags || rule.flags || 'g'),
         };
-    const { source, flags } = parsed;
+    const { source } = parsed;
+    const flags = normalizeFlags(parsed.flags);
     try {
         return new RegExp(source, flags);
     } catch (error) {
@@ -1704,7 +1714,9 @@ export function updateRegexRuleSetting(ruleId, updates = {}) {
         ...settings[ruleId],
         ...updates,
         ...(typeof nextPattern === 'string' ? { pattern: nextPattern } : {}),
-        ...(typeof nextFlags === 'string' ? { flags: nextFlags } : {}),
+        ...(typeof nextFlags === 'string'
+            ? { flags: normalizeFlags(nextFlags) }
+            : {}),
     };
     return setRegexRuleSettings({
         ...settings,
@@ -1892,4 +1904,3 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
-
