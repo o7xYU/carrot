@@ -90,7 +90,7 @@ const REGEX_RULES = [
             avatar.style.backgroundPosition = 'center';
 
             const bubble = doc.createElement('div');
-            bubble.style.padding = '0px 0px';
+            bubble.style.padding = '10px 14px';
             bubble.style.setProperty('border-radius', '24px', 'important');
             bubble.style.lineHeight = '1.4';
             bubble.style.setProperty(
@@ -202,7 +202,7 @@ const REGEX_RULES = [
             avatar.style.backgroundPosition = 'center';
 
             const bubble = doc.createElement('div');
-            bubble.style.padding = '0px 0px';
+            bubble.style.padding = '10px 14px';
             bubble.style.setProperty('border-radius', '24px', 'important');
             bubble.style.lineHeight = '1.4';
             bubble.style.setProperty(
@@ -1904,5 +1904,6 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
+
 
 
