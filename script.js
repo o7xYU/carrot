@@ -12,6 +12,7 @@
     let getRegexRuleSettings = () => ({});
     let addCustomRegexRule = () => null;
     let removeCustomRegexRule = () => false;
+    let clearRegexState = () => {};
     let regexModuleReady = false;
     let regexEnabled = true;
     let isDocked = false;
@@ -60,6 +61,10 @@
             typeof regexModule.getRegexRuleSettings === 'function'
                 ? regexModule.getRegexRuleSettings
                 : getRegexRuleSettings;
+        clearRegexState =
+            typeof regexModule.clearRegexState === 'function'
+                ? regexModule.clearRegexState
+                : clearRegexState;
 
         regexModuleReady =
             typeof regexModule.applyRegexReplacements === 'function';
@@ -1293,6 +1298,7 @@
         const chatContainer = document.getElementById('chat');
         if (!chatContainer) return;
         chatContainer.querySelectorAll('.mes_text').forEach((element) => {
+            clearRegexState(element);
             applyRegexReplacements(element, {
                 enabled: regexEnabled,
                 replacePlaceholderWithNode,
