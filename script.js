@@ -10,6 +10,10 @@
     let resetRegexRuleSetting = () => {};
     let resetAllRegexRuleSettings = () => {};
     let getRegexRuleSettings = () => ({});
+    let getRegexProfiles = () => [];
+    let saveRegexProfile = () => [];
+    let applyRegexProfile = () => false;
+    let getActiveRegexProfile = () => '';
     let addCustomRegexRule = () => null;
     let removeCustomRegexRule = () => false;
     let clearRegexState = () => {};
@@ -61,6 +65,22 @@
             typeof regexModule.getRegexRuleSettings === 'function'
                 ? regexModule.getRegexRuleSettings
                 : getRegexRuleSettings;
+        getRegexProfiles =
+            typeof regexModule.getRegexProfiles === 'function'
+                ? regexModule.getRegexProfiles
+                : getRegexProfiles;
+        saveRegexProfile =
+            typeof regexModule.saveRegexProfile === 'function'
+                ? regexModule.saveRegexProfile
+                : saveRegexProfile;
+        applyRegexProfile =
+            typeof regexModule.applyRegexProfile === 'function'
+                ? regexModule.applyRegexProfile
+                : applyRegexProfile;
+        getActiveRegexProfile =
+            typeof regexModule.getActiveRegexProfile === 'function'
+                ? regexModule.getActiveRegexProfile
+                : getActiveRegexProfile;
         clearRegexState =
             typeof regexModule.clearRegexState === 'function'
                 ? regexModule.clearRegexState
@@ -373,8 +393,11 @@
                         </div>
                     </div>
                     <div class="cip-regex-toolbar">
+                        <div class="cip-regex-profile">
+                            <select id="cip-regex-profile-select" aria-label="正则配置选择"></select>
+                            <button id="cip-regex-profile-save" type="button" class="cip-regex-reset-all">保存当前配置</button>
+                        </div>
                         <button id="cip-regex-reset-btn" type="button" class="cip-regex-reset-all">恢复全部默认</button>
-                        <div class="cip-regex-legend">功能名｜开关｜表达式｜替换为｜恢复</div>
                     </div>
                     <div id="cip-regex-rule-list" class="cip-regex-rule-list"></div>
                 </section>
@@ -524,6 +547,8 @@
     const regexAddBtn = get('cip-regex-add-btn');
     const regexRuleList = get('cip-regex-rule-list');
     const regexResetBtn = get('cip-regex-reset-btn');
+    const regexProfileSelect = get('cip-regex-profile-select');
+    const regexProfileSaveBtn = get('cip-regex-profile-save');
     const dockButton = get('cip-dock-button');
     const settingsPanelEl = get('cip-settings-panel');
     const closeSettingsPanelBtn = get('cip-close-settings-panel-btn');
@@ -649,6 +674,47 @@
         setDotToggleState(regexMasterToggle, !!regexEnabled);
     }
 
+    function renderRegexProfiles() {
+        if (!regexProfileSelect) return;
+        regexProfileSelect.innerHTML = '';
+
+        if (!regexModuleReady || !getRegexProfiles) {
+            const disabledOption = document.createElement('option');
+            disabledOption.value = '';
+            disabledOption.textContent = '正则模块未加载';
+            regexProfileSelect.appendChild(disabledOption);
+            regexProfileSelect.disabled = true;
+            return;
+        }
+
+        regexProfileSelect.disabled = false;
+        const profiles = getRegexProfiles() || [];
+        const active = getActiveRegexProfile ? getActiveRegexProfile() : '';
+
+        if (!profiles.length) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '暂无已保存配置';
+            regexProfileSelect.appendChild(placeholder);
+            return;
+        }
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '选择配置';
+        placeholder.disabled = true;
+        placeholder.selected = !active;
+        regexProfileSelect.appendChild(placeholder);
+
+        for (const item of profiles) {
+            const option = document.createElement('option');
+            option.value = item.name;
+            option.textContent = item.name;
+            option.selected = active === item.name;
+            regexProfileSelect.appendChild(option);
+        }
+    }
+
     function renderRegexRuleList() {
         if (!regexRuleList) return;
         regexRuleList.innerHTML = '';
@@ -755,6 +821,7 @@
     }
 
     updateRegexMasterUI();
+    renderRegexProfiles();
     renderRegexRuleList();
 
     regexMasterToggle?.addEventListener('click', () => {
@@ -768,6 +835,41 @@
         } catch (error) {
             console.warn('胡萝卜插件：写入正则开关状态失败', error);
         }
+        updateRegexMasterUI();
+        reprocessRegexPlaceholders();
+    });
+
+    regexProfileSelect?.addEventListener('change', () => {
+        if (!regexModuleReady) return;
+        const selected = regexProfileSelect.value;
+        if (!selected) return;
+        const applied = applyRegexProfile(selected);
+        if (applied) {
+            try {
+                regexEnabled = !!getRegexEnabled();
+            } catch (error) {
+                console.warn('胡萝卜插件：读取正则开关状态失败', error);
+            }
+            renderRegexProfiles();
+            renderRegexRuleList();
+            updateRegexMasterUI();
+            reprocessRegexPlaceholders();
+        }
+    });
+
+    regexProfileSaveBtn?.addEventListener('click', () => {
+        if (!regexModuleReady) return;
+        const presetName = prompt(
+            '为当前正则配置命名（保存所有规则开关、表达式及自定义规则）',
+            getActiveRegexProfile ? getActiveRegexProfile() : '',
+        );
+        if (presetName === null) return;
+        const list = saveRegexProfile(presetName);
+        if (Array.isArray(list)) {
+            renderRegexProfiles();
+            regexProfileSelect.value = presetName.trim();
+        }
+        renderRegexRuleList();
         updateRegexMasterUI();
         reprocessRegexPlaceholders();
     });

@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'cip_regex_enabled_v1';
 const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
 const CUSTOM_RULES_KEY = 'cip_regex_custom_rules_v1';
+const REGEX_PROFILES_KEY = 'cip_regex_profiles_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
@@ -50,7 +51,7 @@ const REGEX_RULES = [
         patternSource: '^"(.*?)"$',
         flags: 'gm',
         defaultReplacement:
-            '<div class="char_bubble"><div style="display: flex;margin-bottom: 18px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">   <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url(\'{{charAvatarPath}}\'); background-size: cover; background-position: center;">  </div>  <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important; word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: auto;right: 5px; width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span> $1  <span style="position: absolute;top: 15px; left: auto;right: 5px; width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"> </span></div></div></div>',
+            '<div class="char_bubble"><div style="display: flex;margin-bottom: 0px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;">   <div class="B_C_avar custom-B_C_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-right: 10px; background-image: url(\'{{charAvatarPath}}\'); background-size: cover; background-position: center;">  </div>  <div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-left-radius: 24px !important; word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:-4px 4px 8px rgba(0, 0, 0, 0.10),2px -2px 4px rgba(255, 255, 255, 0.3),inset -6px 6px 8px rgba(0, 0, 0, 0.10), inset 6px -6px 8px rgba(255, 255, 255, 0.5) !important;;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: auto;right: 5px; width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(45deg);"></span> $1  <span style="position: absolute;top: 15px; left: auto;right: 5px; width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"> </span></div></div></div>',
         createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -70,7 +71,7 @@ const REGEX_RULES = [
 
             const wrapper = doc.createElement('div');
             wrapper.style.display = 'flex';
-            wrapper.style.marginBottom = '18px';
+            wrapper.style.marginBottom = '0px';
             wrapper.style.alignItems = 'flex-start';
             wrapper.style.position = 'relative';
             wrapper.style.animation = 'message-pop 0.3s ease-out';
@@ -161,7 +162,7 @@ const REGEX_RULES = [
         patternSource: '^“(.*?)”$',
         flags: 'gm',
         defaultReplacement:
-            '<div class="user_bubble"><div style="display: flex;margin-bottom: 18px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;"><div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url(\'{{userAvatarPath}}\'); background-size: cover; background-position: center;"></div><div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>$1 <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span></div></div></div>',
+            '<div class="user_bubble"><div style="display: flex;margin-bottom: 0px;align-items: flex-start;position: relative;animation: message-pop 0.3s ease-out;flex-direction: row-reverse;"><div class="B_U_avar custom-B_U_avar" style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; padding: 5px 5px; overflow: hidden; margin-left: 10px; background-image: url(\'{{userAvatarPath}}\'); background-size: cover; background-position: center;"></div><div style="padding: 10px 14px;border-radius: 24px !important;line-height: 1.4;border-bottom-right-radius: 24px !important;word-wrap: break-word;position:relative;transition: transform 0.2s;background: transparent !important;box-shadow:4px 4px 8px rgba(0, 0, 0, 0.10), -2px -2px 4px rgba(255, 255, 255, 0.3), inset 6px 6px 8px rgba(0, 0, 0, 0.10),  inset -6px -6px 8px rgba(255, 255, 255, 0.5)!important;border: 1px solid rgba(200, 200, 200,0.3) !important;"><span style="position: absolute;top: 5px; left: 5px;right: auto;  width: 12px;height: 6px;background: white;border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;opacity: 0.9; z-index: 2; transform: rotate(-45deg);"></span>$1 <span style="position: absolute;top: 15px; left: 5px;right: auto;  width: 4px;height: 4px;background: white;border-radius: 50%;opacity: 0.6; z-index: 2;"></span></div></div></div>',
         createNode({ documentRef, groups, config }) {
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -181,7 +182,7 @@ const REGEX_RULES = [
 
             const wrapper = doc.createElement('div');
             wrapper.style.display = 'flex';
-            wrapper.style.marginBottom = '18px';
+            wrapper.style.marginBottom = '0px';
             wrapper.style.alignItems = 'flex-start';
             wrapper.style.position = 'relative';
             wrapper.style.animation = 'message-pop 0.3s ease-out';
@@ -458,7 +459,7 @@ const REGEX_RULES = [
 
             const wrapper = doc.createElement('div');
             wrapper.style.display = 'flex';
-            wrapper.style.marginBottom = '16px';
+            wrapper.style.marginBottom = '0px';
             wrapper.style.alignItems = 'flex-start';
             wrapper.style.position = 'relative';
             wrapper.style.animation = 'message-pop 0.3s ease-out';
@@ -596,7 +597,7 @@ const REGEX_RULES = [
 
             const container = doc.createElement('div');
             container.style.textAlign = 'right';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.display = 'flex';
             container.style.justifyContent = 'flex-end';
             container.style.alignItems = 'flex-start';
@@ -735,7 +736,7 @@ const REGEX_RULES = [
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.alignItems = 'flex-start';
             container.style.position = 'relative';
             container.style.animation = 'message-pop 0.3s ease-out';
@@ -866,7 +867,7 @@ const REGEX_RULES = [
 
             const container = doc.createElement('div');
             container.style.display = 'flex';
-            container.style.marginBottom = '18px';
+            container.style.marginBottom = '0px';
             container.style.alignItems = 'flex-start';
             container.style.position = 'relative';
             container.style.animation = 'message-pop 0.3s ease-out';
@@ -1114,6 +1115,7 @@ function resolveCustomReplacement({
 
 let cachedRuleSettings = null;
 let cachedCustomRules = null;
+let cachedProfileStore = null;
 
 function parsePatternInput(input, fallbackFlags = 'gm') {
     if (typeof input !== 'string') return null;
@@ -1209,6 +1211,66 @@ function persistCustomRuleDefinitions(list) {
         localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
     } catch (error) {
         console.warn('胡萝卜插件：写入自定义正则失败', error);
+    }
+}
+
+function normalizeProfileStore(raw) {
+    const base = { active: '', profiles: {} };
+    if (!raw || typeof raw !== 'object') return base;
+    const store = {
+        active: typeof raw.active === 'string' ? raw.active : '',
+        profiles: {},
+    };
+    if (raw.profiles && typeof raw.profiles === 'object') {
+        for (const [name, entry] of Object.entries(raw.profiles)) {
+            if (typeof name !== 'string' || !name.trim()) continue;
+            const trimmed = name.trim();
+            const ruleSettings = normalizeRuleSettings(entry?.ruleSettings);
+            const customRules = normalizeCustomRuleList(entry?.customRules || []);
+            const enabled =
+                typeof entry?.enabled === 'boolean'
+                    ? entry.enabled
+                    : DEFAULT_REGEX_ENABLED;
+            store.profiles[trimmed] = {
+                name: trimmed,
+                ruleSettings,
+                customRules,
+                enabled,
+            };
+        }
+    }
+    return store;
+}
+
+function loadProfileStore() {
+    if (cachedProfileStore) return cachedProfileStore;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedProfileStore = { active: '', profiles: {} };
+            return cachedProfileStore;
+        }
+        const raw = localStorage.getItem(REGEX_PROFILES_KEY);
+        if (!raw) {
+            cachedProfileStore = { active: '', profiles: {} };
+            return cachedProfileStore;
+        }
+        const parsed = JSON.parse(raw);
+        cachedProfileStore = normalizeProfileStore(parsed);
+        return cachedProfileStore;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取正则配置预设失败', error);
+        cachedProfileStore = { active: '', profiles: {} };
+        return cachedProfileStore;
+    }
+}
+
+function persistProfileStore(store) {
+    cachedProfileStore = normalizeProfileStore(store);
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(REGEX_PROFILES_KEY, JSON.stringify(cachedProfileStore));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入正则配置预设失败', error);
     }
 }
 
@@ -1529,6 +1591,55 @@ export function setRegexEnabled(enabled) {
     }
 }
 
+export function getRegexProfiles() {
+    const store = loadProfileStore();
+    return Object.values(store.profiles).map((item) => ({
+        name: item.name,
+        isActive: store.active === item.name,
+    }));
+}
+
+export function getActiveRegexProfile() {
+    const store = loadProfileStore();
+    return store.active || '';
+}
+
+export function saveRegexProfile(name) {
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (!trimmed) return getRegexProfiles();
+
+    const store = loadProfileStore();
+    store.profiles[trimmed] = {
+        name: trimmed,
+        enabled: getRegexEnabled(),
+        ruleSettings: getRuleSettingsWithDefaults(),
+        customRules: loadCustomRuleDefinitions(),
+    };
+    store.active = trimmed;
+    persistProfileStore(store);
+    return getRegexProfiles();
+}
+
+export function applyRegexProfile(name) {
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (!trimmed) return false;
+
+    const store = loadProfileStore();
+    const profile = store.profiles?.[trimmed];
+    if (!profile) return false;
+
+    setRegexEnabled(
+        typeof profile.enabled === 'boolean'
+            ? profile.enabled
+            : DEFAULT_REGEX_ENABLED,
+    );
+    persistCustomRuleDefinitions(profile.customRules || []);
+    persistRuleSettings(profile.ruleSettings || {});
+    store.active = trimmed;
+    persistProfileStore(store);
+    return true;
+}
+
 function createReplacementNode({
     rule,
     groups,
@@ -1755,6 +1866,10 @@ export default {
     applyRegexReplacements,
     getRegexEnabled,
     setRegexEnabled,
+    getRegexProfiles,
+    saveRegexProfile,
+    applyRegexProfile,
+    getActiveRegexProfile,
     getRegexRuleSettings,
     setRegexRuleSettings,
     updateRegexRuleSetting,
