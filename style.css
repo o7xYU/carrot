@@ -706,7 +706,7 @@ emoji-picker {
 #cip-settings-tabs {
     display: flex;
     /* 调整：压缩齿轮面板导航按钮间距 */
-    gap: 4px;
+    gap: 6px;
     flex-wrap: nowrap;
     justify-content: center;
 }
@@ -714,14 +714,14 @@ emoji-picker {
     /* 调整：压缩齿轮面板导航按钮间距 */
     flex: 1 1 0;
     min-width: 0;
-    padding: 6px 12px;
+    padding: 6px 10px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
     color: var(--cip-text-color);
     cursor: pointer;
     transition: all var(--cip-transition-speed);
-    font-size: 14px;
+    font-size: 13px;
 }
 .cip-settings-tab:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -739,6 +739,155 @@ emoji-picker {
 }
 .cip-settings-section.active {
     display: block;
+}
+
+.cip-regex-master-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cip-regex-master-text h4 {
+    margin: 0 0 4px 0;
+    color: var(--cip-text-color);
+}
+
+.cip-regex-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--cip-text-color);
+    opacity: 0.8;
+}
+
+.cip-regex-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 10px 0 4px;
+}
+
+.cip-regex-legend {
+    font-size: 12px;
+    color: var(--cip-text-color);
+    opacity: 0.85;
+}
+
+.cip-regex-rule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cip-regex-rule {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
+    background: var(--cip-input-bg-color, rgba(255, 255, 255, 0.08));
+}
+
+.cip-regex-rule-name {
+    font-weight: 600;
+    color: var(--cip-text-color);
+}
+
+.cip-regex-meta {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--cip-subtle-text-color, rgba(255, 255, 255, 0.75));
+    word-break: break-all;
+}
+
+.cip-regex-actions-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.cip-regex-edit-btn,
+.cip-regex-reset-btn,
+.cip-regex-reset-all {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+}
+
+.cip-regex-reset-btn,
+.cip-regex-reset-all {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.cip-regex-reset-btn:hover,
+.cip-regex-reset-all:hover,
+.cip-regex-edit-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.cip-regex-reset-all {
+    align-self: flex-start;
+}
+
+.cip-regex-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--cip-text-color);
+    opacity: 0.85;
+    border: 1px dashed var(--cip-border-color, rgba(255, 255, 255, 0.25));
+    border-radius: 10px;
+}
+
+.cip-dot-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--cip-border-color, rgba(255, 255, 255, 0.2));
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--cip-text-color);
+    cursor: pointer;
+    transition: all var(--cip-transition-speed);
+}
+
+.cip-dot-toggle.small {
+    padding: 6px 10px;
+}
+
+.cip-dot-toggle.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.cip-dot-toggle:hover:not(.disabled) {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.cip-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #e15b64;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+}
+
+.cip-dot-toggle.active .cip-dot {
+    background: #4cd964;
+}
+
+.cip-dot-label {
+    font-size: 13px;
 }
 .cip-settings-footer {
     display: flex;

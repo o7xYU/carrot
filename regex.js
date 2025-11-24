@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'cip_regex_enabled_v1';
+const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
 
@@ -9,8 +10,11 @@ const TEXT_NODE_FILTER =
 const REGEX_RULES = [
     {
         id: 'bhl-timestamp',
-        pattern: /^『(.*?) \|(.*?)』$/gm,
-        createNode({ documentRef, groups }) {
+        name: '时间戳',
+        patternSource: '^『(.*?) \\|(.*?)』$',
+        flags: 'gm',
+        defaultReplacement: '$1   $2',
+        createNode({ documentRef, groups, config }) {
             const [time = '', text = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -22,14 +26,22 @@ const REGEX_RULES = [
             container.style.margin = '12px 0';
             const safeTime = time.trim();
             const safeText = text.trim();
-            container.textContent = `${safeTime}\u00A0\u00A0\u00A0${safeText}`;
+            const display = applyTemplate(
+                config?.replacement,
+                groups,
+                `${safeTime}\u00A0\u00A0\u00A0${safeText}`,
+            );
+            container.textContent = display;
             return container;
         },
     },
     {
         id: 'bhl-bubble-self',
-        pattern: /\[(.*?)\\(.*?)\\(.*?)\]/gm,
-        createNode({ documentRef, groups }) {
+        name: '第一人称气泡',
+        patternSource: '\\[(.*?)\\\\(.*?)\\\\(.*?)\\\]',
+        flags: 'gm',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
             const [name = '', time = '', message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -81,7 +93,11 @@ const REGEX_RULES = [
             paragraph.style.wordWrap = 'break-word';
             paragraph.style.fontSize = '12px';
             paragraph.style.lineHeight = '1.5';
-            paragraph.textContent = message.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             bubble.appendChild(paragraph);
 
@@ -96,8 +112,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-bubble',
-        pattern: /\[(.*?)\/(.*?)\/(.*?)\]/gm,
-        createNode({ documentRef, groups }) {
+        name: '第三人称气泡',
+        patternSource: '\\[(.*?)\\/(.*?)\\/(.*?)\\\]',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const [name = '', message = '', time = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -143,7 +162,11 @@ const REGEX_RULES = [
             content.style.wordWrap = 'break-word';
             content.style.fontSize = '12px';
             content.style.lineHeight = '1.5';
-            content.textContent = message.trim();
+            content.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             bubble.appendChild(content);
 
@@ -165,8 +188,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-char-voice',
-        pattern: /^=(.*?)\|(.*?)=$/gm,
-        createNode({ documentRef, groups }) {
+        name: '角色语音',
+        patternSource: '^=(.*?)\\|(.*?)=$',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const [title = '', content = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -274,7 +300,11 @@ const REGEX_RULES = [
             paragraph.style.fontWeight = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = content.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                content.trim(),
+            );
 
             detailContent.appendChild(paragraph);
 
@@ -291,8 +321,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-user-voice',
-        pattern: /^=(.*?)-(.*?)=$/gm,
-        createNode({ documentRef, groups }) {
+        name: '用户语音',
+        patternSource: '^=(.*?)-(.*?)=$',
+        flags: 'gm',
+        defaultReplacement: '$2',
+        createNode({ documentRef, groups, config }) {
             const [title = '', content = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -388,7 +421,11 @@ const REGEX_RULES = [
             paragraph.style.fontWeight = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = content.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                content.trim(),
+            );
 
             detailContent.appendChild(paragraph);
 
@@ -415,8 +452,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-char-dimension',
-        pattern: /\[(.*?)\|(.*?)\|(.*?)\]/g,
-        createNode({ documentRef, groups }) {
+        name: '角色维度',
+        patternSource: '\\[(.*?)\\|(.*?)\\|(.*?)\\\]',
+        flags: 'g',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
             const [title = '', value = '', description = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -490,7 +530,11 @@ const REGEX_RULES = [
             descriptionSpan.style.fontSize = '14px';
             descriptionSpan.style.color = '#817478';
             descriptionSpan.style.opacity = '0.9';
-            descriptionSpan.textContent = description.trim();
+            descriptionSpan.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                description.trim(),
+            );
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
@@ -531,8 +575,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-user-dimension',
-        pattern: /\[(.*?)-(.*?)-(.*?)\]/g,
-        createNode({ documentRef, groups }) {
+        name: '用户维度',
+        patternSource: '\\[(.*?)-(.*?)-(.*?)\\]',
+        flags: 'g',
+        defaultReplacement: '$3',
+        createNode({ documentRef, groups, config }) {
             const [title = '', value = '', description = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -607,7 +654,11 @@ const REGEX_RULES = [
             descriptionSpan.style.fontSize = '14px';
             descriptionSpan.style.color = '#817478';
             descriptionSpan.style.opacity = '0.9';
-            descriptionSpan.textContent = description.trim();
+            descriptionSpan.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                description.trim(),
+            );
 
             const shineLarge = doc.createElement('span');
             shineLarge.style.position = 'absolute';
@@ -646,8 +697,11 @@ const REGEX_RULES = [
     },
     {
         id: 'bhl-system',
-        pattern: /\+(.*?)\+/g,
-        createNode({ documentRef, groups }) {
+        name: '系统提示',
+        patternSource: '\\+(.*?)\\+',
+        flags: 'g',
+        defaultReplacement: '$1',
+        createNode({ documentRef, groups, config }) {
             const [message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -656,14 +710,21 @@ const REGEX_RULES = [
             container.style.color = '#888888';
             container.style.fontSize = '14px';
             container.style.margin = '10px 0';
-            container.textContent = message.trim();
+            container.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
             return container;
         },
     },
     {
         id: 'bhl-recall',
-        pattern: /^-(.*?)-$/gm,
-        createNode({ documentRef, groups }) {
+        name: '撤回提示',
+        patternSource: '^-(.*?)-$',
+        flags: 'gm',
+        defaultReplacement: '$1',
+        createNode({ documentRef, groups, config }) {
             const [message = ''] = groups;
             const doc = documentRef || defaultDocument;
             if (!doc) return null;
@@ -696,7 +757,11 @@ const REGEX_RULES = [
             paragraph.style.fontStyle = 'normal';
             paragraph.style.fontSize = '14px';
             paragraph.style.lineHeight = '1.4';
-            paragraph.textContent = message.trim();
+            paragraph.textContent = applyTemplate(
+                config?.replacement,
+                groups,
+                message.trim(),
+            );
 
             content.appendChild(paragraph);
             details.appendChild(summary);
@@ -707,6 +772,117 @@ const REGEX_RULES = [
         },
     },
 ];
+
+function applyTemplate(template, groups, fallback) {
+    if (!template) return fallback;
+    try {
+        return template.replace(/\$(\d+)/g, (_, index) => {
+            const position = Number(index) - 1;
+            return groups[position] !== undefined ? groups[position] : '';
+        });
+    } catch (error) {
+        console.warn('胡萝卜插件：渲染正则模板失败', error);
+        return fallback;
+    }
+}
+
+let cachedRuleSettings = null;
+
+function getDefaultRuleSettings() {
+    const defaults = {};
+    for (const rule of REGEX_RULES) {
+        defaults[rule.id] = {
+            enabled: true,
+            pattern: rule.patternSource,
+            replacement: rule.defaultReplacement || '',
+        };
+    }
+    return defaults;
+}
+
+function normalizeRuleSettings(raw) {
+    const defaults = getDefaultRuleSettings();
+    if (!raw || typeof raw !== 'object') return defaults;
+
+    const merged = { ...defaults };
+    for (const [ruleId, ruleDefaults] of Object.entries(defaults)) {
+        const candidate = raw[ruleId];
+        if (!candidate || typeof candidate !== 'object') continue;
+        merged[ruleId] = { ...ruleDefaults };
+        if (typeof candidate.enabled === 'boolean') {
+            merged[ruleId].enabled = candidate.enabled;
+        }
+        if (typeof candidate.pattern === 'string' && candidate.pattern.trim()) {
+            merged[ruleId].pattern = candidate.pattern;
+        }
+        if (typeof candidate.replacement === 'string') {
+            merged[ruleId].replacement = candidate.replacement;
+        }
+    }
+    return merged;
+}
+
+function loadRuleSettingsFromStorage() {
+    if (cachedRuleSettings) return cachedRuleSettings;
+    try {
+        if (typeof localStorage === 'undefined') {
+            cachedRuleSettings = getDefaultRuleSettings();
+            return cachedRuleSettings;
+        }
+        const raw = localStorage.getItem(RULE_SETTINGS_KEY);
+        if (!raw) {
+            cachedRuleSettings = getDefaultRuleSettings();
+            return cachedRuleSettings;
+        }
+        const parsed = JSON.parse(raw);
+        cachedRuleSettings = normalizeRuleSettings(parsed);
+        return cachedRuleSettings;
+    } catch (error) {
+        console.warn('胡萝卜插件：读取正则规则配置失败', error);
+        cachedRuleSettings = getDefaultRuleSettings();
+        return cachedRuleSettings;
+    }
+}
+
+function persistRuleSettings(settings) {
+    cachedRuleSettings = normalizeRuleSettings(settings);
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(RULE_SETTINGS_KEY, JSON.stringify(cachedRuleSettings));
+    } catch (error) {
+        console.warn('胡萝卜插件：写入正则规则配置失败', error);
+    }
+}
+
+function getRuleSettingsWithDefaults() {
+    return normalizeRuleSettings(loadRuleSettingsFromStorage());
+}
+
+function getRuleConfig(ruleSettings, rule) {
+    const defaults = getDefaultRuleSettings();
+    const merged = {
+        ...(defaults[rule.id] || {}),
+        ...(ruleSettings?.[rule.id] || {}),
+    };
+    return merged;
+}
+
+function buildPattern(rule, config) {
+    if (!rule) return null;
+    const source = config?.pattern || rule.patternSource;
+    const flags = rule.flags || 'g';
+    try {
+        return new RegExp(source, flags);
+    } catch (error) {
+        console.warn('胡萝卜插件：正则表达式无效', {
+            id: rule.id,
+            source,
+            flags,
+            error,
+        });
+        return null;
+    }
+}
 
 function clonePattern(pattern) {
     if (!(pattern instanceof RegExp)) return null;
@@ -757,8 +933,10 @@ function markRegexNode(node, ruleId) {
 function replaceMatchesInTextNode({
     textNode,
     rule,
+    pattern,
     documentRef,
     ensureOriginalStored,
+    ruleConfig,
 }) {
     if (!textNode?.parentNode) return false;
     const text = textNode.nodeValue;
@@ -767,21 +945,21 @@ function replaceMatchesInTextNode({
     const doc = documentRef || defaultDocument;
     if (!doc) return false;
 
-    const pattern = clonePattern(rule.pattern);
-    if (!pattern) return false;
+    const workingPattern = clonePattern(pattern);
+    if (!workingPattern) return false;
 
     let match;
     let lastIndex = 0;
     let replaced = false;
     const fragment = doc.createDocumentFragment();
 
-    pattern.lastIndex = 0;
+    workingPattern.lastIndex = 0;
 
-    while ((match = pattern.exec(text)) !== null) {
+    while ((match = workingPattern.exec(text)) !== null) {
         const matchText = match[0];
         if (!matchText) {
-            if (pattern.lastIndex === match.index) {
-                pattern.lastIndex++;
+            if (workingPattern.lastIndex === match.index) {
+                workingPattern.lastIndex++;
             }
             continue;
         }
@@ -796,6 +974,7 @@ function replaceMatchesInTextNode({
         const replacementNode = rule.createNode({
             documentRef: doc,
             groups: match.slice(1),
+            config: ruleConfig,
         });
 
         if (replacementNode) {
@@ -808,8 +987,8 @@ function replaceMatchesInTextNode({
 
         lastIndex = startIndex + matchText.length;
 
-        if (pattern.lastIndex === match.index) {
-            pattern.lastIndex++;
+        if (workingPattern.lastIndex === match.index) {
+            workingPattern.lastIndex++;
         }
     }
 
@@ -872,6 +1051,62 @@ export function setRegexEnabled(enabled) {
     }
 }
 
+export function getRegexRuleSettings() {
+    return getRuleSettingsWithDefaults();
+}
+
+export function setRegexRuleSettings(settings) {
+    persistRuleSettings(settings);
+    return getRegexRuleSettings();
+}
+
+export function updateRegexRuleSetting(ruleId, updates = {}) {
+    const settings = getRuleSettingsWithDefaults();
+    if (!settings[ruleId]) return settings;
+    const next = {
+        ...settings[ruleId],
+        ...updates,
+    };
+    return setRegexRuleSettings({
+        ...settings,
+        [ruleId]: next,
+    });
+}
+
+export function resetRegexRuleSetting(ruleId) {
+    const defaults = getDefaultRuleSettings();
+    if (!defaults[ruleId]) return getRuleSettingsWithDefaults();
+    const current = getRuleSettingsWithDefaults();
+    return setRegexRuleSettings({
+        ...current,
+        [ruleId]: defaults[ruleId],
+    });
+}
+
+export function resetAllRegexRuleSettings() {
+    const defaults = getDefaultRuleSettings();
+    setRegexRuleSettings(defaults);
+    return defaults;
+}
+
+export function getRegexRulesForUI() {
+    const settings = getRuleSettingsWithDefaults();
+    return REGEX_RULES.map((rule) => ({
+        id: rule.id,
+        name: rule.name || rule.id,
+        enabled: settings[rule.id]?.enabled !== false,
+        pattern: settings[rule.id]?.pattern || rule.patternSource,
+        replacement:
+            settings[rule.id]?.replacement ?? rule.defaultReplacement ?? '',
+        flags: rule.flags || 'g',
+        defaults: {
+            pattern: rule.patternSource,
+            replacement: rule.defaultReplacement || '',
+            flags: rule.flags || 'g',
+        },
+    }));
+}
+
 export function applyRegexReplacements(element, options = {}) {
     if (!element) return false;
 
@@ -897,7 +1132,14 @@ export function applyRegexReplacements(element, options = {}) {
         storedOriginal = true;
     };
 
+    const ruleSettings = getRuleSettingsWithDefaults();
+
     for (const rule of REGEX_RULES) {
+        const config = getRuleConfig(ruleSettings, rule);
+        if (!config.enabled) continue;
+        const pattern = buildPattern(rule, config);
+        if (!pattern) continue;
+
         const textNodes = collectTextNodes(element, documentRef);
         if (!textNodes.length) break;
 
@@ -905,8 +1147,10 @@ export function applyRegexReplacements(element, options = {}) {
             const replaced = replaceMatchesInTextNode({
                 textNode,
                 rule,
+                pattern,
                 documentRef,
                 ensureOriginalStored,
+                ruleConfig: config,
             });
             if (replaced) {
                 replacedAny = true;
@@ -934,6 +1178,12 @@ export default {
     applyRegexReplacements,
     getRegexEnabled,
     setRegexEnabled,
+    getRegexRuleSettings,
+    setRegexRuleSettings,
+    updateRegexRuleSetting,
+    resetRegexRuleSetting,
+    resetAllRegexRuleSettings,
+    getRegexRulesForUI,
 };
 
 export function restoreRegexOriginal(element) {
@@ -947,5 +1197,4 @@ export function clearRegexState(element) {
 
 export function getRegexRules() {
     return REGEX_RULES.slice();
-
 }
