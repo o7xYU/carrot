@@ -979,7 +979,7 @@ const REGEX_RULES = [
     {
         id: 'bhl-system',
         name: '系统提示',
-        patternSource: '\\+(.*?)\\+',
+        patternSource: '\\+([\s\S]*?)\\+',
         flags: 'g',
         defaultReplacement: '$1',
         createNode({ documentRef, groups, config }) {
@@ -1904,6 +1904,7 @@ export function clearRegexState(element) {
 export function getRegexRules() {
     return getAllRules();
 }
+
 
 
 
