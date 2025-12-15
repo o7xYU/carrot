@@ -1,3 +1,12 @@
+import { SettingsStore } from './store.js';
+
+const extension_settings =
+    globalThis.extension_settings || (globalThis.extension_settings = {});
+
+function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
 export function initSyncSettings(
     {
         importSettingsInput,
@@ -7,36 +16,16 @@ export function initSyncSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
         alertRef = (message) => alert(message),
+        settingsStore = SettingsStore,
     } = {},
 ) {
+    const settings = settingsStore.getSettings();
+
     function exportSettings(customFilename = '') {
         try {
-            const settingsToExport = {};
-            const keysToExport = [
-                'cip_sticker_data',
-                'cip_theme_data_v1',
-                'cip_last_active_theme_v1',
-                'cip_avatar_profiles_v1',
-                'cip_last_avatar_profile_v1',
-                'cip_frame_profiles_v1',
-                'cip_last_frame_profile_v1',
-                'cip_custom_command_v1',
-                'cip_sync_filename_v1',
-                'cip_tts_settings_v1',
-                'cip_regex_enabled_v1',
-                'cip_regex_rule_settings_v1',
-                'cip_regex_custom_rules_v1',
-                'cip_regex_profiles_v1',
-            ];
-            keysToExport.forEach((key) => {
-                const value = localStorageRef.getItem(key);
-                if (value !== null) {
-                    settingsToExport[key] = value;
-                }
-            });
-            if (Object.keys(settingsToExport).length === 0) {
+            const settingsToExport = deepClone(extension_settings);
+            if (!settingsToExport || Object.keys(settingsToExport).length === 0) {
                 alertRef('没有可导出的设置。');
                 return;
             }
@@ -78,20 +67,25 @@ export function initSyncSettings(
         reader.onload = function (e) {
             try {
                 const importedSettings = JSON.parse(e.target.result);
-                let settingsApplied = false;
-                for (const key in importedSettings) {
-                    if (!Object.prototype.hasOwnProperty.call(importedSettings, key))
-                        continue;
-                    if (key === 'cip_button_position_v4') continue;
-                    localStorageRef.setItem(key, importedSettings[key]);
-                    settingsApplied = true;
+                if (
+                    !importedSettings ||
+                    typeof importedSettings !== 'object' ||
+                    Array.isArray(importedSettings)
+                ) {
+                    alertRef('导入的文件格式不正确。');
+                    return;
                 }
-                if (settingsApplied) {
-                    alertRef('设置已成功导入！页面将自动刷新以应用所有更改。');
-                    setTimeout(() => getWindow()?.location.reload(), 500);
-                } else {
+                const keys = Object.keys(importedSettings);
+                if (!keys.length) {
                     alertRef('导入的文件不包含任何有效的设置。');
+                    return;
                 }
+                keys.forEach((key) => {
+                    extension_settings[key] = importedSettings[key];
+                });
+                settingsStore.saveSettings();
+                alertRef('设置已成功导入！页面将自动刷新以应用所有更改。');
+                setTimeout(() => getWindow()?.location.reload(), 500);
             } catch (error) {
                 console.error('导入设置时发生错误:', error);
                 alertRef('导入失败，文件格式可能不正确。请查看控制台获取更多信息。');
@@ -116,7 +110,8 @@ export function initSyncSettings(
             alertRef('请输入一个有效的文件名。');
             return;
         }
-        localStorageRef.setItem('cip_sync_filename_v1', filename);
+        settings.syncFilename = filename;
+        settingsStore.saveSettings();
         exportSettings(filename);
     }
 
@@ -128,7 +123,7 @@ export function initSyncSettings(
     savePathBtn?.addEventListener('click', saveToPath);
     loadPathBtn?.addEventListener('click', loadFromPath);
 
-    const savedFilename = localStorageRef.getItem('cip_sync_filename_v1');
+    const savedFilename = settings.syncFilename;
     if (savedFilename && syncPathInput) {
         syncPathInput.value = savedFilename;
     }

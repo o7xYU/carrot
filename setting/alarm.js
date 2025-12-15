@@ -1,14 +1,17 @@
+import { SettingsStore } from './store.js';
+
 const state = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
         alertRef: (message) => alert(message),
         confirmRef: (message) => confirm(message),
         setTimeoutRef: setTimeout,
         windowRef: typeof window !== 'undefined' ? window : null,
         defaultCommand: '',
+        settingsStore: SettingsStore,
     },
     timerWorker: null,
+    settings: null,
 };
 
 function getElements() {
@@ -19,9 +22,17 @@ function getDeps() {
     return state.dependencies;
 }
 
+function getSettings() {
+    if (!state.settings) {
+        state.settings = getDeps().settingsStore.getSettings();
+    }
+    return state.settings;
+}
+
 export function initAlarmSettings(elements, dependencies = {}) {
     state.elements = elements || {};
     state.dependencies = { ...state.dependencies, ...dependencies };
+    state.settings = state.dependencies.settingsStore.getSettings();
 
     const {
         alarmCommandInput,
@@ -32,11 +43,14 @@ export function initAlarmSettings(elements, dependencies = {}) {
         alarmMinutesInput,
         alarmSecondsInput,
         alarmRepeatInput,
+        alarmStatus,
     } = state.elements;
+
+    const settings = getSettings();
 
     if (alarmCommandInput) {
         alarmCommandInput.value =
-            getDeps().localStorageRef?.getItem('cip_custom_command_v1') ||
+            settings.customCommand ||
             state.dependencies.defaultCommand ||
             alarmCommandInput.value;
     }
@@ -48,7 +62,8 @@ export function initAlarmSettings(elements, dependencies = {}) {
             if (alarmCommandInput) {
                 alarmCommandInput.value = state.dependencies.defaultCommand;
             }
-            getDeps().localStorageRef?.removeItem('cip_custom_command_v1');
+            settings.customCommand = '';
+            getDeps().settingsStore.saveSettings();
         }
     });
 
@@ -104,7 +119,7 @@ export function startAlarm(isContinuation = false) {
     if (!ensureWorker()) return;
     const { hours, minutes, seconds, command, repeat } = readInputs();
     const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-    const ls = getDeps().localStorageRef;
+    const settings = getSettings();
 
     if (totalMs <= 0) {
         getDeps().alertRef('请输入有效的定时时间！');
@@ -115,18 +130,12 @@ export function startAlarm(isContinuation = false) {
         return;
     }
 
-    if (ls) {
-        ls.setItem('cip_custom_command_v1', command);
-    }
+    settings.customCommand = command;
 
     const endTime = Date.now() + totalMs;
     let alarmData;
     if (isContinuation) {
-        try {
-            alarmData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
-        } catch (error) {
-            alarmData = null;
-        }
+        alarmData = settings.alarmData;
         if (!alarmData) return;
         alarmData.endTime = endTime;
         alarmData.executed = (alarmData.executed || 0) + 1;
@@ -140,19 +149,22 @@ export function startAlarm(isContinuation = false) {
         };
     }
 
-    ls?.setItem('cip_alarm_data_v1', JSON.stringify(alarmData));
+    settings.alarmData = alarmData;
+    getDeps().settingsStore.saveSettings();
     state.timerWorker?.postMessage({ type: 'start', data: alarmData });
 }
 
 export function stopAlarm() {
     state.timerWorker?.postMessage({ type: 'stop' });
-    getDeps().localStorageRef?.removeItem('cip_alarm_data_v1');
+    const settings = getSettings();
+    settings.alarmData = null;
+    getDeps().settingsStore.saveSettings();
     updateAlarmStatus(null);
 }
 
 export function updateAlarmStatus(data) {
     const { alarmStatus, alarmCommandInput } = getElements();
-    const ls = getDeps().localStorageRef;
+    const settings = getSettings();
     if (!alarmStatus) return;
     if (data && typeof data.remaining === 'number') {
         const remainingMs = Math.max(0, data.remaining);
@@ -169,33 +181,24 @@ export function updateAlarmStatus(data) {
                 : '');
         alarmStatus.textContent = statusText;
     } else {
-        try {
-            const storedData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
-            if (storedData) {
-                alarmStatus.textContent = '状态: 时间到！';
-                return;
-            }
-        } catch (error) {
-            // ignore
+        const storedData = settings.alarmData;
+        if (storedData) {
+            alarmStatus.textContent = '状态: 时间到！';
+            return;
         }
         alarmStatus.textContent = '状态: 未设置';
     }
     if (alarmCommandInput && !alarmCommandInput.value) {
         alarmCommandInput.value =
-            ls?.getItem('cip_custom_command_v1') ||
+            settings.customCommand ||
             state.dependencies.defaultCommand ||
             '';
     }
 }
 
 export function checkAlarmOnLoad() {
-    const ls = getDeps().localStorageRef;
-    let alarmData = null;
-    try {
-        alarmData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
-    } catch (error) {
-        alarmData = null;
-    }
+    const settings = getSettings();
+    let alarmData = settings.alarmData;
     const {
         alarmHoursInput,
         alarmMinutesInput,
@@ -209,8 +212,9 @@ export function checkAlarmOnLoad() {
             state.timerWorker.postMessage({ type: 'start', data: alarmData });
         }
     } else if (alarmData) {
-        ls?.removeItem('cip_alarm_data_v1');
+        settings.alarmData = null;
         alarmData = null;
+        getDeps().settingsStore.saveSettings();
     }
 
     const duration = alarmData ? alarmData.duration || 0 : 0;
@@ -223,7 +227,7 @@ export function checkAlarmOnLoad() {
     if (alarmCommandInput)
         alarmCommandInput.value = alarmData
             ? alarmData.command
-            : ls?.getItem('cip_custom_command_v1') ||
+            : settings.customCommand ||
               state.dependencies.defaultCommand ||
               '';
     if (alarmRepeatInput) alarmRepeatInput.value = alarmData ? alarmData.repeat || 1 : 1;
@@ -265,13 +269,7 @@ export function executeCommand(command) {
 }
 
 export function handleExecutionComplete() {
-    const ls = getDeps().localStorageRef;
-    let currentAlarmData = null;
-    try {
-        currentAlarmData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
-    } catch (error) {
-        currentAlarmData = null;
-    }
+    const currentAlarmData = getSettings().alarmData;
     if (
         currentAlarmData &&
         currentAlarmData.executed + 1 < (currentAlarmData.repeat || 1)

@@ -1102,11 +1102,11 @@
                 alarmStatus,
             },
             {
-                localStorageRef: localStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 windowRef: window,
                 defaultCommand,
+                settingsStore: SettingsStore,
             },
         );
 
@@ -1119,8 +1119,8 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
                 alertRef: (message) => alert(message),
+                settingsStore: SettingsStore,
             },
         );
     } catch (error) {
@@ -2226,13 +2226,11 @@
                     ? hidePanel()
                     : showPanel();
             } else {
-                localStorage.setItem(
-                    'cip_button_position_v4',
-                    JSON.stringify({
-                        top: carrotButton.style.top,
-                        left: carrotButton.style.left,
-                    }),
-                );
+                settings.buttonPosition = {
+                    top: carrotButton.style.top,
+                    left: carrotButton.style.left,
+                };
+                SettingsStore.saveSettings();
             }
         };
         document.addEventListener('mousemove', move);
@@ -2247,9 +2245,7 @@
     });
 
     function loadButtonPosition() {
-        const savedPos = JSON.parse(
-            localStorage.getItem('cip_button_position_v4'),
-        );
+        const savedPos = settings.buttonPosition;
         if (savedPos?.top && savedPos?.left) {
             carrotButton.style.position = 'fixed';
             carrotButton.style.top = savedPos.top;

@@ -16,6 +16,12 @@ const SettingsStore = {
         frameProfiles: {},
         lastAvatarProfile: '',
         lastFrameProfile: '',
+        themeData: {},
+        lastActiveTheme: 'default',
+        customCommand: '',
+        alarmData: null,
+        syncFilename: '',
+        buttonPosition: null,
         ttsSettings: {
             key: '',
             endpoint: '',
@@ -137,6 +143,68 @@ const SettingsStore = {
             } finally {
                 localStorage.removeItem('cip_tts_settings_v1');
             }
+        }
+
+        const themeRaw = localStorage.getItem('cip_theme_data_v1');
+        if (themeRaw) {
+            try {
+                const parsed = JSON.parse(themeRaw);
+                settings.themeData = parsed && typeof parsed === 'object' ? parsed : {};
+                migrated = true;
+            } catch (error) {
+                console.warn('[carrot] 迁移主题数据失败', error);
+            } finally {
+                localStorage.removeItem('cip_theme_data_v1');
+            }
+        }
+
+        const lastTheme = localStorage.getItem('cip_last_active_theme_v1');
+        if (lastTheme !== null) {
+            settings.lastActiveTheme = lastTheme;
+            migrated = true;
+            localStorage.removeItem('cip_last_active_theme_v1');
+        }
+
+        const customCommand = localStorage.getItem('cip_custom_command_v1');
+        if (customCommand !== null) {
+            settings.customCommand = customCommand;
+            migrated = true;
+            localStorage.removeItem('cip_custom_command_v1');
+        }
+
+        const alarmRaw = localStorage.getItem('cip_alarm_data_v1');
+        if (alarmRaw) {
+            try {
+                const parsed = JSON.parse(alarmRaw);
+                settings.alarmData = parsed && typeof parsed === 'object' ? parsed : null;
+                migrated = true;
+            } catch (error) {
+                console.warn('[carrot] 迁移定时器数据失败', error);
+            } finally {
+                localStorage.removeItem('cip_alarm_data_v1');
+            }
+        }
+
+        const syncFilename = localStorage.getItem('cip_sync_filename_v1');
+        if (syncFilename !== null) {
+            settings.syncFilename = syncFilename;
+            migrated = true;
+            localStorage.removeItem('cip_sync_filename_v1');
+        }
+
+        try {
+            const buttonRaw = localStorage.getItem('cip_button_position_v4');
+            if (buttonRaw) {
+                const parsed = JSON.parse(buttonRaw);
+                if (parsed && typeof parsed === 'object') {
+                    settings.buttonPosition = parsed;
+                    migrated = true;
+                }
+            }
+        } catch (error) {
+            console.warn('[carrot] 迁移按钮位置失败', error);
+        } finally {
+            localStorage.removeItem('cip_button_position_v4');
         }
 
         if (migrated) {

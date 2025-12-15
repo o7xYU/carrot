@@ -1,3 +1,5 @@
+import { SettingsStore } from './store.js';
+
 export function initThemeSettings(
     {
         colorInputs = [],
@@ -9,7 +11,7 @@ export function initThemeSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
+        settingsStore = SettingsStore,
     } = {},
 ) {
     const defaultTheme = {
@@ -22,7 +24,8 @@ export function initThemeSettings(
         '--cip-input-bg-color': 'rgba(255, 255, 255, 0.5)',
     };
 
-    let themes = {};
+    const settings = settingsStore.getSettings();
+    let themes = settings.themeData || {};
 
     const colorInputList = Array.from(colorInputs || []);
     const colorPickerList = Array.from(colorPickers || []);
@@ -118,10 +121,11 @@ export function initThemeSettings(
             return;
         }
         themes[name] = getColorsFromInputs();
-        localStorageRef.setItem('cip_theme_data_v1', JSON.stringify(themes));
+        settings.themeData = themes;
+        settings.lastActiveTheme = name;
+        settingsStore.saveSettings();
         populateThemeSelect();
         themeSelect && (themeSelect.value = name);
-        localStorageRef.setItem('cip_last_active_theme_v1', name);
         alert('主题已保存');
     }
 
@@ -134,26 +138,18 @@ export function initThemeSettings(
         }
         if (confirm(`确定要删除主题 "${selected}" 吗？`)) {
             delete themes[selected];
-            localStorageRef.setItem('cip_theme_data_v1', JSON.stringify(themes));
+            settings.themeData = themes;
+            settings.lastActiveTheme = 'default';
+            settingsStore.saveSettings();
             populateThemeSelect();
             applyTheme(defaultTheme);
-            localStorageRef.setItem('cip_last_active_theme_v1', 'default');
         }
     }
 
     function loadThemes() {
-        try {
-            const savedThemes = localStorageRef.getItem('cip_theme_data_v1');
-            if (savedThemes) {
-                themes = JSON.parse(savedThemes);
-            }
-        } catch (error) {
-            console.warn('加载主题设置失败', error);
-            themes = {};
-        }
+        themes = settings.themeData || {};
         populateThemeSelect();
-        const lastThemeName =
-            localStorageRef.getItem('cip_last_active_theme_v1') || 'default';
+        const lastThemeName = settings.lastActiveTheme || 'default';
         const themeToApply = themes[lastThemeName] || defaultTheme;
         if (themeSelect) {
             themeSelect.value = themes[lastThemeName] ? lastThemeName : 'default';
@@ -199,7 +195,8 @@ export function initThemeSettings(
         const themeName = e.target.value;
         const theme = themeName === 'default' ? defaultTheme : themes[themeName];
         applyTheme(theme);
-        localStorageRef.setItem('cip_last_active_theme_v1', themeName);
+        settings.lastActiveTheme = themeName;
+        settingsStore.saveSettings();
     });
 
     saveThemeBtn?.addEventListener('click', saveCurrentTheme);
