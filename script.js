@@ -17,6 +17,7 @@
     let addCustomRegexRule = () => null;
     let removeCustomRegexRule = () => false;
     let clearRegexState = () => {};
+    const { SettingsStore } = await import('./setting/store.js');
     let regexModuleReady = false;
     let regexEnabled = true;
     let isDocked = false;
@@ -100,30 +101,17 @@
     } catch (error) {
         console.warn('胡萝卜插件：加载正则模块失败', error);
     }
+    const settings = SettingsStore.getSettings();
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
-    const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
-    let unsplashAccessKey = '';
-    try {
-        unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
-    } catch (error) {
-        console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
-        unsplashAccessKey = '';
-    }
+    let unsplashAccessKey = settings.unsplashAccessKey || '';
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
-        try {
-            if (unsplashAccessKey) {
-                localStorage.setItem(UNSPLASH_STORAGE_KEY, unsplashAccessKey);
-            } else {
-                localStorage.removeItem(UNSPLASH_STORAGE_KEY);
-            }
-        } catch (error) {
-            console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
-        }
+        settings.unsplashAccessKey = unsplashAccessKey;
+        SettingsStore.saveSettings();
     }
 
 
@@ -1025,7 +1013,6 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
             },
         );
 
@@ -1063,7 +1050,6 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 unsplashAccessKey,
@@ -1097,7 +1083,6 @@
                 ttsPanes,
             },
             {
-                localStorageRef: localStorage,
                 fetchRef: fetch,
                 documentRef: document,
                 windowRef: window,
@@ -1147,7 +1132,7 @@
 
     let currentTab = 'text',
         currentTextSubType = 'plain',
-        stickerData = {},
+        stickerData = settings.stickerData || {},
         stickerLookup = new Map(),
         currentStickerCategory = '',
         selectedSticker = null,
@@ -1352,27 +1337,14 @@
     }
 
     function readUnsplashCache(query) {
-        try {
-            const raw = localStorage.getItem(getUnsplashCacheKey(query));
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (!parsed || typeof parsed.imageUrl !== 'string') return null;
-            return parsed;
-        } catch (error) {
-            console.error('胡萝卜插件：读取Unsplash缓存失败', error);
-            return null;
-        }
+        const cached = settings.unsplashCache?.[query];
+        if (!cached || typeof cached.imageUrl !== 'string') return null;
+        return cached;
     }
 
     function writeUnsplashCache(query, data) {
-        try {
-            localStorage.setItem(
-                getUnsplashCacheKey(query),
-                JSON.stringify(data),
-            );
-        } catch (error) {
-            console.error('胡萝卜插件：写入Unsplash缓存失败', error);
-        }
+        settings.unsplashCache[query] = data;
+        SettingsStore.saveSettings();
     }
 
     async function requestUnsplashImage(query) {
@@ -1743,22 +1715,13 @@
         });
     }
     function saveStickerData() {
-        try {
-            localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
-        } catch (error) {
-            console.error('胡萝卜插件：写入表情包数据失败', error);
-        }
+        settings.stickerData = stickerData;
+        SettingsStore.saveSettings();
         rebuildStickerLookup();
         reprocessStickerPlaceholders();
     }
     function loadStickerData() {
-        try {
-            const stored = localStorage.getItem('cip_sticker_data');
-            stickerData = stored ? JSON.parse(stored) : {};
-        } catch (error) {
-            console.error('胡萝卜插件：读取表情包数据失败', error);
-            stickerData = {};
-        }
+        stickerData = settings.stickerData || {};
         rebuildStickerLookup();
     }
     function toggleModal(t, o) {

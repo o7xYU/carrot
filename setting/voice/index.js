@@ -5,11 +5,11 @@ import {
     DEFAULT_TTS_SPEED,
 } from '../tts/constants.js';
 import { SILICON_FLOW_TTS_API_DOC } from '../tts/apiDocs.js';
+import { SettingsStore } from '../store.js';
 
 const voiceState = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
         fetchRef: typeof fetch !== 'undefined' ? fetch : null,
         documentRef: typeof document !== 'undefined' ? document : null,
         windowRef: typeof window !== 'undefined' ? window : null,
@@ -33,23 +33,16 @@ function getDefaultEndpoint() {
 }
 
 function getTTSSettings() {
-    const ls = getDeps().localStorageRef;
-    let settings = null;
-    try {
-        settings = JSON.parse(ls?.getItem('cip_tts_settings_v1')) || null;
-    } catch (error) {
-        settings = null;
-    }
-    if (!settings) {
-        settings = {
-            key: '',
-            endpoint: getDefaultEndpoint(),
-            model: '',
-            voice: '',
-        };
-    }
-    if (!settings.endpoint) settings.endpoint = getDefaultEndpoint();
-    return settings;
+    const settings = SettingsStore.getSettings();
+    const stored = settings.ttsSettings || {};
+    const normalized = {
+        key: stored.key || '',
+        endpoint: stored.endpoint || getDefaultEndpoint(),
+        model: stored.model || '',
+        voice: stored.voice || '',
+    };
+    settings.ttsSettings = normalized;
+    return normalized;
 }
 
 function applyTTSSettingsToUI(settings) {
@@ -103,14 +96,9 @@ function readTTSSettingsFromUI() {
 }
 
 function saveTTSSettings(settings) {
-    try {
-        getDeps().localStorageRef?.setItem(
-            'cip_tts_settings_v1',
-            JSON.stringify(settings),
-        );
-    } catch (error) {
-        console.error('保存语音设置失败', error);
-    }
+    const store = SettingsStore.getSettings();
+    store.ttsSettings = settings;
+    SettingsStore.saveSettings();
 }
 
 function updateTTSStatus(text, isError = false) {
