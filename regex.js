@@ -1,9 +1,112 @@
+const script = globalThis.script || {};
+const extension_settings =
+    globalThis.extension_settings || (globalThis.extension_settings = {});
 const STORAGE_KEY = 'cip_regex_enabled_v1';
 const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
 const CUSTOM_RULES_KEY = 'cip_regex_custom_rules_v1';
 const REGEX_PROFILES_KEY = 'cip_regex_profiles_v1';
 const DEFAULT_REGEX_ENABLED = true;
 const originalContentMap = new WeakMap();
+const EXT_NAME = 'regex';
+
+let cachedRuleSettings = null;
+let cachedCustomRules = null;
+let cachedProfileStore = null;
+
+const Store = {
+    defaultSettings: Object.freeze({
+        enabled: DEFAULT_REGEX_ENABLED,
+        customRules: [],
+        ruleSettings: {},
+        profileStore: { active: '', profiles: {} },
+    }),
+
+    getSettings() {
+        if (!extension_settings[EXT_NAME]) {
+            extension_settings[EXT_NAME] = JSON.parse(
+                JSON.stringify(this.defaultSettings),
+            );
+        }
+        const settings = extension_settings[EXT_NAME];
+        for (const key of Object.keys(this.defaultSettings)) {
+            if (settings[key] === undefined) {
+                settings[key] = JSON.parse(
+                    JSON.stringify(this.defaultSettings[key]),
+                );
+            }
+        }
+        return settings;
+    },
+
+    saveSettings() {
+        if (typeof script.saveSettingsDebounced === 'function') {
+            script.saveSettingsDebounced();
+        }
+    },
+
+    migrateFromLocalStorage() {
+        if (typeof localStorage === 'undefined') return;
+
+        const settings = this.getSettings();
+        let migrated = false;
+
+        const enabledRaw = localStorage.getItem(STORAGE_KEY);
+        if (enabledRaw !== null) {
+            settings.enabled = enabledRaw === 'true';
+            localStorage.removeItem(STORAGE_KEY);
+            migrated = true;
+        }
+
+        const ruleSettingsRaw = localStorage.getItem(RULE_SETTINGS_KEY);
+        if (ruleSettingsRaw) {
+            try {
+                const parsed = JSON.parse(ruleSettingsRaw);
+                settings.ruleSettings = parsed;
+                migrated = true;
+            } catch (error) {
+                console.warn('[regex] 迁移规则配置失败', error);
+            } finally {
+                localStorage.removeItem(RULE_SETTINGS_KEY);
+            }
+        }
+
+        const customRulesRaw = localStorage.getItem(CUSTOM_RULES_KEY);
+        if (customRulesRaw) {
+            try {
+                const parsed = JSON.parse(customRulesRaw);
+                settings.customRules = parsed;
+                migrated = true;
+            } catch (error) {
+                console.warn('[regex] 迁移自定义规则失败', error);
+            } finally {
+                localStorage.removeItem(CUSTOM_RULES_KEY);
+            }
+        }
+
+        const profileStoreRaw = localStorage.getItem(REGEX_PROFILES_KEY);
+        if (profileStoreRaw) {
+            try {
+                const parsed = JSON.parse(profileStoreRaw);
+                settings.profileStore = parsed;
+                migrated = true;
+            } catch (error) {
+                console.warn('[regex] 迁移规则预设失败', error);
+            } finally {
+                localStorage.removeItem(REGEX_PROFILES_KEY);
+            }
+        }
+
+        if (migrated) {
+            cachedCustomRules = null;
+            cachedRuleSettings = null;
+            cachedProfileStore = null;
+            this.saveSettings();
+            console.log('[regex] migrated settings from localStorage');
+        }
+    },
+};
+
+Store.migrateFromLocalStorage();
 
 const defaultDocument = typeof document !== 'undefined' ? document : null;
 const TEXT_NODE_FILTER =
@@ -890,10 +993,6 @@ function resolveCustomReplacement({
     return buildCustomReplacement(documentRef, template, groups);
 }
 
-let cachedRuleSettings = null;
-let cachedCustomRules = null;
-let cachedProfileStore = null;
-
 function normalizeFlags(flags = 'g') {
     const raw = typeof flags === 'string' ? flags : '';
     const uniq = [];
@@ -970,17 +1069,9 @@ function normalizeCustomRuleList(rawList = []) {
 function loadCustomRuleDefinitions() {
     if (cachedCustomRules) return cachedCustomRules;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedCustomRules = [];
-            return cachedCustomRules;
-        }
-        const raw = localStorage.getItem(CUSTOM_RULES_KEY);
-        if (!raw) {
-            cachedCustomRules = [];
-            return cachedCustomRules;
-        }
-        const parsed = JSON.parse(raw);
-        cachedCustomRules = normalizeCustomRuleList(parsed);
+        const settings = Store.getSettings();
+        cachedCustomRules = normalizeCustomRuleList(settings.customRules);
+        settings.customRules = cachedCustomRules;
         return cachedCustomRules;
     } catch (error) {
         console.warn('胡萝卜插件：读取自定义正则失败', error);
@@ -993,8 +1084,9 @@ function persistCustomRuleDefinitions(list) {
     cachedCustomRules = normalizeCustomRuleList(list);
     cachedRuleSettings = null;
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
+        const settings = Store.getSettings();
+        settings.customRules = cachedCustomRules;
+        Store.saveSettings();
     } catch (error) {
         console.warn('胡萝卜插件：写入自定义正则失败', error);
     }
@@ -1031,17 +1123,9 @@ function normalizeProfileStore(raw) {
 function loadProfileStore() {
     if (cachedProfileStore) return cachedProfileStore;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedProfileStore = { active: '', profiles: {} };
-            return cachedProfileStore;
-        }
-        const raw = localStorage.getItem(REGEX_PROFILES_KEY);
-        if (!raw) {
-            cachedProfileStore = { active: '', profiles: {} };
-            return cachedProfileStore;
-        }
-        const parsed = JSON.parse(raw);
-        cachedProfileStore = normalizeProfileStore(parsed);
+        const settings = Store.getSettings();
+        cachedProfileStore = normalizeProfileStore(settings.profileStore);
+        settings.profileStore = cachedProfileStore;
         return cachedProfileStore;
     } catch (error) {
         console.warn('胡萝卜插件：读取正则配置预设失败', error);
@@ -1053,8 +1137,9 @@ function loadProfileStore() {
 function persistProfileStore(store) {
     cachedProfileStore = normalizeProfileStore(store);
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(REGEX_PROFILES_KEY, JSON.stringify(cachedProfileStore));
+        const settings = Store.getSettings();
+        settings.profileStore = cachedProfileStore;
+        Store.saveSettings();
     } catch (error) {
         console.warn('胡萝卜插件：写入正则配置预设失败', error);
     }
@@ -1105,17 +1190,9 @@ function normalizeRuleSettings(raw) {
 function loadRuleSettingsFromStorage() {
     if (cachedRuleSettings) return cachedRuleSettings;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedRuleSettings = getDefaultRuleSettings();
-            return cachedRuleSettings;
-        }
-        const raw = localStorage.getItem(RULE_SETTINGS_KEY);
-        if (!raw) {
-            cachedRuleSettings = getDefaultRuleSettings();
-            return cachedRuleSettings;
-        }
-        const parsed = JSON.parse(raw);
-        cachedRuleSettings = normalizeRuleSettings(parsed);
+        const settings = Store.getSettings();
+        cachedRuleSettings = normalizeRuleSettings(settings.ruleSettings);
+        settings.ruleSettings = cachedRuleSettings;
         return cachedRuleSettings;
     } catch (error) {
         console.warn('胡萝卜插件：读取正则规则配置失败', error);
@@ -1127,8 +1204,9 @@ function loadRuleSettingsFromStorage() {
 function persistRuleSettings(settings) {
     cachedRuleSettings = normalizeRuleSettings(settings);
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(RULE_SETTINGS_KEY, JSON.stringify(cachedRuleSettings));
+        const storeSettings = Store.getSettings();
+        storeSettings.ruleSettings = cachedRuleSettings;
+        Store.saveSettings();
     } catch (error) {
         console.warn('胡萝卜插件：写入正则规则配置失败', error);
     }
@@ -1357,12 +1435,11 @@ function restoreOriginal(element) {
 
 export function getRegexEnabled() {
     try {
-        if (typeof localStorage === 'undefined') {
-            return DEFAULT_REGEX_ENABLED;
+        const settings = Store.getSettings();
+        if (typeof settings.enabled !== 'boolean') {
+            settings.enabled = DEFAULT_REGEX_ENABLED;
         }
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored === null) return DEFAULT_REGEX_ENABLED;
-        return stored === 'true';
+        return settings.enabled;
     } catch (error) {
         console.warn('胡萝卜插件：读取正则开关失败', error);
         return DEFAULT_REGEX_ENABLED;
@@ -1371,8 +1448,9 @@ export function getRegexEnabled() {
 
 export function setRegexEnabled(enabled) {
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
+        const settings = Store.getSettings();
+        settings.enabled = !!enabled;
+        Store.saveSettings();
     } catch (error) {
         console.warn('胡萝卜插件：写入正则开关失败', error);
     }
