@@ -1847,12 +1847,10 @@
     const triggerInsertOnEnter = (element) => {
         if (!element) return;
         element.addEventListener('keydown', (event) => {
-            if (
-                event.key === 'Enter' &&
-                !event.shiftKey &&
-                !event.isComposing
-            ) {
+            const isEnter = event.key === 'Enter' || event.keyCode === 13;
+            if (isEnter && !event.shiftKey && !event.isComposing) {
                 event.preventDefault();
+                event.stopPropagation();
                 insertButton.click();
             }
         });
