@@ -1,7 +1,9 @@
+import { persistentStorage } from '../storage.js';
+
 const state = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
+        localStorageRef: persistentStorage,
         alertRef: (message) => alert(message),
         confirmRef: (message) => confirm(message),
         setTimeoutRef: setTimeout,

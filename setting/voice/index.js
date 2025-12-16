@@ -5,11 +5,12 @@ import {
     DEFAULT_TTS_SPEED,
 } from '../tts/constants.js';
 import { SILICON_FLOW_TTS_API_DOC } from '../tts/apiDocs.js';
+import { persistentStorage } from '../../storage.js';
 
 const voiceState = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
+        localStorageRef: persistentStorage,
         fetchRef: typeof fetch !== 'undefined' ? fetch : null,
         documentRef: typeof document !== 'undefined' ? document : null,
         windowRef: typeof window !== 'undefined' ? window : null,

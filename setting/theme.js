@@ -1,3 +1,5 @@
+import { persistentStorage } from '../storage.js';
+
 export function initThemeSettings(
     {
         colorInputs = [],
@@ -9,7 +11,7 @@ export function initThemeSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
+        localStorageRef = persistentStorage,
     } = {},
 ) {
     const defaultTheme = {

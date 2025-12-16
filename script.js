@@ -2,6 +2,8 @@
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
+    const { persistentStorage } = await import('./storage.js');
+
     let applyRegexReplacements = () => false;
     let getRegexEnabled = () => true;
     let setRegexEnabled = () => {};
@@ -103,26 +105,17 @@
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
     const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
     let unsplashAccessKey = '';
-    try {
-        unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
-    } catch (error) {
-        console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
-        unsplashAccessKey = '';
-    }
+    unsplashAccessKey = persistentStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
     const UNSPLASH_PENDING_REQUESTS = new Map();
     const UNSPLASH_MAX_RETRIES = 2;
     const stickerPlaceholderRegex = /\[([^\[\]]+?)\]/g;
 
     function setUnsplashAccessKey(value) {
         unsplashAccessKey = value.trim();
-        try {
-            if (unsplashAccessKey) {
-                localStorage.setItem(UNSPLASH_STORAGE_KEY, unsplashAccessKey);
-            } else {
-                localStorage.removeItem(UNSPLASH_STORAGE_KEY);
-            }
-        } catch (error) {
-            console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
+        if (unsplashAccessKey) {
+            persistentStorage.setItem(UNSPLASH_STORAGE_KEY, unsplashAccessKey);
+        } else {
+            persistentStorage.removeItem(UNSPLASH_STORAGE_KEY);
         }
     }
 
@@ -1025,7 +1018,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: persistentStorage,
             },
         );
 
@@ -1063,7 +1056,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: persistentStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 unsplashAccessKey,
@@ -1097,7 +1090,7 @@
                 ttsPanes,
             },
             {
-                localStorageRef: localStorage,
+                localStorageRef: persistentStorage,
                 fetchRef: fetch,
                 documentRef: document,
                 windowRef: window,
@@ -1117,7 +1110,7 @@
                 alarmStatus,
             },
             {
-                localStorageRef: localStorage,
+                localStorageRef: persistentStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 windowRef: window,
@@ -1134,7 +1127,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: persistentStorage,
                 alertRef: (message) => alert(message),
             },
         );
@@ -1352,9 +1345,9 @@
     }
 
     function readUnsplashCache(query) {
+        const raw = persistentStorage.getItem(getUnsplashCacheKey(query));
+        if (!raw) return null;
         try {
-            const raw = localStorage.getItem(getUnsplashCacheKey(query));
-            if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed.imageUrl !== 'string') return null;
             return parsed;
@@ -1366,7 +1359,7 @@
 
     function writeUnsplashCache(query, data) {
         try {
-            localStorage.setItem(
+            persistentStorage.setItem(
                 getUnsplashCacheKey(query),
                 JSON.stringify(data),
             );
@@ -1744,7 +1737,7 @@
     }
     function saveStickerData() {
         try {
-            localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
+            persistentStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
         } catch (error) {
             console.error('胡萝卜插件：写入表情包数据失败', error);
         }
@@ -1753,7 +1746,7 @@
     }
     function loadStickerData() {
         try {
-            const stored = localStorage.getItem('cip_sticker_data');
+            const stored = persistentStorage.getItem('cip_sticker_data');
             stickerData = stored ? JSON.parse(stored) : {};
         } catch (error) {
             console.error('胡萝卜插件：读取表情包数据失败', error);
@@ -2263,7 +2256,7 @@
                     ? hidePanel()
                     : showPanel();
             } else {
-                localStorage.setItem(
+                persistentStorage.setItem(
                     'cip_button_position_v4',
                     JSON.stringify({
                         top: carrotButton.style.top,
@@ -2285,7 +2278,7 @@
 
     function loadButtonPosition() {
         const savedPos = JSON.parse(
-            localStorage.getItem('cip_button_position_v4'),
+            persistentStorage.getItem('cip_button_position_v4'),
         );
         if (savedPos?.top && savedPos?.left) {
             carrotButton.style.position = 'fixed';

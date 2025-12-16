@@ -1,3 +1,5 @@
+import { persistentStorage } from '../storage.js';
+
 export function initSyncSettings(
     {
         importSettingsInput,
@@ -7,7 +9,7 @@ export function initSyncSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
+        localStorageRef = persistentStorage,
         alertRef = (message) => alert(message),
     } = {},
 ) {

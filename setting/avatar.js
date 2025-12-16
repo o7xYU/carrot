@@ -1,3 +1,5 @@
+import { persistentStorage } from '../storage.js';
+
 export function initAvatarSettings(
     {
         charAvatarUrlInput,
@@ -32,7 +34,7 @@ export function initAvatarSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
+        localStorageRef = persistentStorage,
         alertRef = (message) => alert(message),
         confirmRef = (message) => confirm(message),
         unsplashAccessKey = '',
