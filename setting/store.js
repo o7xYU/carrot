@@ -44,8 +44,112 @@ const SettingsStore = {
     },
 
     saveSettings() {
+        this.persistToLocalStorage();
         if (typeof script.saveSettingsDebounced === 'function') {
             script.saveSettingsDebounced();
+        }
+    },
+
+    persistToLocalStorage(settings = this.getSettings()) {
+        if (typeof localStorage === 'undefined') return;
+        try {
+            localStorage.setItem('cip_sticker_data', JSON.stringify(settings.stickerData || {}));
+        } catch (error) {
+            console.warn('[carrot] 保存表情包数据到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_unsplash_access_key_v1', settings.unsplashAccessKey || '');
+        } catch (error) {
+            console.warn('[carrot] 保存 Unsplash Key 到 localStorage 失败', error);
+        }
+
+        try {
+            const cachePrefix = 'cip_unsplash_cache_v1:';
+            for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(cachePrefix)) {
+                    localStorage.removeItem(key);
+                }
+            }
+            Object.entries(settings.unsplashCache || {}).forEach(([query, value]) => {
+                const serialized = JSON.stringify(value || {});
+                localStorage.setItem(`${cachePrefix}${query}`, serialized);
+            });
+        } catch (error) {
+            console.warn('[carrot] 保存 Unsplash 缓存到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem(
+                'cip_avatar_profiles_v1',
+                JSON.stringify(settings.avatarProfiles || {}),
+            );
+        } catch (error) {
+            console.warn('[carrot] 保存头像配置到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem(
+                'cip_frame_profiles_v1',
+                JSON.stringify(settings.frameProfiles || {}),
+            );
+        } catch (error) {
+            console.warn('[carrot] 保存头像框配置到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_last_avatar_profile_v1', settings.lastAvatarProfile || '');
+        } catch (error) {
+            console.warn('[carrot] 保存最近头像到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_last_frame_profile_v1', settings.lastFrameProfile || '');
+        } catch (error) {
+            console.warn('[carrot] 保存最近头像框到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_theme_data_v1', JSON.stringify(settings.themeData || {}));
+        } catch (error) {
+            console.warn('[carrot] 保存主题数据到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_last_active_theme_v1', settings.lastActiveTheme || 'default');
+        } catch (error) {
+            console.warn('[carrot] 保存最近主题到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_custom_command_v1', settings.customCommand || '');
+        } catch (error) {
+            console.warn('[carrot] 保存自定义指令到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_alarm_data_v1', JSON.stringify(settings.alarmData || null));
+        } catch (error) {
+            console.warn('[carrot] 保存定时器数据到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_sync_filename_v1', settings.syncFilename || '');
+        } catch (error) {
+            console.warn('[carrot] 保存同步文件名到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_button_position_v4', JSON.stringify(settings.buttonPosition || null));
+        } catch (error) {
+            console.warn('[carrot] 保存按钮位置到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem('cip_tts_settings_v1', JSON.stringify(settings.ttsSettings || {}));
+        } catch (error) {
+            console.warn('[carrot] 保存语音设置到 localStorage 失败', error);
         }
     },
 

@@ -39,8 +39,36 @@ const Store = {
     },
 
     saveSettings() {
+        this.persistToLocalStorage();
         if (typeof script.saveSettingsDebounced === 'function') {
             script.saveSettingsDebounced();
+        }
+    },
+
+    persistToLocalStorage(settings = this.getSettings()) {
+        if (typeof localStorage === 'undefined') return;
+        try {
+            localStorage.setItem(STORAGE_KEY, settings.enabled ? 'true' : 'false');
+        } catch (error) {
+            console.warn('[regex] 保存开关状态到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem(RULE_SETTINGS_KEY, JSON.stringify(settings.ruleSettings || {}));
+        } catch (error) {
+            console.warn('[regex] 保存规则设置到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(settings.customRules || []));
+        } catch (error) {
+            console.warn('[regex] 保存自定义规则到 localStorage 失败', error);
+        }
+
+        try {
+            localStorage.setItem(REGEX_PROFILES_KEY, JSON.stringify(settings.profileStore || { active: '', profiles: {} }));
+        } catch (error) {
+            console.warn('[regex] 保存规则预设到 localStorage 失败', error);
         }
     },
 
