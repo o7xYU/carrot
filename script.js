@@ -1848,11 +1848,14 @@
         if (!element) return;
         element.addEventListener('keydown', (event) => {
             const isEnter = event.key === 'Enter' || event.keyCode === 13;
-            if (isEnter && !event.shiftKey && !event.isComposing) {
-                event.preventDefault();
+            if (!isEnter) return;
+            if (event.isComposing) {
                 event.stopPropagation();
-                insertButton.click();
+                return;
             }
+            event.preventDefault();
+            event.stopPropagation();
+            insertButton.click();
         });
     };
 
