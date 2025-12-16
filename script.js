@@ -1844,6 +1844,29 @@
         insertIntoSillyTavern(buildDateSnippet()),
     );
 
+    const triggerInsertOnEnter = (element) => {
+        if (!element) return;
+        element.addEventListener('keydown', (event) => {
+            if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !event.isComposing
+            ) {
+                event.preventDefault();
+                insertButton.click();
+            }
+        });
+    };
+
+    [
+        mainInput,
+        voiceDurationInput,
+        voiceMessageInput,
+        walletPlatformInput,
+        walletAmountInput,
+        walletMessageInput,
+    ].forEach(triggerInsertOnEnter);
+
     insertButton.addEventListener('click', () => {
         let formattedText = '';
         let inputToClear = null;
