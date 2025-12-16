@@ -1,14 +1,14 @@
+import { extension_settings } from './extensions.js';
+
 const EXTENSION_KEY = 'cip_quick_input_settings';
 const memoryStore = {};
 
 function getExtensionSettings() {
     if (typeof window === 'undefined') return memoryStore;
-    const extSettings = window.extension_settings;
-    if (!extSettings) return memoryStore;
-    if (!extSettings[EXTENSION_KEY]) {
-        extSettings[EXTENSION_KEY] = {};
+    if (!extension_settings[EXTENSION_KEY]) {
+        extension_settings[EXTENSION_KEY] = {};
     }
-    return extSettings[EXTENSION_KEY];
+    return extension_settings[EXTENSION_KEY];
 }
 
 function persistExtensionSettings() {
