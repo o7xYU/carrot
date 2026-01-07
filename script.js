@@ -100,9 +100,101 @@
     } catch (error) {
         console.warn('胡萝卜插件：加载正则模块失败', error);
     }
+    const EXTENSION_SETTINGS_KEY = 'carrot';
+    const EXTENSION_INPUT_VALUES_KEY = 'inputValues';
     const UNSPLASH_CACHE_PREFIX = 'cip_unsplash_cache_v1:';
     const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
     let unsplashAccessKey = '';
+    let extensionContext = null;
+    let extensionSettings = null;
+    let extensionSettingsReady = false;
+
+    async function initExtensionSettings() {
+        try {
+            const extensionModule = await import('./extensions.js');
+            if (typeof extensionModule.getContext !== 'function') {
+                throw new Error('缺少 getContext');
+            }
+            extensionContext = extensionModule.getContext();
+            if (!extensionContext) return false;
+            extensionContext.extensionSettings =
+                extensionContext.extensionSettings || {};
+            extensionContext.extensionSettings[EXTENSION_SETTINGS_KEY] =
+                extensionContext.extensionSettings[EXTENSION_SETTINGS_KEY] || {};
+            extensionSettings =
+                extensionContext.extensionSettings[EXTENSION_SETTINGS_KEY];
+            extensionSettings[EXTENSION_INPUT_VALUES_KEY] =
+                extensionSettings[EXTENSION_INPUT_VALUES_KEY] || {};
+            extensionSettingsReady = true;
+            return true;
+        } catch (error) {
+            console.warn('胡萝卜插件：读取扩展设置失败', error);
+            return false;
+        }
+    }
+
+    function saveExtensionSettings() {
+        if (!extensionSettingsReady) return;
+        if (typeof extensionContext?.saveSettingsDebounced === 'function') {
+            extensionContext.saveSettingsDebounced();
+        }
+    }
+
+    function updateExtensionInputValue(fieldId, value) {
+        if (!extensionSettingsReady) return;
+        if (!extensionSettings[EXTENSION_INPUT_VALUES_KEY]) {
+            extensionSettings[EXTENSION_INPUT_VALUES_KEY] = {};
+        }
+        extensionSettings[EXTENSION_INPUT_VALUES_KEY][fieldId] = value;
+        saveExtensionSettings();
+    }
+
+    function restoreExtensionInputs(container) {
+        if (!extensionSettingsReady || !container) return;
+        const storedValues = extensionSettings[EXTENSION_INPUT_VALUES_KEY];
+        if (!storedValues) return;
+        const fields = container.querySelectorAll('input, textarea, select');
+        fields.forEach((field) => {
+            if (!field.id) return;
+            if (field.tagName === 'INPUT' && field.type === 'file') return;
+            if (!Object.prototype.hasOwnProperty.call(storedValues, field.id))
+                return;
+            const value = storedValues[field.id];
+            if (field.type === 'checkbox' || field.type === 'radio') {
+                field.checked = Boolean(value);
+                return;
+            }
+            if (field.tagName === 'SELECT' && value) {
+                if (!field.querySelector(`option[value="${value}"]`)) {
+                    const option = new Option(value, value, true, true);
+                    field.add(option);
+                }
+            }
+            field.value = value ?? '';
+        });
+    }
+
+    function bindExtensionInputSync(container) {
+        if (!extensionSettingsReady || !container) return;
+        const fields = container.querySelectorAll('input, textarea, select');
+        fields.forEach((field) => {
+            if (!field.id) return;
+            if (field.tagName === 'INPUT' && field.type === 'file') return;
+            const eventName =
+                field.tagName === 'SELECT' ||
+                field.type === 'checkbox' ||
+                field.type === 'radio'
+                    ? 'change'
+                    : 'input';
+            field.addEventListener(eventName, () => {
+                const value =
+                    field.type === 'checkbox' || field.type === 'radio'
+                        ? field.checked
+                        : field.value;
+                updateExtensionInputValue(field.id, value);
+            });
+        });
+    }
     try {
         unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
     } catch (error) {
@@ -124,6 +216,7 @@
         } catch (error) {
             console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
         }
+        updateExtensionInputValue('cip-unsplash-access-key', unsplashAccessKey);
     }
 
 
@@ -627,6 +720,15 @@
     const frameOffsetYValue = get('cip-frame-offset-y-value');
     const frameResetBtn = get('cip-frame-reset-btn');
     const frameCloseBtn = get('cip-frame-close-btn');
+
+    await initExtensionSettings();
+    const storedUnsplashKey =
+        extensionSettings?.[EXTENSION_INPUT_VALUES_KEY]?.[
+            'cip-unsplash-access-key'
+        ];
+    if (typeof storedUnsplashKey === 'string' && storedUnsplashKey.trim()) {
+        unsplashAccessKey = storedUnsplashKey.trim();
+    }
 
     function setDotToggleState(button, enabled) {
         if (!button) return;
@@ -1140,6 +1242,12 @@
         );
     } catch (error) {
         console.error('胡萝卜插件：加载设置模块失败', error);
+    }
+
+    restoreExtensionInputs(settingsPanelEl);
+    bindExtensionInputSync(settingsPanelEl);
+    if (unsplashAccessKeyInput && unsplashAccessKeyInput.value) {
+        setUnsplashAccessKey(unsplashAccessKeyInput.value);
     }
 
     // --- 4. 核心逻辑与事件监听 (已修改) ---
