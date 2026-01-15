@@ -1161,10 +1161,10 @@
             post: '“[{content}.link]”',
             bunny: "+{content}+",
         },
-        voice: '"={duration}|{message}="',
-        wallet: '"[{platform}|{amount}|{message}]"',
+        voice: '“={duration}|{message}=”',
+        wallet: '“[{platform}|{amount}|{message}]”',
         stickers: '“[{desc}]”',
-        recall: '"--"',
+        recall: '“--”',
     };
     const weekdayLabels = [
         '星期日',
@@ -1216,7 +1216,7 @@
                 break;
             case 'wallet':
                 formatDisplay.textContent =
-                    '格式: “[平台名称|金额/车牌号|留言/物品名称]”';
+                    '格式: \u201C[平台名称|金额/车牌号|留言/物品名称]\u201D';
                 break;
             case 'stickers':
                 formatDisplay.textContent = '格式: “描述”';

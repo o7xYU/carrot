@@ -215,7 +215,7 @@ const REGEX_RULES = [
     {
         id: 'bhl-char-voice',
         name: '角色语音',
-        patternSource: '^"=(.*?)\\|(.*?)="$',
+        patternSource: '^["“]?=(.*?)\\|(.*?)=["”]?$',
         flags: 'gm',
         defaultReplacement: '$2',
         createNode({ documentRef, groups, config }) {
@@ -495,7 +495,7 @@ const REGEX_RULES = [
     {
         id: 'bhl-char-dimension',
         name: 'char超次元',
-        patternSource: '"\\[(.*?)\\|(.*?)\\|(.*?)\\]"',
+        patternSource: '["“]?\\[(.*?)\\|(.*?)\\|(.*?)\\]["”]?',
         flags: 'g',
         defaultReplacement: '$3',
         createNode({ documentRef, groups, config }) {
@@ -626,7 +626,7 @@ const REGEX_RULES = [
     {
         id: 'bhl-user-dimension',
         name: 'user超次元',
-        patternSource: '\\[(.*?)-(.*?)-(.*?)\\]',
+        patternSource: '“\\[(.*?)-(.*?)-(.*?)\\]”',
         flags: 'g',
         defaultReplacement: '$3',
         createNode({ documentRef, groups, config }) {
@@ -787,7 +787,7 @@ const REGEX_RULES = [
     {
         id: 'bhl-recall',
         name: '撤回提示',
-        patternSource: '^"-(.*?)-"$',
+        patternSource: '^["“]?-(.*?)-["”]?$',
         flags: 'gm',
         defaultReplacement: '$1',
         createNode({ documentRef, groups, config }) {
