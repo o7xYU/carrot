@@ -166,7 +166,7 @@
                         <div id="cip-emoji-picker-btn" title="Emoji">😊</div>
                     </div>
                 </div>
-                <div id="cip-voice-content" class="cip-content-section"><input type="number" id="cip-voice-duration" placeholder="输入时长 (秒, 仅数字)"><textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea></div>
+                <div id="cip-voice-content" class="cip-content-section"><input type="text" id="cip-voice-duration" placeholder="输入时长 (MM:SS)"><textarea id="cip-voice-message" placeholder="输入语音识别出的内容..."></textarea></div>
                 <div id="cip-wallet-content" class="cip-content-section"><div class="cip-wallet-row"><input type="text" id="cip-wallet-platform" placeholder="平台名称"><input type="text" id="cip-wallet-amount" placeholder="金额/车牌号"></div><div class="cip-wallet-row"><input type="text" id="cip-wallet-message" placeholder="留言/物品名称"></div></div>
                 <div id="cip-stickers-content" class="cip-content-section"><div id="cip-sticker-categories" class="cip-sub-options-container"><button id="cip-add-category-btn" class="cip-sub-option-btn">+</button></div><div id="cip-sticker-grid"></div></div>
             </div>
@@ -1161,10 +1161,10 @@
             post: '“[{content}.link]”',
             bunny: "+{content}+",
         },
-        voice: '={duration}-{message}=',
-        wallet: '[{platform}-{amount}-{message}]',
+        voice: '"={duration}|{message}="',
+        wallet: '"[{platform}|{amount}|{message}]"',
         stickers: '“[{desc}]”',
-        recall: '--',
+        recall: '"--"',
     };
     const weekdayLabels = [
         '星期日',
@@ -1212,14 +1212,14 @@
                 formatDisplay.textContent = `格式: ${formatTemplates.text[currentTextSubType].replace('{content}', '内容')}`;
                 break;
             case 'voice':
-                formatDisplay.textContent = '格式: =数字-内容=';
+                formatDisplay.textContent = '格式: “=MM:SS|内容=”';
                 break;
             case 'wallet':
                 formatDisplay.textContent =
-                    '格式: [平台名称-金额/车牌号-留言/物品名称]';
+                    '格式: “[平台名称|金额/车牌号|留言/物品名称]”';
                 break;
             case 'stickers':
-                formatDisplay.textContent = '格式: "描述"';
+                formatDisplay.textContent = '格式: “描述”';
                 if (e) {
                     const t = document.createElement('i');
                     t.textContent = ' ➕';
