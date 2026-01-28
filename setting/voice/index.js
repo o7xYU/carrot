@@ -5,11 +5,18 @@ import {
     DEFAULT_TTS_SPEED,
 } from '../tts/constants.js';
 import { SILICON_FLOW_TTS_API_DOC } from '../tts/apiDocs.js';
+import { getSettingsStore } from '../storage.js';
+
+const fallbackStore = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+};
 
 const voiceState = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
+        settingsStore: getSettingsStore(),
         fetchRef: typeof fetch !== 'undefined' ? fetch : null,
         documentRef: typeof document !== 'undefined' ? document : null,
         windowRef: typeof window !== 'undefined' ? window : null,
@@ -33,7 +40,7 @@ function getDefaultEndpoint() {
 }
 
 function getTTSSettings() {
-    const ls = getDeps().localStorageRef;
+    const ls = getDeps().settingsStore || fallbackStore;
     let settings = null;
     try {
         settings = JSON.parse(ls?.getItem('cip_tts_settings_v1')) || null;
@@ -104,7 +111,7 @@ function readTTSSettingsFromUI() {
 
 function saveTTSSettings(settings) {
     try {
-        getDeps().localStorageRef?.setItem(
+        getDeps().settingsStore?.setItem(
             'cip_tts_settings_v1',
             JSON.stringify(settings),
         );

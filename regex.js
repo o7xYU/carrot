@@ -1,3 +1,5 @@
+import { getSettingsStore } from './setting/storage.js';
+
 const STORAGE_KEY = 'cip_regex_enabled_v1';
 const RULE_SETTINGS_KEY = 'cip_regex_rule_settings_v1';
 const CUSTOM_RULES_KEY = 'cip_regex_custom_rules_v1';
@@ -8,6 +10,16 @@ const originalContentMap = new WeakMap();
 const defaultDocument = typeof document !== 'undefined' ? document : null;
 const TEXT_NODE_FILTER =
     typeof NodeFilter !== 'undefined' ? NodeFilter.SHOW_TEXT : 4;
+
+const fallbackStore = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+};
+
+function getStorage() {
+    return getSettingsStore() || fallbackStore;
+}
 
 const REGEX_RULES = [
     {
@@ -709,11 +721,8 @@ function normalizeCustomRuleList(rawList = []) {
 function loadCustomRuleDefinitions() {
     if (cachedCustomRules) return cachedCustomRules;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedCustomRules = [];
-            return cachedCustomRules;
-        }
-        const raw = localStorage.getItem(CUSTOM_RULES_KEY);
+        const store = getStorage();
+        const raw = store.getItem(CUSTOM_RULES_KEY);
         if (!raw) {
             cachedCustomRules = [];
             return cachedCustomRules;
@@ -732,8 +741,8 @@ function persistCustomRuleDefinitions(list) {
     cachedCustomRules = normalizeCustomRuleList(list);
     cachedRuleSettings = null;
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
+        const store = getStorage();
+        store.setItem(CUSTOM_RULES_KEY, JSON.stringify(cachedCustomRules));
     } catch (error) {
         console.warn('胡萝卜插件：写入自定义正则失败', error);
     }
@@ -770,11 +779,8 @@ function normalizeProfileStore(raw) {
 function loadProfileStore() {
     if (cachedProfileStore) return cachedProfileStore;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedProfileStore = { active: '', profiles: {} };
-            return cachedProfileStore;
-        }
-        const raw = localStorage.getItem(REGEX_PROFILES_KEY);
+        const store = getStorage();
+        const raw = store.getItem(REGEX_PROFILES_KEY);
         if (!raw) {
             cachedProfileStore = { active: '', profiles: {} };
             return cachedProfileStore;
@@ -792,8 +798,8 @@ function loadProfileStore() {
 function persistProfileStore(store) {
     cachedProfileStore = normalizeProfileStore(store);
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(REGEX_PROFILES_KEY, JSON.stringify(cachedProfileStore));
+        const storage = getStorage();
+        storage.setItem(REGEX_PROFILES_KEY, JSON.stringify(cachedProfileStore));
     } catch (error) {
         console.warn('胡萝卜插件：写入正则配置预设失败', error);
     }
@@ -844,11 +850,8 @@ function normalizeRuleSettings(raw) {
 function loadRuleSettingsFromStorage() {
     if (cachedRuleSettings) return cachedRuleSettings;
     try {
-        if (typeof localStorage === 'undefined') {
-            cachedRuleSettings = getDefaultRuleSettings();
-            return cachedRuleSettings;
-        }
-        const raw = localStorage.getItem(RULE_SETTINGS_KEY);
+        const store = getStorage();
+        const raw = store.getItem(RULE_SETTINGS_KEY);
         if (!raw) {
             cachedRuleSettings = getDefaultRuleSettings();
             return cachedRuleSettings;
@@ -866,8 +869,8 @@ function loadRuleSettingsFromStorage() {
 function persistRuleSettings(settings) {
     cachedRuleSettings = normalizeRuleSettings(settings);
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(RULE_SETTINGS_KEY, JSON.stringify(cachedRuleSettings));
+        const store = getStorage();
+        store.setItem(RULE_SETTINGS_KEY, JSON.stringify(cachedRuleSettings));
     } catch (error) {
         console.warn('胡萝卜插件：写入正则规则配置失败', error);
     }
@@ -1096,10 +1099,8 @@ function restoreOriginal(element) {
 
 export function getRegexEnabled() {
     try {
-        if (typeof localStorage === 'undefined') {
-            return DEFAULT_REGEX_ENABLED;
-        }
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const store = getStorage();
+        const stored = store.getItem(STORAGE_KEY);
         if (stored === null) return DEFAULT_REGEX_ENABLED;
         return stored === 'true';
     } catch (error) {
@@ -1110,8 +1111,8 @@ export function getRegexEnabled() {
 
 export function setRegexEnabled(enabled) {
     try {
-        if (typeof localStorage === 'undefined') return;
-        localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
+        const store = getStorage();
+        store.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
     } catch (error) {
         console.warn('胡萝卜插件：写入正则开关失败', error);
     }

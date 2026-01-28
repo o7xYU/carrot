@@ -2,6 +2,8 @@
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
+    let settingsStore = null;
+
     let applyRegexReplacements = () => false;
     let getRegexEnabled = () => true;
     let setRegexEnabled = () => {};
@@ -22,6 +24,15 @@
     let isDocked = false;
     let dockedLauncherButton = null;
     let dockPlaceholder = null;
+
+    try {
+        const { initSettingsStore } = await import('./setting/storage.js');
+        settingsStore = await initSettingsStore({
+            documentRef: document,
+        });
+    } catch (error) {
+        console.warn('胡萝卜插件：初始化 settings.json 存储失败', error);
+    }
 
     try {
         const regexModule = await import('./regex.js');
@@ -104,7 +115,8 @@
     const UNSPLASH_STORAGE_KEY = 'cip_unsplash_access_key_v1';
     let unsplashAccessKey = '';
     try {
-        unsplashAccessKey = localStorage.getItem(UNSPLASH_STORAGE_KEY) || '';
+        unsplashAccessKey =
+            settingsStore?.getItem(UNSPLASH_STORAGE_KEY) || '';
     } catch (error) {
         console.error('胡萝卜插件：读取Unsplash Access Key失败', error);
         unsplashAccessKey = '';
@@ -117,9 +129,12 @@
         unsplashAccessKey = value.trim();
         try {
             if (unsplashAccessKey) {
-                localStorage.setItem(UNSPLASH_STORAGE_KEY, unsplashAccessKey);
+                settingsStore?.setItem(
+                    UNSPLASH_STORAGE_KEY,
+                    unsplashAccessKey,
+                );
             } else {
-                localStorage.removeItem(UNSPLASH_STORAGE_KEY);
+                settingsStore?.removeItem(UNSPLASH_STORAGE_KEY);
             }
         } catch (error) {
             console.error('胡萝卜插件：写入Unsplash Access Key失败', error);
@@ -465,13 +480,13 @@
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                     <div class="cip-sync-path-container">
                         <label for="cip-sync-path-input">保存到:</label>
-                        <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
+                        <input type="text" id="cip-sync-path-input" placeholder="settings.json">
                     </div>
                     <div class="cip-sync-path-actions">
                         <button id="cip-save-path-btn">保存</button>
                         <button id="cip-load-path-btn">加载</button>
                     </div>
-                    <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
+                    <p class="cip-sync-note">提示：所有设置会写入 settings.json，浏览器不支持直接写入时会触发下载。</p>
                 </section>
             </div>
             <div class="cip-settings-footer">
@@ -1025,7 +1040,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                settingsStore,
             },
         );
 
@@ -1063,7 +1078,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                settingsStore,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 unsplashAccessKey,
@@ -1097,7 +1112,7 @@
                 ttsPanes,
             },
             {
-                localStorageRef: localStorage,
+                settingsStore,
                 fetchRef: fetch,
                 documentRef: document,
                 windowRef: window,
@@ -1117,7 +1132,7 @@
                 alarmStatus,
             },
             {
-                localStorageRef: localStorage,
+                settingsStore,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 windowRef: window,
@@ -1134,7 +1149,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                settingsStore,
                 alertRef: (message) => alert(message),
             },
         );
@@ -1353,7 +1368,7 @@
 
     function readUnsplashCache(query) {
         try {
-            const raw = localStorage.getItem(getUnsplashCacheKey(query));
+            const raw = settingsStore?.getItem(getUnsplashCacheKey(query));
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed.imageUrl !== 'string') return null;
@@ -1366,7 +1381,7 @@
 
     function writeUnsplashCache(query, data) {
         try {
-            localStorage.setItem(
+            settingsStore?.setItem(
                 getUnsplashCacheKey(query),
                 JSON.stringify(data),
             );
@@ -1744,7 +1759,10 @@
     }
     function saveStickerData() {
         try {
-            localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
+            settingsStore?.setItem(
+                'cip_sticker_data',
+                JSON.stringify(stickerData),
+            );
         } catch (error) {
             console.error('胡萝卜插件：写入表情包数据失败', error);
         }
@@ -1753,7 +1771,7 @@
     }
     function loadStickerData() {
         try {
-            const stored = localStorage.getItem('cip_sticker_data');
+            const stored = settingsStore?.getItem('cip_sticker_data');
             stickerData = stored ? JSON.parse(stored) : {};
         } catch (error) {
             console.error('胡萝卜插件：读取表情包数据失败', error);
@@ -2263,7 +2281,7 @@
                     ? hidePanel()
                     : showPanel();
             } else {
-                localStorage.setItem(
+                settingsStore?.setItem(
                     'cip_button_position_v4',
                     JSON.stringify({
                         top: carrotButton.style.top,
@@ -2285,7 +2303,7 @@
 
     function loadButtonPosition() {
         const savedPos = JSON.parse(
-            localStorage.getItem('cip_button_position_v4'),
+            settingsStore?.getItem('cip_button_position_v4') || 'null',
         );
         if (savedPos?.top && savedPos?.left) {
             carrotButton.style.position = 'fixed';

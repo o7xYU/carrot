@@ -1,3 +1,11 @@
+import { getSettingsStore } from './storage.js';
+
+const fallbackStore = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+};
+
 export function initAvatarSettings(
     {
         charAvatarUrlInput,
@@ -32,7 +40,7 @@ export function initAvatarSettings(
     },
     {
         documentRef = document,
-        localStorageRef = localStorage,
+        settingsStore = getSettingsStore(),
         alertRef = (message) => alert(message),
         confirmRef = (message) => confirm(message),
         unsplashAccessKey = '',
@@ -40,6 +48,7 @@ export function initAvatarSettings(
         reprocessUnsplashPlaceholders = () => {},
     } = {},
 ) {
+    const storage = settingsStore || fallbackStore;
     let avatarStyleTag = null;
     let avatarProfiles = {};
     let frameProfiles = {};
@@ -164,7 +173,7 @@ export function initAvatarSettings(
             char: charUrl,
             user: userUrl,
         };
-        localStorageRef.setItem(
+        storage.setItem(
             'cip_avatar_profiles_v1',
             JSON.stringify(avatarProfiles),
         );
@@ -185,7 +194,7 @@ export function initAvatarSettings(
         }
         if (confirmRef(`确定要删除 "${selected}" 这个头像配置吗？`)) {
             delete avatarProfiles[selected];
-            localStorageRef.setItem(
+            storage.setItem(
                 'cip_avatar_profiles_v1',
                 JSON.stringify(avatarProfiles),
             );
@@ -216,7 +225,7 @@ export function initAvatarSettings(
             charFrameAdj: { ...frameAdjustments.char },
             userFrameAdj: { ...frameAdjustments.user },
         };
-        localStorageRef.setItem(
+        storage.setItem(
             'cip_frame_profiles_v1',
             JSON.stringify(frameProfiles),
         );
@@ -235,7 +244,7 @@ export function initAvatarSettings(
         }
         if (confirmRef(`确定要删除 "${selected}" 这个头像框配置吗？`)) {
             delete frameProfiles[selected];
-            localStorageRef.setItem(
+            storage.setItem(
                 'cip_frame_profiles_v1',
                 JSON.stringify(frameProfiles),
             );
@@ -245,14 +254,14 @@ export function initAvatarSettings(
 
     function loadAvatarProfiles() {
         try {
-            const savedProfiles = localStorageRef.getItem('cip_avatar_profiles_v1');
+            const savedProfiles = storage.getItem('cip_avatar_profiles_v1');
             avatarProfiles = savedProfiles ? JSON.parse(savedProfiles) : {};
         } catch (error) {
             console.warn('加载头像配置失败', error);
             avatarProfiles = {};
         }
         populateAvatarSelect();
-        const lastProfileName = localStorageRef.getItem('cip_last_avatar_profile_v1');
+        const lastProfileName = storage.getItem('cip_last_avatar_profile_v1');
         if (lastProfileName && avatarProfiles[lastProfileName]) {
             if (avatarProfileSelect) avatarProfileSelect.value = lastProfileName;
             const profile = avatarProfiles[lastProfileName];
@@ -264,14 +273,14 @@ export function initAvatarSettings(
 
     function loadFrameProfiles() {
         try {
-            const savedProfiles = localStorageRef.getItem('cip_frame_profiles_v1');
+            const savedProfiles = storage.getItem('cip_frame_profiles_v1');
             frameProfiles = savedProfiles ? JSON.parse(savedProfiles) : {};
         } catch (error) {
             console.warn('加载头像框配置失败', error);
             frameProfiles = {};
         }
         populateFrameSelect();
-        const lastFrameProfileName = localStorageRef.getItem(
+        const lastFrameProfileName = storage.getItem(
             'cip_last_frame_profile_v1',
         );
         if (lastFrameProfileName && frameProfiles[lastFrameProfileName]) {
@@ -304,12 +313,12 @@ export function initAvatarSettings(
             if (charAvatarUrlInput) charAvatarUrlInput.value = profile.char || '';
             if (userAvatarUrlInput) userAvatarUrlInput.value = profile.user || '';
             applyFromInputs();
-            localStorageRef.setItem('cip_last_avatar_profile_v1', profileName);
+            storage.setItem('cip_last_avatar_profile_v1', profileName);
         } else if (!profileName) {
             if (charAvatarUrlInput) charAvatarUrlInput.value = '';
             if (userAvatarUrlInput) userAvatarUrlInput.value = '';
             applyFromInputs();
-            localStorageRef.removeItem('cip_last_avatar_profile_v1');
+            storage.removeItem('cip_last_avatar_profile_v1');
         }
     });
 
@@ -331,14 +340,14 @@ export function initAvatarSettings(
                 frameAdjustments.user = { ...profile.userFrameAdj };
             }
             applyFromInputs();
-            localStorageRef.setItem('cip_last_frame_profile_v1', profileName);
+            storage.setItem('cip_last_frame_profile_v1', profileName);
         } else if (!profileName) {
             if (charAvatarFrameUrlInput) charAvatarFrameUrlInput.value = '';
             if (userAvatarFrameUrlInput) userAvatarFrameUrlInput.value = '';
             frameAdjustments.char = { size: 120, offsetX: 0, offsetY: 0 };
             frameAdjustments.user = { size: 120, offsetX: 0, offsetY: 0 };
             applyFromInputs();
-            localStorageRef.removeItem('cip_last_frame_profile_v1');
+            storage.removeItem('cip_last_frame_profile_v1');
         }
     });
 

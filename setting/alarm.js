@@ -1,7 +1,15 @@
+import { getSettingsStore } from './storage.js';
+
+const fallbackStore = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+};
+
 const state = {
     elements: {},
     dependencies: {
-        localStorageRef: typeof localStorage !== 'undefined' ? localStorage : null,
+        settingsStore: getSettingsStore(),
         alertRef: (message) => alert(message),
         confirmRef: (message) => confirm(message),
         setTimeoutRef: setTimeout,
@@ -36,7 +44,7 @@ export function initAlarmSettings(elements, dependencies = {}) {
 
     if (alarmCommandInput) {
         alarmCommandInput.value =
-            getDeps().localStorageRef?.getItem('cip_custom_command_v1') ||
+            getDeps().settingsStore?.getItem('cip_custom_command_v1') ||
             state.dependencies.defaultCommand ||
             alarmCommandInput.value;
     }
@@ -48,7 +56,7 @@ export function initAlarmSettings(elements, dependencies = {}) {
             if (alarmCommandInput) {
                 alarmCommandInput.value = state.dependencies.defaultCommand;
             }
-            getDeps().localStorageRef?.removeItem('cip_custom_command_v1');
+            getDeps().settingsStore?.removeItem('cip_custom_command_v1');
         }
     });
 
@@ -104,7 +112,7 @@ export function startAlarm(isContinuation = false) {
     if (!ensureWorker()) return;
     const { hours, minutes, seconds, command, repeat } = readInputs();
     const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-    const ls = getDeps().localStorageRef;
+    const ls = getDeps().settingsStore || fallbackStore;
 
     if (totalMs <= 0) {
         getDeps().alertRef('请输入有效的定时时间！');
@@ -146,13 +154,13 @@ export function startAlarm(isContinuation = false) {
 
 export function stopAlarm() {
     state.timerWorker?.postMessage({ type: 'stop' });
-    getDeps().localStorageRef?.removeItem('cip_alarm_data_v1');
+    getDeps().settingsStore?.removeItem('cip_alarm_data_v1');
     updateAlarmStatus(null);
 }
 
 export function updateAlarmStatus(data) {
     const { alarmStatus, alarmCommandInput } = getElements();
-    const ls = getDeps().localStorageRef;
+    const ls = getDeps().settingsStore || fallbackStore;
     if (!alarmStatus) return;
     if (data && typeof data.remaining === 'number') {
         const remainingMs = Math.max(0, data.remaining);
@@ -189,7 +197,7 @@ export function updateAlarmStatus(data) {
 }
 
 export function checkAlarmOnLoad() {
-    const ls = getDeps().localStorageRef;
+    const ls = getDeps().settingsStore || fallbackStore;
     let alarmData = null;
     try {
         alarmData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
@@ -265,7 +273,7 @@ export function executeCommand(command) {
 }
 
 export function handleExecutionComplete() {
-    const ls = getDeps().localStorageRef;
+    const ls = getDeps().settingsStore || fallbackStore;
     let currentAlarmData = null;
     try {
         currentAlarmData = JSON.parse(ls?.getItem('cip_alarm_data_v1'));
