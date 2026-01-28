@@ -480,13 +480,13 @@
                     <input type="file" id="cip-import-settings-input" accept=".json" style="display: none;">
                     <div class="cip-sync-path-container">
                         <label for="cip-sync-path-input">保存到:</label>
-                        <input type="text" id="cip-sync-path-input" placeholder="settings.json">
+                        <input type="text" id="cip-sync-path-input" placeholder="输入默认文件名 (例如: settings.json)">
                     </div>
                     <div class="cip-sync-path-actions">
                         <button id="cip-save-path-btn">保存</button>
                         <button id="cip-load-path-btn">加载</button>
                     </div>
-                    <p class="cip-sync-note">提示：所有设置会写入 settings.json，浏览器不支持直接写入时会触发下载。</p>
+                    <p class="cip-sync-note">提示：由于浏览器安全限制，"保存"将使用上方文件名弹出另存为对话框，"加载"会打开文件选择框。</p>
                 </section>
             </div>
             <div class="cip-settings-footer">

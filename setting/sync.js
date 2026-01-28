@@ -44,16 +44,27 @@ export function initSyncSettings(
                 alertRef('没有可导出的设置。');
                 return;
             }
-            if (!store?.saveToFile) {
-                alertRef('当前环境无法写入 settings.json。');
-                return;
-            }
-            store.saveToFile();
+            const jsonString = JSON.stringify(settingsToExport, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = documentRef.createElement('a');
+            link.href = url;
             if (customFilename) {
-                alertRef(`设置已保存到 ${customFilename}。`);
+                link.download = customFilename;
             } else {
-                alertRef('设置已保存到 settings.json。');
+                const date = new Date();
+                const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+                    .toString()
+                    .padStart(2, '0')}-${date
+                    .getDate()
+                    .toString()
+                    .padStart(2, '0')}`;
+                link.download = `carrot-input-panel-settings-${dateString}.json`;
             }
+            documentRef.body.appendChild(link);
+            link.click();
+            documentRef.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
             console.error('导出设置时发生错误:', error);
             alertRef('导出失败，请查看控制台获取更多信息。');
@@ -61,21 +72,43 @@ export function initSyncSettings(
     }
 
     function importSettings(event) {
-        event?.preventDefault?.();
-        if (!store?.loadFromFile) {
-            alertRef('当前环境无法读取 settings.json。');
+        const file = event?.target?.files?.[0];
+        if (!file) return;
+        if (file.type !== 'application/json') {
+            alertRef('请选择一个有效的 .json 配置文件。');
             return;
         }
-        store
-            .loadFromFile()
-            .then(() => {
-                alertRef('已从 settings.json 读取设置，页面将刷新应用。');
-                setTimeout(() => getWindow()?.location.reload(), 500);
-            })
-            .catch((error) => {
-                console.error('读取 settings.json 失败:', error);
-                alertRef('读取 settings.json 失败，请查看控制台。');
-            });
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const importedSettings = JSON.parse(e.target.result);
+                let settingsApplied = false;
+                for (const key in importedSettings) {
+                    if (!Object.prototype.hasOwnProperty.call(importedSettings, key))
+                        continue;
+                    if (key === 'cip_button_position_v4') continue;
+                    store?.setItem(key, importedSettings[key]);
+                    settingsApplied = true;
+                }
+                if (settingsApplied) {
+                    store?.saveToFile({ allowDownload: false });
+                    alertRef('设置已成功导入！页面将自动刷新以应用所有更改。');
+                    setTimeout(() => getWindow()?.location.reload(), 500);
+                } else {
+                    alertRef('导入的文件不包含任何有效的设置。');
+                }
+            } catch (error) {
+                console.error('导入设置时发生错误:', error);
+                alertRef('导入失败，文件格式可能不正确。请查看控制台获取更多信息。');
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.onerror = function () {
+            alertRef('读取文件时发生错误。');
+            event.target.value = '';
+        };
+        reader.readAsText(file);
     }
 
     function getWindow() {
@@ -83,25 +116,26 @@ export function initSyncSettings(
     }
 
     function saveToPath() {
-        const filename = (syncPathInput?.value || 'settings.json').trim();
+        const filename = (syncPathInput?.value || '').trim();
         if (!filename) {
             alertRef('请输入一个有效的文件名。');
             return;
         }
+        store?.setItem('cip_sync_filename_v1', filename);
         exportSettings(filename);
     }
 
     function loadFromPath() {
-        importSettings();
+        importSettingsInput?.click();
     }
 
     importSettingsInput?.addEventListener('change', importSettings);
     savePathBtn?.addEventListener('click', saveToPath);
     loadPathBtn?.addEventListener('click', loadFromPath);
 
-    if (syncPathInput) {
-        syncPathInput.value = 'settings.json';
-        syncPathInput.readOnly = true;
+    const savedFilename = store?.getItem('cip_sync_filename_v1');
+    if (savedFilename && syncPathInput) {
+        syncPathInput.value = savedFilename;
     }
 
     return {

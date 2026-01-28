@@ -107,9 +107,10 @@ function createSettingsStore({
         return store.data;
     }
 
-    async function persist() {
+    async function persist({ allowDownload = false } = {}) {
         const payload = JSON.stringify(store.data, null, 2);
         if (await writeToOpfs(payload)) return true;
+        if (!allowDownload) return false;
         return downloadSettings(payload, documentRef);
     }
 
@@ -119,7 +120,7 @@ function createSettingsStore({
             pendingSave = true;
             return;
         }
-        saveInFlight = persist().finally(() => {
+        saveInFlight = persist({ allowDownload: false }).finally(() => {
             saveInFlight = null;
             if (pendingSave) {
                 pendingSave = false;
@@ -159,8 +160,8 @@ function createSettingsStore({
         return store.data;
     }
 
-    async function saveToFile() {
-        return persist();
+    async function saveToFile(options = {}) {
+        return persist(options);
     }
 
     return {
