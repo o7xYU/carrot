@@ -1,12 +1,13 @@
 {
   "name": "carrot-input-panel",
   "display_name": "兔子不吃胡萝卜",
-  "version": "6.1",
+  "version": "6.2",
   "manifest_version": 6,
   "description": "去掉了userchar气泡",
   "js": ["script.js"],
   "css": ["style.css"]
 }
+
 
 
 
