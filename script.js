@@ -1,4 +1,4 @@
-// script.js (v4.0 - 正则大修)
+// script.js (v5.0 - 修复安卓拖拽问题)
 (async function () {
     if (document.getElementById('cip-carrot-button')) return;
 
@@ -2222,20 +2222,34 @@
         let isClick = true;
         if (e.type === 'touchstart') e.preventDefault();
         const rect = carrotButton.getBoundingClientRect();
-        const offsetX =
-            (e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) -
-            rect.left;
-        const offsetY =
-            (e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) -
-            rect.top;
+        const startClientX = e.type.includes('mouse')
+            ? e.clientX
+            : e.touches[0].clientX;
+        const startClientY = e.type.includes('mouse')
+            ? e.clientY
+            : e.touches[0].clientY;
+        const offsetX = startClientX - rect.left;
+        const offsetY = startClientY - rect.top;
+        const dragThreshold = 6;
         const move = (e) => {
+            const currentClientX = e.type.includes('mouse')
+                ? e.clientX
+                : e.touches[0].clientX;
+            const currentClientY = e.type.includes('mouse')
+                ? e.clientY
+                : e.touches[0].clientY;
+            const distanceX = currentClientX - startClientX;
+            const distanceY = currentClientY - startClientY;
+            if (Math.hypot(distanceX, distanceY) < dragThreshold) {
+                return;
+            }
             isClick = false;
             carrotButton.classList.add('is-dragging');
             let newLeft =
-                (e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) -
+                currentClientX -
                 offsetX;
             let newTop =
-                (e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) -
+                currentClientY -
                 offsetY;
             newLeft = Math.max(
                 0,
