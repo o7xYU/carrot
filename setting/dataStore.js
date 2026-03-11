@@ -1,4 +1,3 @@
-const DEFAULT_DIR_NAME = 'carrot';
 const DEFAULT_FILE_NAME = 'settings.json';
 const DATA_VERSION = 1;
 
@@ -19,6 +18,11 @@ const MANAGED_KEYS = Object.freeze([
     'cip_regex_profiles_v1',
     'cip_alarm_data_v1',
 ]);
+
+const API_BASE_CANDIDATES = [
+    '/api/plugins/carrot/settings',
+    '/api/extensions/carrot/settings',
+];
 
 function buildDefaultState() {
     return {
@@ -45,37 +49,14 @@ function normalizeFileName(fileName) {
 
 export function createDataStore({
     localStorageRef = typeof localStorage !== 'undefined' ? localStorage : null,
-    fileName = DEFAULT_FILE_NAME,
-    rootDirName = DEFAULT_DIR_NAME,
+    fetchRef = typeof fetch !== 'undefined' ? fetch : null,
     consoleRef = console,
+    fileName = DEFAULT_FILE_NAME,
 } = {}) {
     let state = buildDefaultState();
     let saveQueue = Promise.resolve();
-    let dirHandle = null;
     let currentFileName = normalizeFileName(fileName);
-
-    async function getDirHandle() {
-        if (!navigator?.storage?.getDirectory) return null;
-        if (dirHandle) return dirHandle;
-        const root = await navigator.storage.getDirectory();
-        dirHandle = await root.getDirectoryHandle(rootDirName, { create: true });
-        return dirHandle;
-    }
-
-    async function getFileHandle(targetFileName = currentFileName) {
-        const dir = await getDirHandle();
-        if (!dir) return null;
-        return dir.getFileHandle(normalizeFileName(targetFileName), { create: true });
-    }
-
-    async function writeStateToFile(targetFileName = currentFileName) {
-        const handle = await getFileHandle(targetFileName);
-        if (!handle) return false;
-        const writable = await handle.createWritable();
-        await writable.write(JSON.stringify(state, null, 2));
-        await writable.close();
-        return true;
-    }
+    let workingApiBase = null;
 
     function syncStateToLocalStorage() {
         if (!localStorageRef) return;
@@ -102,67 +83,115 @@ export function createDataStore({
         state.updatedAt = new Date().toISOString();
     }
 
-    async function queueSave(targetFileName = currentFileName) {
+    async function requestApi(base, method, payload = null) {
+        if (!fetchRef) return null;
+        const url = `${base}?file=${encodeURIComponent(currentFileName)}`;
+        const options = { method, headers: {} };
+        if (payload !== null) {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(payload);
+        }
+        const response = await fetchRef(url, options);
+        return response;
+    }
+
+    async function tryApi(method, payload = null) {
+        if (!fetchRef) return { ok: false, reason: 'fetch unavailable' };
+        const candidates = workingApiBase
+            ? [workingApiBase, ...API_BASE_CANDIDATES.filter((x) => x !== workingApiBase)]
+            : [...API_BASE_CANDIDATES];
+
+        for (const base of candidates) {
+            try {
+                const response = await requestApi(base, method, payload);
+                if (!response) continue;
+                if (response.ok) {
+                    workingApiBase = base;
+                    return { ok: true, response, base };
+                }
+                if (response.status === 404 || response.status === 405) {
+                    continue;
+                }
+                const text = await response.text().catch(() => '');
+                return {
+                    ok: false,
+                    reason: `HTTP ${response.status} ${text}`,
+                };
+            } catch (error) {
+                // 尝试下一个候选端点
+            }
+        }
+
+        return { ok: false, reason: 'no SillyTavern endpoint available' };
+    }
+
+    async function saveToServerFile() {
+        const result = await tryApi('PUT', state);
+        if (!result.ok) {
+            throw new Error(result.reason || 'server save failed');
+        }
+    }
+
+    async function queueSave() {
         state.updatedAt = new Date().toISOString();
         saveQueue = saveQueue
             .catch(() => {})
             .then(async () => {
                 syncStateToLocalStorage();
-                try {
-                    await writeStateToFile(targetFileName);
-                } catch (error) {
-                    consoleRef.warn('Carrot 数据文件写入失败，已保留在 localStorage。', error);
-                }
+                await saveToServerFile();
             });
         await saveQueue;
     }
 
     async function load_data(targetFileName = currentFileName) {
         currentFileName = normalizeFileName(targetFileName);
-        const handle = await getFileHandle(currentFileName);
-        if (!handle) {
-            hydrateFromLocalStorage();
-            return state;
-        }
+        const result = await tryApi('GET');
 
-        const file = await handle.getFile();
-        const text = await file.text();
-
-        if (!text.trim()) {
+        if (!result.ok) {
             hydrateFromLocalStorage();
-            await queueSave(currentFileName);
+            try {
+                await queueSave();
+            } catch (error) {
+                consoleRef.warn('Carrot 无法访问酒馆文件接口，已退回 localStorage。', error);
+            }
             return state;
         }
 
         try {
-            const parsed = JSON.parse(text);
-            if (!isValidState(parsed)) throw new Error('invalid schema');
+            const payload = await result.response.json();
+            if (!isValidState(payload)) {
+                throw new Error('invalid schema');
+            }
             state = {
-                version: Number(parsed.version) || DATA_VERSION,
-                updatedAt: parsed.updatedAt || new Date().toISOString(),
-                records: { ...parsed.records },
+                version: Number(payload.version) || DATA_VERSION,
+                updatedAt: payload.updatedAt || new Date().toISOString(),
+                records: { ...payload.records },
             };
             syncStateToLocalStorage();
         } catch (error) {
-            consoleRef.warn('Carrot 数据文件损坏，已执行兜底恢复。', error);
+            consoleRef.warn('Carrot 服务端 settings.json 损坏，使用本地兜底重建。', error);
             state = buildDefaultState();
             hydrateFromLocalStorage();
-            await queueSave(currentFileName);
+            await queueSave();
         }
 
         return state;
     }
 
     async function save_data() {
-        await queueSave(currentFileName);
+        try {
+            await queueSave();
+        } catch (error) {
+            consoleRef.warn('Carrot 写入酒馆文件失败，仅保留 localStorage。', error);
+            syncStateToLocalStorage();
+        }
         return state;
     }
 
     async function setFileName(fileNameToSet, { reload = true } = {}) {
-        const nextFileName = normalizeFileName(fileNameToSet);
-        currentFileName = nextFileName;
+        currentFileName = normalizeFileName(fileNameToSet);
         if (reload) {
-            await load_data(nextFileName);
+            await load_data(currentFileName);
         }
         return currentFileName;
     }
@@ -176,19 +205,19 @@ export function createDataStore({
             throw new Error(`记录已存在: ${key}`);
         }
         state.records[key] = value;
-        await queueSave();
+        await save_data();
         return value;
     }
 
     async function update_item(key, value) {
         state.records[key] = value;
-        await queueSave();
+        await save_data();
         return value;
     }
 
     async function delete_item(key) {
         delete state.records[key];
-        await queueSave();
+        await save_data();
     }
 
     function get_item(key) {
@@ -208,9 +237,7 @@ export function createDataStore({
     function createStorageAdapter() {
         return {
             getItem(key) {
-                if (isManagedKey(key)) {
-                    return get_item(key);
-                }
+                if (isManagedKey(key)) return get_item(key);
                 return localStorageRef?.getItem(key) ?? null;
             },
             setItem(key, value) {
@@ -249,7 +276,7 @@ export function createDataStore({
                 updatedAt: payload.updatedAt || new Date().toISOString(),
                 records: { ...payload.records },
             };
-            await queueSave();
+            await save_data();
             return;
         }
 
@@ -261,7 +288,7 @@ export function createDataStore({
             }
         });
         state.records = legacy;
-        await queueSave();
+        await save_data();
     }
 
     return {

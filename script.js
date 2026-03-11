@@ -32,7 +32,6 @@
                 localStorage.getItem('cip_sync_filename_v1') || 'settings.json';
             settingsDataStore = dataStoreModule.createDataStore({
                 localStorageRef: localStorage,
-                rootDirName: 'carrot',
                 fileName: startupFileName,
             });
             await settingsDataStore.load_data(startupFileName);
