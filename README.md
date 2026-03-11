@@ -135,3 +135,28 @@ MIT License
 ## 问题反馈
 
 如果您遇到任何问题或有建议，请在 [Issues](https://github.com/yourusername/SillyTavern-QuickInput/issues) 页面提出。 
+
+## 服务端文件持久化（SillyTavern 目录）
+
+本扩展支持把设置写入 **SillyTavern 扩展目录**（`.../public/scripts/extensions/third-party/carrot/`）下的 `settings.json`（或你在同步面板填写的文件名）。
+
+### 需要挂载后端接口
+
+前端会请求以下接口之一（按顺序尝试）：
+
+- `GET/PUT /api/plugins/carrot/settings?file=<filename>`
+- `GET/PUT /api/extensions/carrot/settings?file=<filename>`
+
+仓库已提供 `server.js`（Express Router），你可以在 SillyTavern 后端里挂载：
+
+```js
+const { router: carrotSettingsRouter } = require('./public/scripts/extensions/third-party/carrot/server.js');
+app.use('/api/plugins/carrot/settings', carrotSettingsRouter);
+```
+
+挂载后行为：
+- 首次读取会自动创建 `settings.json`。
+- 前端新增/修改/删除会立即 `PUT` 回文件。
+- 导入外部 JSON 会覆盖当前目标文件。
+- 同步面板“保存”会同时下载文件，并把同样内容写回扩展目录文件。
+

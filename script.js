@@ -22,6 +22,24 @@
     let isDocked = false;
     let dockedLauncherButton = null;
     let dockPlaceholder = null;
+    let settingsDataStore = null;
+    let settingsStorage = localStorage;
+
+    try {
+        const dataStoreModule = await import('./setting/dataStore.js');
+        if (typeof dataStoreModule.createDataStore === 'function') {
+            const startupFileName =
+                localStorage.getItem('cip_sync_filename_v1') || 'settings.json';
+            settingsDataStore = dataStoreModule.createDataStore({
+                localStorageRef: localStorage,
+                fileName: startupFileName,
+            });
+            await settingsDataStore.load_data(startupFileName);
+            settingsStorage = settingsDataStore.createStorageAdapter();
+        }
+    } catch (error) {
+        console.warn('胡萝卜插件：初始化数据存储模块失败，将回退 localStorage', error);
+    }
 
     try {
         const regexModule = await import('./regex.js');
@@ -1025,7 +1043,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: settingsStorage,
             },
         );
 
@@ -1063,7 +1081,7 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: settingsStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 unsplashAccessKey,
@@ -1097,7 +1115,7 @@
                 ttsPanes,
             },
             {
-                localStorageRef: localStorage,
+                localStorageRef: settingsStorage,
                 fetchRef: fetch,
                 documentRef: document,
                 windowRef: window,
@@ -1117,7 +1135,7 @@
                 alarmStatus,
             },
             {
-                localStorageRef: localStorage,
+                localStorageRef: settingsStorage,
                 alertRef: (message) => alert(message),
                 confirmRef: (message) => confirm(message),
                 windowRef: window,
@@ -1134,7 +1152,8 @@
             },
             {
                 documentRef: document,
-                localStorageRef: localStorage,
+                localStorageRef: settingsStorage,
+                dataStore: settingsDataStore,
                 alertRef: (message) => alert(message),
             },
         );
@@ -1744,7 +1763,7 @@
     }
     function saveStickerData() {
         try {
-            localStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
+            settingsStorage.setItem('cip_sticker_data', JSON.stringify(stickerData));
         } catch (error) {
             console.error('胡萝卜插件：写入表情包数据失败', error);
         }
@@ -1753,7 +1772,7 @@
     }
     function loadStickerData() {
         try {
-            const stored = localStorage.getItem('cip_sticker_data');
+            const stored = settingsStorage.getItem('cip_sticker_data');
             stickerData = stored ? JSON.parse(stored) : {};
         } catch (error) {
             console.error('胡萝卜插件：读取表情包数据失败', error);

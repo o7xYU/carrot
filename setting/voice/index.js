@@ -122,9 +122,10 @@ function updateTTSStatus(text, isError = false) {
 
 async function fetchSiliconFlowTTS(text, settings) {
     const base = settings.endpoint || getDefaultEndpoint();
-    const endpoint = base.endsWith('/audio/speech')
-        ? base
-        : `${base.replace(/\/$/, '')}/audio/speech`;
+    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    const endpoint = normalizedBase.endsWith('/audio/speech')
+        ? normalizedBase
+        : `${normalizedBase}/audio/speech`;
     if (!settings.key) throw new Error('未配置硅基流动API Key');
     const body = {
         model: settings.model || DEFAULT_TTS_MODEL,
@@ -355,9 +356,6 @@ function setupUploadHandlers() {
                 if (!name) throw new Error('请填写音色名称');
                 if (!text) throw new Error('请填写参考文本');
                 if (!file) throw new Error('请选择参考音频文件');
-                if (!/^[a-zA-Z0-9_\-]+$/.test(name)) {
-                    throw new Error('音色名称仅支持字母数字下划线');
-                }
                 const body = new FormData();
                 body.append('name', name);
                 body.append('text', text);

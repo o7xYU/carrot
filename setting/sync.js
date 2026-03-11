@@ -8,12 +8,13 @@ export function initSyncSettings(
     {
         documentRef = document,
         localStorageRef = localStorage,
+        dataStore = null,
         alertRef = (message) => alert(message),
     } = {},
 ) {
     function exportSettings(customFilename = '') {
         try {
-            const settingsToExport = {};
+            let settingsToExport = null;
             const keysToExport = [
                 'cip_sticker_data',
                 'cip_theme_data_v1',
@@ -30,16 +31,28 @@ export function initSyncSettings(
                 'cip_regex_custom_rules_v1',
                 'cip_regex_profiles_v1',
             ];
-            keysToExport.forEach((key) => {
-                const value = localStorageRef.getItem(key);
-                if (value !== null) {
-                    settingsToExport[key] = value;
-                }
-            });
-            if (Object.keys(settingsToExport).length === 0) {
+
+            if (dataStore?.exportSnapshot) {
+                settingsToExport = dataStore.exportSnapshot();
+            } else {
+                settingsToExport = {};
+                keysToExport.forEach((key) => {
+                    const value = localStorageRef.getItem(key);
+                    if (value !== null) {
+                        settingsToExport[key] = value;
+                    }
+                });
+            }
+
+            const hasRecords = settingsToExport.records
+                ? Object.keys(settingsToExport.records).length > 0
+                : Object.keys(settingsToExport).length > 0;
+
+            if (!hasRecords) {
                 alertRef('没有可导出的设置。');
                 return;
             }
+
             const jsonString = JSON.stringify(settingsToExport, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -79,6 +92,29 @@ export function initSyncSettings(
             try {
                 const importedSettings = JSON.parse(e.target.result);
                 let settingsApplied = false;
+
+                if (dataStore?.importSnapshot) {
+                    const configuredName = (syncPathInput?.value || '').trim();
+                    const activeName = configuredName || 'settings.json';
+                    const importResult = dataStore
+                        .setFileName(activeName, { reload: false })
+                        .then(() => dataStore.importSnapshot(importedSettings));
+
+                    importResult
+                        .then(() => {
+                            alertRef('设置已成功导入！页面将自动刷新以应用所有更改。');
+                            setTimeout(() => getWindow()?.location.reload(), 500);
+                        })
+                        .catch((error) => {
+                            console.error('导入设置时发生错误:', error);
+                            alertRef('导入失败，文件格式可能不正确。请查看控制台获取更多信息。');
+                        })
+                        .finally(() => {
+                            event.target.value = '';
+                        });
+                    return;
+                }
+
                 for (const key in importedSettings) {
                     if (!Object.prototype.hasOwnProperty.call(importedSettings, key))
                         continue;
@@ -86,6 +122,7 @@ export function initSyncSettings(
                     localStorageRef.setItem(key, importedSettings[key]);
                     settingsApplied = true;
                 }
+
                 if (settingsApplied) {
                     alertRef('设置已成功导入！页面将自动刷新以应用所有更改。');
                     setTimeout(() => getWindow()?.location.reload(), 500);
@@ -117,6 +154,16 @@ export function initSyncSettings(
             return;
         }
         localStorageRef.setItem('cip_sync_filename_v1', filename);
+
+        if (dataStore?.setFileName && dataStore?.save_data) {
+            void dataStore
+                .setFileName(filename, { reload: false })
+                .then(() => dataStore.save_data())
+                .catch((error) => {
+                    console.error('同步写入Carrot本地文件失败:', error);
+                });
+        }
+
         exportSettings(filename);
     }
 
@@ -128,7 +175,7 @@ export function initSyncSettings(
     savePathBtn?.addEventListener('click', saveToPath);
     loadPathBtn?.addEventListener('click', loadFromPath);
 
-    const savedFilename = localStorageRef.getItem('cip_sync_filename_v1');
+    const savedFilename = localStorageRef.getItem('cip_sync_filename_v1') || 'settings.json';
     if (savedFilename && syncPathInput) {
         syncPathInput.value = savedFilename;
     }
