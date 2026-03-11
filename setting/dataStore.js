@@ -1,4 +1,5 @@
-const DATA_FILE_NAME = 'carrot-input-panel-settings.json';
+const DEFAULT_DIR_NAME = 'carrot';
+const DEFAULT_FILE_NAME = 'settings.json';
 const DATA_VERSION = 1;
 
 const MANAGED_KEYS = Object.freeze([
@@ -36,25 +37,39 @@ function isValidState(candidate) {
     );
 }
 
+function normalizeFileName(fileName) {
+    const raw = `${fileName || ''}`.trim();
+    if (!raw) return DEFAULT_FILE_NAME;
+    return raw.endsWith('.json') ? raw : `${raw}.json`;
+}
+
 export function createDataStore({
     localStorageRef = typeof localStorage !== 'undefined' ? localStorage : null,
-    fileName = DATA_FILE_NAME,
+    fileName = DEFAULT_FILE_NAME,
+    rootDirName = DEFAULT_DIR_NAME,
     consoleRef = console,
 } = {}) {
     let state = buildDefaultState();
     let saveQueue = Promise.resolve();
-    let fileHandle = null;
+    let dirHandle = null;
+    let currentFileName = normalizeFileName(fileName);
 
-    async function getFileHandle() {
+    async function getDirHandle() {
         if (!navigator?.storage?.getDirectory) return null;
-        if (fileHandle) return fileHandle;
+        if (dirHandle) return dirHandle;
         const root = await navigator.storage.getDirectory();
-        fileHandle = await root.getFileHandle(fileName, { create: true });
-        return fileHandle;
+        dirHandle = await root.getDirectoryHandle(rootDirName, { create: true });
+        return dirHandle;
     }
 
-    async function writeStateToFile() {
-        const handle = await getFileHandle();
+    async function getFileHandle(targetFileName = currentFileName) {
+        const dir = await getDirHandle();
+        if (!dir) return null;
+        return dir.getFileHandle(normalizeFileName(targetFileName), { create: true });
+    }
+
+    async function writeStateToFile(targetFileName = currentFileName) {
+        const handle = await getFileHandle(targetFileName);
         if (!handle) return false;
         const writable = await handle.createWritable();
         await writable.write(JSON.stringify(state, null, 2));
@@ -74,14 +89,27 @@ export function createDataStore({
         });
     }
 
-    async function queueSave() {
+    function hydrateFromLocalStorage() {
+        if (!localStorageRef) return;
+        const next = {};
+        MANAGED_KEYS.forEach((key) => {
+            const value = localStorageRef.getItem(key);
+            if (typeof value === 'string') {
+                next[key] = value;
+            }
+        });
+        state.records = next;
+        state.updatedAt = new Date().toISOString();
+    }
+
+    async function queueSave(targetFileName = currentFileName) {
         state.updatedAt = new Date().toISOString();
         saveQueue = saveQueue
             .catch(() => {})
             .then(async () => {
                 syncStateToLocalStorage();
                 try {
-                    await writeStateToFile();
+                    await writeStateToFile(targetFileName);
                 } catch (error) {
                     consoleRef.warn('Carrot 数据文件写入失败，已保留在 localStorage。', error);
                 }
@@ -89,18 +117,20 @@ export function createDataStore({
         await saveQueue;
     }
 
-    async function load_data() {
-        const handle = await getFileHandle();
+    async function load_data(targetFileName = currentFileName) {
+        currentFileName = normalizeFileName(targetFileName);
+        const handle = await getFileHandle(currentFileName);
         if (!handle) {
             hydrateFromLocalStorage();
             return state;
         }
+
         const file = await handle.getFile();
         const text = await file.text();
 
         if (!text.trim()) {
             hydrateFromLocalStorage();
-            await queueSave();
+            await queueSave(currentFileName);
             return state;
         }
 
@@ -117,28 +147,28 @@ export function createDataStore({
             consoleRef.warn('Carrot 数据文件损坏，已执行兜底恢复。', error);
             state = buildDefaultState();
             hydrateFromLocalStorage();
-            await queueSave();
+            await queueSave(currentFileName);
         }
 
         return state;
     }
 
-    function hydrateFromLocalStorage() {
-        if (!localStorageRef) return;
-        const next = {};
-        MANAGED_KEYS.forEach((key) => {
-            const value = localStorageRef.getItem(key);
-            if (typeof value === 'string') {
-                next[key] = value;
-            }
-        });
-        state.records = next;
-        state.updatedAt = new Date().toISOString();
+    async function save_data() {
+        await queueSave(currentFileName);
+        return state;
     }
 
-    async function save_data() {
-        await queueSave();
-        return state;
+    async function setFileName(fileNameToSet, { reload = true } = {}) {
+        const nextFileName = normalizeFileName(fileNameToSet);
+        currentFileName = nextFileName;
+        if (reload) {
+            await load_data(nextFileName);
+        }
+        return currentFileName;
+    }
+
+    function getFileName() {
+        return currentFileName;
     }
 
     async function create_item(key, value) {
@@ -223,7 +253,6 @@ export function createDataStore({
             return;
         }
 
-        // 兼容旧版本导出格式（扁平 key-value）
         const legacy = {};
         MANAGED_KEYS.forEach((key) => {
             const value = payload[key];
@@ -238,6 +267,8 @@ export function createDataStore({
     return {
         load_data,
         save_data,
+        setFileName,
+        getFileName,
         create_item,
         update_item,
         delete_item,

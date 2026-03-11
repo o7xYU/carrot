@@ -28,10 +28,14 @@
     try {
         const dataStoreModule = await import('./setting/dataStore.js');
         if (typeof dataStoreModule.createDataStore === 'function') {
+            const startupFileName =
+                localStorage.getItem('cip_sync_filename_v1') || 'settings.json';
             settingsDataStore = dataStoreModule.createDataStore({
                 localStorageRef: localStorage,
+                rootDirName: 'carrot',
+                fileName: startupFileName,
             });
-            await settingsDataStore.load_data();
+            await settingsDataStore.load_data(startupFileName);
             settingsStorage = settingsDataStore.createStorageAdapter();
         }
     } catch (error) {
